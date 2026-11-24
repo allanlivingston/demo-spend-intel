@@ -21,8 +21,8 @@ export const BURST_SHARE = 0.12;
 export const BURST_SIZE = 3.5;
 /** Daily limit per person, as a multiple of an even daily share of their monthly limit. */
 export const CAPS_DAILY_X = 2;
-/** Share of a burst's excess that can wait (scheduled runs); the rest is hard throttled. */
-export const BURST_DEFERRABLE = 0.5;
+/** Share of a burst's excess that can wait (scheduled runs); the rest is held for a few hours. Most can wait, so the harsher step stays smaller. */
+export const BURST_DEFERRABLE = 0.7;
 
 /** Highest step someone reaches: cheaper model, paused, hard throttled. ("blocked" is kept for stopped-for-the-month.) */
 export type PaceStep = "cheaper" | "deferred" | "rationed" | "blocked";
@@ -119,7 +119,7 @@ export function monthStrip(s: DemoState, sel: GroupSelection): MonthStrip {
     // Work with evidence that it is producing results is slowed last: here the rest of the team absorbs the overrun, and its overrun is the case for funding it.
     const prot = team.map((m) => isProtected(s, g, m));
     // 1. The month's totals for each step: each over-limit person's overrun goes down the ladder; burst-day excess
-    //    over the daily limit is half paused, half hard throttled.
+    //    over the daily limit is mostly paused (70%), the rest held for a few hours.
     let R = 0;
     let P = 0;
     let H = 0;
