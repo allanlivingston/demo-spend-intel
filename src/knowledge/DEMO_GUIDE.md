@@ -27,7 +27,7 @@ A dashboard makes you work out what to do. Here Claude does the looking and draf
 High, Medium and Low. A fix is usually High because the spend produced nothing. Funding confidence rises with evidence: usage only is Low, merged PRs or a team report is Medium, and code still in place after 30 days is High.
 
 ## How is privacy handled?
-The app reads billing, usage and cache data, never prompt text. Admins see each person's spend and limit, as they already can in the Claude Enterprise console.
+The app reads billing, usage and cache data, never prompt text. Admins see each person's spend and limit, as they already can in the Claude Enterprise console. Results (merged PRs, passing tests) are counted for the team and the piece of work, not for each person, to address people's concerns about being measured one by one.
 
 ## What's real and what's simulated?
 The engine, forecasts, savings, checks and the Claude agents are real. The spend data is a made-up month for three teams. Sending to owners and budget owner approval are simulated and recorded in Activity. Nothing leaves the app.
