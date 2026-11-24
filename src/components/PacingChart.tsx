@@ -20,7 +20,9 @@ export function PacingChart({ onDay }: { onDay?: (question: string, context: str
   const markers = groups.flatMap((g) => driverEffects(demo, g).filter((e) => e.driver.marker && (advanced || e.driver.id !== "b-soc2")).map((e) => e.driver));
   // The whole month for everyone who hits a limit: bursty days included, under both policies.
   const ms = monthStrip(demo, group);
-  const blockDays = ms.firstBlocks;
+  // The day-1 "runs held" dot only explains the advanced comparison lines; the daily bars already show it in the default view.
+  const blockDays = advanced ? ms.firstBlocks : {};
+  const fixedState = (id: string) => (demo.appliedFixes.includes(id) ? "fixed" : (demo.handedOff ?? []).includes(id) ? "with owner" : null);
   const cum = (i: number) => { const p = f.series[i]; return p.actual ?? p.p50 ?? 0; };
   const stripDays: StripDay[] = ms.demand.map((dem, i) => {
     const step = { rerouted: Math.round(ms.rerouted[i]), paused: Math.round(ms.paused[i]), hard: Math.round(ms.hardThrottled[i]), stopped: Math.round(ms.stopped[i]) };
@@ -41,7 +43,7 @@ export function PacingChart({ onDay }: { onDay?: (question: string, context: str
   const throttleLabels = Object.entries(blockDays)
     .filter(([day], i, all) => !(i > 0 && +day - +all[i - 1][0] < 4))
     .map(([day]) => ({ key: `b${day}`, day: +day, text: `${Object.entries(blockDays).filter(([d]) => +d >= +day && +d - +day < 4).reduce((a, [, c]) => a + c, 0)} people: some runs held`, color: "#C4452F" }));
-  const labels = [...markers.map((d) => ({ key: d.id, day: d.startDay, text: d.marker!.replace(/^Day \d+:\s*/, ""), color: "#555" })), ...throttleLabels].sort((a, b) => a.day - b.day);
+  const labels = [...markers.map((d) => ({ key: d.id, day: d.startDay, text: `${d.marker!.replace(/^Day \d+:\s*/, "")}${fixedState(d.id) ? ` (${fixedState(d.id)})` : ""}`, color: "#555" })), ...throttleLabels].sort((a, b) => a.day - b.day);
   const rowOf = new Map<string, number>();
   const rowEnds: number[] = [];
   for (const l of labels) {
@@ -104,11 +106,11 @@ export function PacingChart({ onDay }: { onDay?: (question: string, context: str
                 x={d.startDay}
                 y={yAt(d.startDay)}
                 r={6}
-                fill={d.kind === "waste" ? "#C98A1B" : "#3F8F5A"}
+                fill={fixedState(d.id) ? "#B8B8B8" : d.kind === "waste" ? "#C98A1B" : "#3F8F5A"}
                 stroke="#fff"
                 strokeWidth={2}
                 style={{ cursor: "pointer" }}
-                label={labelFor(d.id, d.marker!.replace(/^Day \d+:\s*/, ""), "#555")}
+                label={labelFor(d.id, `${d.marker!.replace(/^Day \d+:\s*/, "")}${fixedState(d.id) ? ` (${fixedState(d.id)})` : ""}`, fixedState(d.id) ? "#999" : "#555")}
               />
             ))}
             {Object.entries(blockDays).map(([day]) => (
