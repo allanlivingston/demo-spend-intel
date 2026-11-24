@@ -1,0 +1,46 @@
+{
+  "agent": "cache",
+  "scenario": "A",
+  "key": "cache--A--a-cache",
+  "prompt": "Fix with agent: prompt cache hit rate fell from 78% to 31%.",
+  "model": "claude-sonnet-5-5",
+  "calls": [
+    {
+      "tool": "get_forecast",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "list_drivers",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "draft_policy_diff",
+      "input": {
+        "driver_ids": [
+          "a-cache"
+        ]
+      }
+    },
+    {
+      "tool": "send_to_owner_preview",
+      "input": {
+        "driver_id": "a-cache"
+      }
+    },
+    {
+      "tool": "simulate_policy",
+      "input": {
+        "group": "pe",
+        "apply_fixes": [
+          "a-cache"
+        ]
+      }
+    }
+  ],
+  "text": "Spend still lands at $50,400 after your changes, because this fix sits with the dev tools team. If they move the date out of the session start, it lands at $48,300. Cache usage shows every session has started differently since day 12, and I never read prompt text.",
+  "recordedAt": "2026-11-22T02:09:20.121Z"
+}

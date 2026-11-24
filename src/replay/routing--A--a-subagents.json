@@ -1,0 +1,40 @@
+{
+  "agent": "routing",
+  "scenario": "A",
+  "key": "routing--A--a-subagents",
+  "prompt": "Fix with agent: Claude Code subagents inheriting Opus.",
+  "model": "claude-sonnet-5-5",
+  "calls": [
+    {
+      "tool": "get_forecast",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "list_drivers",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "simulate_policy",
+      "input": {
+        "group": "pe",
+        "apply_fixes": [
+          "a-subagents"
+        ]
+      }
+    },
+    {
+      "tool": "draft_policy_diff",
+      "input": {
+        "driver_ids": [
+          "a-subagents"
+        ]
+      }
+    }
+  ],
+  "text": "Routing subagents to Sonnet moves Platform Engineering from landing at $50,400 to $45,800, still over the $40,000 budget. 71% of subagent calls run on Opus for search and lint tasks that Sonnet completes. The cache and Jira connector fixes are still open.",
+  "recordedAt": "2026-11-22T10:44:49.409Z"
+}

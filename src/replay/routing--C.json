@@ -1,0 +1,38 @@
+{
+  "agent": "routing",
+  "scenario": "C",
+  "key": "routing--C",
+  "prompt": "Fix all open waste with one policy.",
+  "model": "claude-sonnet-5-5",
+  "calls": [
+    {
+      "tool": "get_forecast",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "list_drivers",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "simulate_policy",
+      "input": {
+        "group": "pe",
+        "apply_fixes": [
+          "a-subagents",
+          "a-cache",
+          "a-connector"
+        ]
+      }
+    },
+    {
+      "tool": "draft_policy_diff",
+      "input": {}
+    }
+  ],
+  "text": "Platform Engineering lands at $50,800 after your routing and retry changes, down from $59,500, against a $40,000 budget. The cache fix belongs to the dev tools team, and once they ship it spend lands at $48,700. Review the proposed changes below.",
+  "recordedAt": "2026-11-22T10:55:13.095Z"
+}

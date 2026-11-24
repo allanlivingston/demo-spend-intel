@@ -1,0 +1,33 @@
+{
+  "agent": "funding",
+  "scenario": "B",
+  "key": "funding--B",
+  "prompt": "Draft the budget owner brief.",
+  "model": "claude-sonnet-5-5",
+  "calls": [
+    {
+      "tool": "get_forecast",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "list_drivers",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "get_evidence",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "draft_cfo_brief",
+      "input": {}
+    }
+  ],
+  "text": "Platform Engineering lands at $48,400 against a $40,000 budget, and the brief requests $8,500 to cover it. The spend is backed by shipped work at Medium confidence, and $600 of work is at risk without it. Review the Budget owner brief below.",
+  "recordedAt": "2026-11-22T11:32:06.677Z"
+}

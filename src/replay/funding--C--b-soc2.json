@@ -1,0 +1,35 @@
+{
+  "agent": "funding",
+  "scenario": "C",
+  "key": "funding--C--b-soc2",
+  "prompt": "Fund with agent: planned SOC 2 documentation sprint. Draft the planned spend approval.",
+  "model": "claude-sonnet-5-5",
+  "calls": [
+    {
+      "tool": "get_forecast",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "list_drivers",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "get_evidence",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "draft_override",
+      "input": {
+        "driver_id": "b-soc2"
+      }
+    }
+  ],
+  "text": "Platform Engineering lands at $51,200 against a $40,000 budget, and the SOC 2 sprint adds a projected $2,600 of planned work. Confidence is Medium, since it rests on a team report and a survey rather than measured output, so the budget owner needs to confirm the funding source. Review the Planned spend approval below.",
+  "recordedAt": "2026-11-22T11:47:10.472Z"
+}

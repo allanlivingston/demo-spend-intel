@@ -1,0 +1,37 @@
+{
+  "agent": "connector",
+  "scenario": "A",
+  "key": "connector--A--a-connector",
+  "prompt": "Fix with agent: Jira MCP connector retrying in a loop.",
+  "model": "claude-sonnet-5-5",
+  "calls": [
+    {
+      "tool": "get_forecast",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "list_drivers",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "draft_policy_diff",
+      "input": {
+        "driver_ids": [
+          "a-connector"
+        ]
+      }
+    },
+    {
+      "tool": "send_to_owner_preview",
+      "input": {
+        "driver_id": "a-connector"
+      }
+    }
+  ],
+  "text": "Platform Engineering lands at $46,300 after this fix, down from $50,400, still above its $40,000 budget. The Jira connector has made 9,400 retries since day 14, and create_issue returns 401, so it has completed 0 successful writes. Review the proposed changes below, and the hand-off draft ticket goes to the connector owner to fix the credentials.",
+  "recordedAt": "2026-11-22T02:09:11.033Z"
+}

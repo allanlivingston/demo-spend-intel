@@ -1,0 +1,37 @@
+{
+  "agent": "cache",
+  "scenario": "C",
+  "key": "cache--C--a-cache",
+  "prompt": "Fix with agent: prompt cache hit rate fell from 78% to 31%.",
+  "model": "claude-sonnet-5-5",
+  "calls": [
+    {
+      "tool": "get_forecast",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "list_drivers",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "draft_policy_diff",
+      "input": {
+        "driver_ids": [
+          "a-cache"
+        ]
+      }
+    },
+    {
+      "tool": "send_to_owner_preview",
+      "input": {
+        "driver_id": "a-cache"
+      }
+    }
+  ],
+  "text": "Platform Engineering still lands at $59,500 after my changes, because this fix belongs to the dev tools team and changes nothing until they act. Once they move the date out of the session start, it lands at $57,400. The cause comes from cache metadata alone: every session has started differently since day 12, and I read no prompt text.",
+  "recordedAt": "2026-11-22T10:54:54.878Z"
+}

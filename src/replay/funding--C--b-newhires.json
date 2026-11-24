@@ -1,0 +1,33 @@
+{
+  "agent": "funding",
+  "scenario": "C",
+  "key": "funding--C--b-newhires",
+  "prompt": "Fund with agent: 14 new engineers ramping on the payments refactor. Plan a rebalance.",
+  "model": "claude-sonnet-5-5",
+  "calls": [
+    {
+      "tool": "get_forecast",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "list_drivers",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "get_evidence",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "draft_rebalance_plan",
+      "input": {}
+    }
+  ],
+  "text": "Moving $2,800 of unused budget to the payments refactor cuts work at risk from $3,431 to $631. Platform Engineering still lands at $51,200, with Medium confidence because 31 PRs have merged and the 30-day check is pending. Review the budget move plan below.",
+  "recordedAt": "2026-11-22T11:47:05.937Z"
+}

@@ -1,0 +1,40 @@
+{
+  "agent": "routing",
+  "scenario": "C",
+  "key": "routing--C--a-subagents",
+  "prompt": "Fix with agent: Claude Code subagents inheriting Opus.",
+  "model": "claude-sonnet-5-5",
+  "calls": [
+    {
+      "tool": "get_forecast",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "list_drivers",
+      "input": {
+        "group": "pe"
+      }
+    },
+    {
+      "tool": "simulate_policy",
+      "input": {
+        "group": "pe",
+        "apply_fixes": [
+          "a-subagents"
+        ]
+      }
+    },
+    {
+      "tool": "draft_policy_diff",
+      "input": {
+        "driver_ids": [
+          "a-subagents"
+        ]
+      }
+    }
+  ],
+  "text": "Routing subagent search and lint work to Sonnet moves Platform Engineering from landing at $59500 to $54900, still over the $40000 budget. It's safe to do because 71% of subagent calls run on Opus for tasks Sonnet completes as well, and work at risk drops from $4534 to $3431. Review the proposed changes below.",
+  "recordedAt": "2026-11-22T10:55:04.194Z"
+}

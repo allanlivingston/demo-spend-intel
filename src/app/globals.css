@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  /* Matched to claude.ai: white page, #FAFAFA sidebar, text at 90% / 60% / 47% black. */
+  --color-canvas: #FFFFFF;
+  --color-sidebar: #FAFAFA;
+  --color-card: #FFFFFF;
+  --color-ink: #1A1A1A;
+  --color-faint: #878787;
+  --color-accent: #D97757;
+  --color-ok: #3F8F5A;
+  --color-warn: #C98A1B;
+  --color-bad: #C4452F;
+  --color-muted: #666666;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-source-serif), Georgia, serif;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+/* Clicking the chart (to ask about a day) should not draw a focus box around it. */
+.recharts-wrapper:focus,
+.recharts-surface:focus,
+.recharts-wrapper *:focus {
+  outline: none;
+}
