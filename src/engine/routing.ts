@@ -44,7 +44,7 @@ export function policyRow(d: Driver): PolicyRow | null {
         before: "inherit Opus from parent session",
         after: "use Sonnet, Opus still available on request",
         savings: Math.round(excess - penalty),
-        method: `Cost per completed task: Opus $${ROUTING.subagentOpusCost.toLocaleString()} vs Sonnet $${ROUTING.subagentSonnetCost.toLocaleString()}, less ${ROUTING.sonnetRetryRate * 100}% Sonnet retries.`,
+        method: `This month's subagent work: Opus $${ROUTING.subagentOpusCost.toLocaleString()} on Sonnet $${ROUTING.subagentSonnetCost.toLocaleString()}, less ${ROUTING.sonnetRetryRate * 100}% Sonnet retries.`,
       };
     }
     case "a-cache": {

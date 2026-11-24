@@ -103,7 +103,7 @@ export const TOOLS: ToolDef[] = [
         members_blocked_by_day_22: t.blockedByDay22,
         work_at_risk: t.value,
         planned_spend_approval_rate_pct: Math.round(overrideRate(ctx.demo, g) * 100),
-        team_shipped_results_per_1000_dollars: draftCfoBrief(ctx.demo, g).outputPer1k,
+        ...(() => { const b = draftCfoBrief(ctx.demo, g); return { brief_new_work_to_fund: b.fund, brief_waiting_on_owner: b.waiting ?? 0 }; })(),
         rebalance: { sharing_level: rp.rungLabel, allowed: rp.allowed, reason: rp.reason, headroom_movable: rp.moved },
         pacing: (() => {
           const p = pacing(ctx.demo, g);
@@ -198,7 +198,7 @@ export const TOOLS: ToolDef[] = [
     run: (ctx) => {
       const art = draftCfoBrief(ctx.demo, "pe");
       ctx.artifacts.push(art);
-      return { data: { drafted: "cfo_brief", card_name: "Budget owner brief", requested: art.requested, new_budget: art.newBudget, p50: r(art.p50), p90: r100(art.p90), status_after: art.statusAfter, override_rate_pct: Math.round(art.overrideRate * 100), work_at_risk_without_it: art.throttledAvoided, team_shipped_results_per_1000_dollars: art.outputPer1k }, summary: `Drafted a budget owner brief: ask for ${usd(art.requested)} more (budget to ${usd(art.newBudget)})` };
+      return { data: { drafted: "cfo_brief", card_name: "Budget owner brief", requested: art.requested, new_budget: art.newBudget, p50: r(art.p50), p90: r100(art.p90), status_after: art.statusAfter, override_rate_pct: Math.round(art.overrideRate * 100), work_at_risk_without_it: art.throttledAvoided, new_work_to_fund: art.fund, waiting_on_owner: art.waiting ?? 0, covers: art.covers }, summary: `Drafted a budget owner brief: ask for ${usd(art.requested)} more (budget to ${usd(art.newBudget)})` };
     },
   },
   {

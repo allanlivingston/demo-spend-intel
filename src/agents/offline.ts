@@ -79,7 +79,7 @@ function draftAnswer(s: DemoState, p: string, kind: string): string {
   }
   const b = draftCfoBrief(s, g);
   if (/risk/.test(p)) return `If the budget owner says no, ${GROUPS[g].name} stays over budget and the new engineers' runs stay slowed for the rest of the month.`;
-  return `${s.rebalanceApplied ? "After moving budget and the approvals" : s.overrides.length ? "After the approvals" : "As things stand"}, ${GROUPS[g].name} still lands at ${usd100(b.p50)}. The brief asks for ${usd(b.requested)} more, taking the budget to ${usd(b.newBudget)}. The team produces ${b.outputPer1k} merged PRs and newly passing tests for every thousand dollars spent.`;
+  return `${s.rebalanceApplied ? "After moving budget and the approvals" : s.overrides.length ? "After the approvals" : "As things stand"}, ${GROUPS[g].name} still lands at ${usd100(b.p50)}. The brief asks for ${usd(b.requested)} more, taking the budget to ${usd(b.newBudget)}. ${b.covers}`;
 }
 
 export function offlinePlan(req: AgentRequest): OfflinePlan {

@@ -16,7 +16,20 @@ export default function Home() {
     setReady(true);
     if (!tourSeen()) setTour(true);
   }, []);
-  if (!ready) return <div className="min-h-screen bg-canvas" />;
+  // A quiet outline of the page while saved state loads, instead of a blank screen.
+  if (!ready)
+    return (
+      <div className="flex h-screen bg-canvas" aria-busy="true">
+        <div className="w-[288px] shrink-0 border-r-[0.5px] border-black/10 bg-sidebar px-4 pt-4">
+          <div className="font-serif text-[19px] text-ink">Spend Intelligence</div>
+        </div>
+        <div className="mx-auto w-full max-w-[816px] animate-pulse space-y-4 px-6 pt-8">
+          <div className="h-4 w-48 rounded bg-black/5" />
+          <div className="h-10 w-3/4 rounded bg-black/5" />
+          <div className="h-72 rounded-xl bg-black/[0.04]" />
+        </div>
+      </div>
+    );
   return (
     <div className="flex h-screen bg-canvas">
       <Sidebar onTour={() => setTour(true)} onActivity={() => setActivity(true)} onGuide={() => setGuide(true)} />

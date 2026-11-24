@@ -40,7 +40,7 @@ export function PacingChart({ onDay }: { onDay?: (question: string, context: str
   // left-aligned, stacked into rows so no two labels overlap.
   const throttleLabels = Object.entries(blockDays)
     .filter(([day], i, all) => !(i > 0 && +day - +all[i - 1][0] < 4))
-    .map(([day]) => ({ key: `b${day}`, day: +day, text: `${Object.entries(blockDays).filter(([d]) => +d >= +day && +d - +day < 4).reduce((a, [, c]) => a + c, 0)} hard throttled`, color: "#C4452F" }));
+    .map(([day]) => ({ key: `b${day}`, day: +day, text: `${Object.entries(blockDays).filter(([d]) => +d >= +day && +d - +day < 4).reduce((a, [, c]) => a + c, 0)} people: some runs held`, color: "#C4452F" }));
   const labels = [...markers.map((d) => ({ key: d.id, day: d.startDay, text: d.marker!.replace(/^Day \d+:\s*/, ""), color: "#555" })), ...throttleLabels].sort((a, b) => a.day - b.day);
   const rowOf = new Map<string, number>();
   const rowEnds: number[] = [];
@@ -136,7 +136,7 @@ export function PacingChart({ onDay }: { onDay?: (question: string, context: str
         {advanced && <span><span className="mr-1 inline-block h-px w-4 bg-accent align-middle" />Pacing plan</span>}
         <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-warn align-middle" />Waste starts</span>
         <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-ok align-middle" />Growth starts</span>
-        {Object.keys(blockDays).length > 0 && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-bad align-middle" />People first hard throttled</span>}
+        {Object.keys(blockDays).length > 0 && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-bad align-middle" />People with runs first held</span>}
         <span className="ml-auto cursor-help underline decoration-dotted" title={FORMULA}>How is this calculated?</span>
       </div>
     </div>
@@ -153,7 +153,7 @@ const C_RAN_FUTURE = "#e0e0e0";
 const STEPS: { key: Exclude<StepKey, "ran">; label: string; color: string; text: string }[] = [
   { key: "rerouted", label: "Cheaper model", color: "#F2CF8A", text: "#9A6A12" },
   { key: "paused", label: "Paused", color: "#E3A63B", text: "#9A6A12" },
-  { key: "hard", label: "Hard throttled", color: "#D9693F", text: "#B04A26" },
+  { key: "hard", label: "Held a few hours", color: "#D9693F", text: "#B04A26" },
   { key: "stopped", label: "Stopped for the month", color: "#9E2A1C", text: "#9E2A1C" },
 ];
 
@@ -177,8 +177,8 @@ function DailyStrip({ data }: { data: StripDay[] }) {
     <div className="px-4 pt-2">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
         <span className="text-[13px] font-medium text-ink">Each day</span>
-        <span><span className="mr-1 inline-block h-2.5 w-2.5 align-middle" style={{ background: C_RAN_PAST }} />Ran {usd(t("ran"))}</span>
-        {steps.map((st) => <span key={st.key}><span className="mr-1 inline-block h-2.5 w-2.5 align-middle" style={{ background: st.color }} />{st.label} {usd(t(st.key))}</span>)}
+        <span><span className="mr-1 inline-block h-2.5 w-2.5 align-middle" style={{ background: C_RAN_PAST }} />Ran {usd(Math.round(t("ran") / 100) * 100)}</span>
+        {steps.map((st) => <span key={st.key}><span className="mr-1 inline-block h-2.5 w-2.5 align-middle" style={{ background: st.color }} />{st.label} {usd(Math.round(t(st.key) / 100) * 100)}</span>)}
       </div>
       <div className="h-[120px]">
         <ResponsiveContainer width="100%" height="100%">

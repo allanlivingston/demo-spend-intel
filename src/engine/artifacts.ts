@@ -7,6 +7,7 @@ import { driverEffects, evidenceTier, forecast, MAX_TARGET_CHANGE, poolOf, rebal
 import { evidenceAge } from "./pacing";
 import { policyRow } from "./routing";
 import { SIGNAL_COUNTS } from "./evidence";
+import { isAdvanced } from "./viewMode";
 import type { DemoState, GroupId } from "./types";
 
 const StatusZ = z.enum(["On track", "Budget remaining", "Over budget"]);
@@ -77,6 +78,8 @@ export const CfoBriefZ = z.object({
   statusAfter: StatusZ,
   fix: z.number(),
   fund: z.number(),
+  waiting: z.number().optional(),
+  covers: z.string().optional(),
   evidence: z.array(z.object({ tier: z.string(), count: z.number(), detail: z.string() })),
   overrideRate: z.number(),
   throttledAvoided: z.number(),
@@ -174,11 +177,13 @@ export function draftCfoBrief(s: DemoState, g: GroupId): CfoBrief {
   const newBudget = pool + requested;
   const b = breakdown(s, g);
   const fix = b.rows.filter((r) => r.side === "fix" && r.state === "open").reduce((a, r) => a + r.recoverable, 0);
-  const fund = b.rows.filter((r) => r.side === "fund").reduce((a, r) => a + r.projected, 0);
+  const waiting = kpis(s, g).waitingOnOwner;
+  // New work to fund: what is still over budget once every fix, including the owner's, has shipped.
+  const fund = Math.max(0, Math.round((f.p50 - fix - waiting - pool) / 100) * 100);
   const counts = SIGNAL_COUNTS[g];
   const drivers = driverEffects(s, g).map((e) => e.driver);
   const evidence = [
-    { tier: "Waste", count: counts[1] ?? 0, detail: fix > 0 ? `${usd(fix)} of fixable waste open` : "No open waste" },
+    { tier: "Waste", count: counts[1] ?? 0, detail: fix > 0 ? `${usd(fix)} of fixable waste open` : waiting > 0 ? `${usd(waiting)} waiting on its owner; nothing else open` : "No open waste" },
     { tier: "Shipped work", count: counts[2] ?? 0, detail: drivers.filter((d) => d.tier === 2).flatMap((d) => d.evidence.slice(0, 2)).join(", ") || "None" },
     { tier: "Code still in use", count: s.tier3Arrived ? 27 : 0, detail: s.tier3Arrived ? "27 PRs still in use after 30 days" : "Too early to tell: the code is under 30 days old" },
     { tier: "Team reports", count: counts[4] ?? 0, detail: drivers.filter((d) => d.tier === 4).flatMap((d) => d.evidence).join(", ") || "None" },
@@ -193,6 +198,7 @@ export function draftCfoBrief(s: DemoState, g: GroupId): CfoBrief {
       : `Approve ${usd(requested)}. The extra spend is new work with ${levelOfTier(Math.min(tier, 4)).toLowerCase()} confidence that it is producing results, not waste.${throttledBase > 0 ? ` Without it, ${usd(throttledBase)} of that work is slowed or held.` : ""}`;
   const name = GROUPS[g].name;
   const outputPer1k = Math.round(((counts[2] ?? 0) / (f.actualToDate / 1000)) * 10) / 10;
+  const covers = requested > 0 ? `Covers ${usd(fund)} of new work${waiting > 0 ? ` and ${usd(waiting)} until the owner's fix ships` : ""}${fix > 0 ? ` and ${usd(fix)} of waste not yet fixed` : ""}, rounded up.` : "";
   const statusAfter = forecast({ ...s, budgetRevisions: { ...s.budgetRevisions, [g]: newBudget } }, g).status;
   const markdown = [
     `# Budget owner brief: ${name}`,
@@ -205,20 +211,19 @@ export function draftCfoBrief(s: DemoState, g: GroupId): CfoBrief {
     `| High case | ${usd(Math.round(f.p90 / 100) * 100)} | ${usd(Math.round(f.p90 / 100) * 100)} |`,
     `| Status | ${f.status} | ${statusAfter} |`,
     ``,
-    `**New work to fund:** ${usd(fund)}. **Waste still open:** ${usd(fix)}.`,
+    covers,
     ``,
     `**Evidence:**`,
     ...evidence.map((e) => `- ${e.tier}: ${e.detail}`),
     ``,
-    `**Team output:** ${outputPer1k} merged PRs and newly passing tests per $1,000 spent so far.`,
-    `**Planned spend approval rate this month:** ${Math.round(rate * 100)}%`,
+    ...(isAdvanced() ? [`**Planned spend approval rate this month:** ${Math.round(rate * 100)}%`] : []),
     `**Work slowed without it:** ${usd(throttledBase)}`,
     ``,
     `**Recommendation:** ${recommendation}`,
   ].join("\n");
   return {
     kind: "cfo_brief", id: `cfo-${g}`, groupId: g, groupName: name, currentBudget: pool, requested, newBudget,
-    p50: f.p50, p90: f.p90, statusBefore: f.status, statusAfter, fix, fund, evidence, overrideRate: rate,
+    p50: f.p50, p90: f.p90, statusBefore: f.status, statusAfter, fix, fund, waiting, covers, evidence, overrideRate: rate,
     throttledAvoided: throttledBase, recommendation, outputPer1k, markdown,
   };
 }

@@ -5,7 +5,7 @@ import { forecast } from "@/engine";
 import { AGENT_LABEL } from "@/state/agentClient";
 import { useStore } from "@/state/store";
 import { ArtifactCard } from "./Artifacts";
-import { StatusPill, usd } from "./ui";
+import { mergeSteps, StatusPill, usd } from "./ui";
 
 /** Plan, then apply: a focused page for the decisions Finance and auditors will ask about. */
 export function ReviewScreen() {
@@ -38,7 +38,7 @@ export function ReviewScreen() {
           {text && <p className="font-serif text-[17px] leading-[26px]">{text.replace(/\s*Review the [^.]+ below\.?$/, "")}</p>}
           {run && (
             <ol className="space-y-2">
-              {run.steps.map((s, i) => (
+              {mergeSteps(run.steps).map((s, i) => (
                 <li key={i} className="flex gap-2 text-[15px]">
                   <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-ok" />
                   <span><span className="font-medium">{s.phase}</span><span className="block text-neutral-600">{s.summary}</span></span>

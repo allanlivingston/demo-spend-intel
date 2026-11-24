@@ -3,7 +3,7 @@ import { useState } from "react";
 import { CheckCircle2, ChevronRight, CircleAlert, Loader2, RotateCcw, Sparkles } from "lucide-react";
 import { AGENT_LABEL, retryRun, startAgentRun } from "@/state/agentClient";
 import type { ChatMessage } from "@/state/store";
-import { cx } from "./ui";
+import { cx, mergeSteps } from "./ui";
 
 const MODEL_NAME: Record<string, string> = {
   "claude-haiku-5-5": "Haiku",
@@ -32,7 +32,7 @@ export function AgentRunCard({ m }: { m: ChatMessage }) {
       </div>
       {stepsVisible && run.steps.length > 0 && (
         <ol className="space-y-1 border-l-2 border-neutral-200 pl-3">
-          {run.steps.map((s, i) => (
+          {mergeSteps(run.steps).map((s, i) => (
             <li key={i} className="flex gap-2 text-[13px] text-neutral-600">
               <CheckCircle2 size={12} className="mt-0.5 shrink-0 text-ok" />
               <span><span className="font-medium text-ink">{s.phase}.</span> {s.summary}</span>

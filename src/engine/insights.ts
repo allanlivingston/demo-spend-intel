@@ -314,6 +314,9 @@ function fundLine(s: DemoState, over: number): string {
   const who = hires ? `the ${hires} new engineers` : "new work";
   if (soc2 && isAdvanced() && !s.overrides.includes("b-soc2") && !isDeclined(s, "b-soc2"))
     return `${usd100(over)} over budget from ${who} and a planned ${usd(soc2.forward)} SOC 2 sprint starting tomorrow. Approve the sprint, then ask the budget owner for the rest.`;
+  const waiting = kpis(s, "pe").waitingOnOwner;
+  if (waiting > 0 && over > waiting)
+    return `${usd100(over)} over budget: ${usd100(over - waiting)} from ${who} and ${usd(waiting)} until the owner's fix ships. Ask the budget owner for the rest.`;
   return `${usd100(over)} over budget from ${who}. Ask the budget owner for the rest.`;
 }
 

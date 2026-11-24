@@ -25,7 +25,7 @@ function LandingChange({ before, after, label = "Lands at" }: { before: { p50: n
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-md bg-neutral-50 px-3 py-2">
       <span className="text-[13px] text-muted">{label}</span>
-      <span className="tabular-nums">{usd(before.p50)}</span> <StatusPill status={before.status} />
+      <span className="tabular-nums text-muted">{usd(before.p50)}</span>
       <ArrowRight size={14} className="text-muted" />
       <span className="font-semibold tabular-nums">{usd(after.p50)}</span> <StatusPill status={after.status} />
     </div>
@@ -84,7 +84,7 @@ function PolicyDiffCard({ a, status }: { a: PolicyDiff; status?: ArtifactStatus 
                     <Send size={12} />
                     {shipped ? <span className="text-ok">Fixed by {ownerOf(r.driverId)!.short}.</span>
                       : sent ? <>Sent to {ownerOf(r.driverId)!.name}. Not counted until they ship it.</>
-                      : <>You can&apos;t change this. Apply sends it to {ownerOf(r.driverId)!.name}.</>}
+                      : <>Owned by {ownerOf(r.driverId)!.name}. Applying sends it to them.</>}
                     {sent && !shipped && (
                       <button type="button" onClick={() => ownerShipped(r.driverId)} className="ml-auto rounded border border-neutral-300 px-2 py-0.5 text-[12px] hover:border-ok hover:text-ok" title="Demo control: play the owner's side">
                         Mark as shipped
@@ -101,7 +101,7 @@ function PolicyDiffCard({ a, status }: { a: PolicyDiff; status?: ArtifactStatus 
       {theirs.length > 0 && mine.length > 0 && <LandingChange before={afterMine} after={afterAll} label="After the owner's fix" />}
       <div className="flex gap-2">
         {!applied ? (
-          <Button onClick={() => applyPolicy(a.driverIds, a.id)} disabled={!a.rows.length}>{mine.length ? "Apply Policy" : "Send to owner"}</Button>
+          <Button onClick={() => applyPolicy(a.driverIds, a.id)} disabled={!a.rows.length}>{mine.length ? "Apply the changes" : "Send to owner"}</Button>
         ) : mine.length > 0 ? (
           <Button variant="secondary" onClick={() => undoPolicy(a.driverIds, a.id)}>Undo</Button>
         ) : null}
@@ -197,6 +197,7 @@ function OverrideCard({ a, status }: { a: OverrideArtifact; status?: ArtifactSta
 
 function CfoBriefCard({ a, status }: { a: CfoBrief; status?: ArtifactStatus }) {
   const approveRevision = useStore((s) => s.approveRevision);
+  const advanced = useStore((s) => s.advanced);
   const [copied, setCopied] = useState(false);
   return (
     <Shell icon={<FileText size={15} />} title="Budget owner brief" status={status}>
@@ -211,17 +212,14 @@ function CfoBriefCard({ a, status }: { a: CfoBrief; status?: ArtifactStatus }) {
           <tr><td className="text-muted">Status</td><td><StatusPill status={a.statusBefore} /></td><td><StatusPill status={a.statusAfter} /></td></tr>
         </tbody>
       </table>
-      <div className="text-[13px]"><span className="text-muted">New work to fund:</span> {usd(a.fund)} · <span className="text-muted">Waste still open:</span> {usd(a.fix)}</div>
+      {a.covers && <div className="text-[13px] text-muted">{a.covers}</div>}
       <ul className="space-y-0.5 text-[13px]">
         {a.evidence.map((e) => (
           <li key={e.tier}><span className="font-semibold">{e.tier}</span><span className="block text-muted">{e.detail}</span></li>
         ))}
       </ul>
-      {a.outputPer1k !== undefined && (
-        <div className="text-[13px]"><span className="text-muted">Team output:</span> {a.outputPer1k} merged PRs and newly passing tests per $1,000 spent so far</div>
-      )}
       <div className="grid grid-cols-2 gap-2 text-[13px]">
-        <div><span className="text-muted">Planned spend approved this month</span><div className="font-medium">{pct(a.overrideRate)}</div></div>
+        {advanced && <div><span className="text-muted">Planned spend approved this month</span><div className="font-medium">{pct(a.overrideRate)}</div></div>}
         <div><span className="text-muted">Work slowed without it</span><div className="font-medium">{usd(a.throttledAvoided)}</div></div>
       </div>
       <p className="rounded-md bg-emerald-50/60 px-3 py-2 text-[13px]">{a.recommendation}</p>

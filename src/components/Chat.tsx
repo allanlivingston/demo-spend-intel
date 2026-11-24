@@ -672,7 +672,7 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
           ))}
         </div>
       </div>
-      {below && (
+      {below && messages.length > 0 && (
         <button type="button" aria-label="Scroll to the newest message" onClick={() => scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" })}
           className="absolute bottom-40 left-1/2 z-10 -translate-x-1/2 rounded-full border border-neutral-200 bg-white p-1.5 text-muted shadow-md hover:text-ink">
           <ChevronDown size={18} />

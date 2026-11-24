@@ -5,7 +5,18 @@ import type { Status } from "@/engine";
 
 export const cx = (...xs: (string | false | null | undefined)[]) => xs.filter(Boolean).join(" ");
 export const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
-export const usdK = (n: number) => `$${(n / 1000).toFixed(1)}k`;
+export const usdK = (n: number) => (n === 0 ? "$0" : `$${+(n / 1000).toFixed(1)}k`);
+
+/** Consecutive steps with the same phase read as one: "Looked into it: a; b". */
+export function mergeSteps<T extends { phase: string; summary: string }>(steps: T[]): T[] {
+  const out: T[] = [];
+  for (const s of steps) {
+    const prev = out.at(-1);
+    if (prev && prev.phase === s.phase) out[out.length - 1] = { ...prev, summary: `${prev.summary}; ${s.summary}` };
+    else out.push(s);
+  }
+  return out;
+}
 export const pct = (n: number) => `${Math.round(n * 100)}%`;
 
 export function Card({ children, className, title, right }: { children: ReactNode; className?: string; title?: ReactNode; right?: ReactNode }) {
