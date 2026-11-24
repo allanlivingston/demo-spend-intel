@@ -11,7 +11,7 @@ This app does four things instead:
 
 **Try it:** [demo-spend-intel.vercel.app](https://demo-spend-intel.vercel.app) (passcode in the write-up). A small Live / Offline marker next to "Admin" shows whether agents are running on Claude or replaying recorded runs; every number is computed live either way.
 
-See `SUMMARY.md` for the problem, customer, validation plan and path to product-market fit in bullet points.
+The two-page write-up covers the problem, customer, validation plan and path to product-market fit.
 
 ## Run it
 
@@ -90,7 +90,6 @@ src/replay/      recorded agent runs
 src/state/       browser store, agent client, next step and chip rules
 src/components/  chat, forecast, chart, tabs, drafts, wizard
 src/knowledge/   FAQ and "Ask about this demo" content
-SUMMARY.md       the assignment answer in bullet points
 ```
 
 The data is a constructed month: three teams, about 70 people plus 14 new engineers, 30 days, today is day 18.
