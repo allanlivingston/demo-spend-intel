@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { ArrowRight, Check, Copy, FileText, GitBranch, Scale, Send, ShieldCheck } from "lucide-react";
 import {
-  FUNDING_PATHS, landing, ownerOf, REASON_CODES, type Artifact, type CfoBrief, type Handoff, type OverrideArtifact, type PolicyDiff, type RebalanceArtifact, levelOfTier } from "@/engine";
+  FUNDING_PATHS, handoffTo, handoffWhat, landing, ownerOf, REASON_CODES, type Artifact, type CfoBrief, type Handoff, type OverrideArtifact, type PolicyDiff, type RebalanceArtifact, levelOfTier } from "@/engine";
 import { useStore, type ArtifactStatus } from "@/state/store";
 import { Button, StatusPill, usd, pct, cx } from "./ui";
 
@@ -48,8 +48,36 @@ function DiffRow({ r }: { r: PolicyDiff["rows"][number] }) {
   );
 }
 
-function PolicyDiffCard({ a, status }: { a: PolicyDiff; status?: ArtifactStatus }) {
-  const { applyPolicy, undoPolicy, ownerShipped, demo } = useStore();
+/** The message a fix sends its owner, shown on the fix itself, with the text one click away. */
+function TicketLine({ t, children }: { t: Handoff; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="px-3 pb-2 text-[13px]">
+      <div className="flex gap-2 text-muted">
+        <Send size={12} className="mt-[3px] shrink-0" />
+        <div>
+        {children}{" "}
+        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="whitespace-nowrap text-accent-ink hover:underline">
+          {open ? "Hide" : `Preview ${t.channel === "Ticket draft" ? "the ticket" : "it"}`}
+        </button>
+        </div>
+      </div>
+      {open && (
+        <div className="mt-1.5 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2">
+          <div className="text-[12px] text-muted">{t.channel} · to {t.recipient}</div>
+          <div className="mt-0.5 font-medium text-ink">{t.title}</div>
+          <p className="mt-0.5 leading-5 text-neutral-700">{t.body}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PolicyDiffCard({ a, status, runOf }: { a: PolicyDiff; status?: ArtifactStatus; runOf?: string }) {
+  const { applyPolicy, undoPolicy, ownerShipped, demo, messages } = useStore();
+  // Hand-offs drafted in the same run belong to this fix: shown on its rows instead of as separate cards.
+  const ticketOf = (driverId: string) =>
+    messages.find((m) => runOf && m.runOf === runOf && m.artifact?.kind === "handoff" && m.artifact.driverId === driverId)?.artifact as Handoff | undefined;
   const applied = status === "applied";
   const mine = a.rows.filter((r) => !ownerOf(r.driverId));
   const theirs = a.rows.filter((r) => ownerOf(r.driverId));
@@ -65,7 +93,16 @@ function PolicyDiffCard({ a, status }: { a: PolicyDiff; status?: ArtifactStatus 
         <div>
           {theirs.length > 0 && <div className="mb-1 text-[12px] font-semibold uppercase tracking-wide text-muted">You apply</div>}
           <div className="divide-y divide-neutral-100 rounded-md border border-neutral-200">
-            {mine.map((r) => <DiffRow key={r.driverId} r={r} />)}
+            {mine.map((r) => {
+              const t = ticketOf(r.driverId);
+              const sent = (demo.handedOff ?? []).includes(r.driverId);
+              return (
+                <div key={r.driverId}>
+                  <DiffRow r={r} />
+                  {t && <TicketLine t={t}>{sent ? <span>Sent {handoffWhat(t)} to {handoffTo(t)}.</span> : <span>Applying also sends {handoffWhat(t)} to {handoffTo(t)}.</span>}</TicketLine>}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -76,20 +113,27 @@ function PolicyDiffCard({ a, status }: { a: PolicyDiff; status?: ArtifactStatus 
             {theirs.map((r) => {
               const shipped = demo.appliedFixes.includes(r.driverId);
               const sent = (demo.handedOff ?? []).includes(r.driverId);
+              const t = ticketOf(r.driverId);
+              const what = t ? ` as ${handoffWhat(t)}` : "";
+              const line = shipped ? <span className="text-ok-ink">Fixed by {ownerOf(r.driverId)!.short}.</span>
+                : sent ? <span>Sent to {ownerOf(r.driverId)!.name}{what}. Not counted until they ship it.</span>
+                : <span>Owned by {ownerOf(r.driverId)!.name}. Applying sends it to them{what}.</span>;
               return (
                 <div key={r.driverId}>
                   <DiffRow r={r} />
+                  {t ? <TicketLine t={t}>{line}</TicketLine> : (
                   <div className="flex items-center gap-2 px-3 pb-2 text-[13px] text-muted">
                     <Send size={12} />
-                    {shipped ? <span className="text-ok-ink">Fixed by {ownerOf(r.driverId)!.short}.</span>
-                      : sent ? <>Sent to {ownerOf(r.driverId)!.name}. Not counted until they ship it.</>
-                      : <>Owned by {ownerOf(r.driverId)!.name}. Applying sends it to them.</>}
-                    {sent && !shipped && (
+                    {line}
+                  </div>
+                  )}
+                  {sent && !shipped && (
+                  <div className="flex px-3 pb-2">
                       <button type="button" onClick={() => ownerShipped(r.driverId)} className="ml-auto rounded border border-neutral-300 px-2 py-0.5 text-[12px] hover:border-ok hover:text-ok-ink" title="Demo control: play the owner's side">
                         Mark as shipped
                       </button>
-                    )}
                   </div>
+                  )}
                 </div>
               );
             })}
@@ -246,10 +290,10 @@ function HandoffCard({ a }: { a: Handoff }) {
   );
 }
 
-export function ArtifactCard({ a, status }: { a: Artifact; status?: ArtifactStatus }) {
+export function ArtifactCard({ a, status, runOf }: { a: Artifact; status?: ArtifactStatus; runOf?: string }) {
   switch (a.kind) {
     case "handoff": return <HandoffCard a={a} />;
-    case "policy_diff": return <PolicyDiffCard a={a} status={status} />;
+    case "policy_diff": return <PolicyDiffCard a={a} status={status} runOf={runOf} />;
     case "rebalance_plan": return <RebalanceCard a={a} status={status} />;
     case "governed_override": return <OverrideCard a={a} status={status} />;
     case "cfo_brief": return <CfoBriefCard a={a} status={status} />;

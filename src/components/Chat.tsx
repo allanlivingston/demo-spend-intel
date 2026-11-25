@@ -17,7 +17,7 @@ import { ArtifactCard } from "./Artifacts";
 import { Activity, Agents, Users, Workstreams } from "./Details";
 import { HealthPanel } from "./HealthPanel";
 import { PacingChart } from "./PacingChart";
-import { cx, usd } from "./ui";
+import { cx, StatusPill, usd } from "./ui";
 
 /** Money decisions an auditor or budget owner will ask about open in a full-page review. */
 export const NEEDS_REVIEW: Artifact["kind"][] = ["cfo_brief", "governed_override"];
@@ -53,9 +53,15 @@ const same = (a: Snapshot, b: Snapshot) => a.group === b.group && JSON.stringify
 
 function Frame({ icon, title, right, children, id, stale }: {
   icon: React.ReactNode; title: string; right?: React.ReactNode; children: React.ReactNode; id?: string;
-  stale?: { changed: boolean; kind: ViewKind };
+  stale?: { changed: boolean; kind: ViewKind; open: boolean };
 }) {
   const postView = useStore((s) => s.postView);
+  // The live copy is already in the conversation (the newest one): go to it rather than add another.
+  const toCurrent = (kind: ViewKind) => {
+    const el = document.querySelector<HTMLElement>(`[data-live-view][data-view="${kind}"]`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    else postView(kind);
+  };
   return (
     <section id={id} className={cx("overflow-hidden rounded-xl border bg-white", stale ? "border-black/[0.06]" : "border-black/10")}>
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-neutral-100 px-4 py-2.5">
@@ -63,15 +69,15 @@ function Frame({ icon, title, right, children, id, stale }: {
         <h2 className="whitespace-nowrap text-[15px] font-semibold">{title}</h2>
         <div className="ml-auto flex flex-wrap items-center gap-2">{right}</div>
       </header>
-      {stale && (
+      {stale?.open && (
         <div className="flex items-center gap-2 border-b border-neutral-100 bg-neutral-50 px-4 py-1.5 text-[13px] text-muted">
-          {stale.changed ? "Earlier copy. The numbers have changed since." : "Earlier copy."}
-          <button type="button" onClick={() => postView(stale.kind)} className="ml-auto font-medium text-accent-ink hover:underline">
-            Show current
+          {stale.changed ? "Earlier copy, as it was at this point. The numbers have changed since." : "Earlier copy, as it was at this point."}
+          <button type="button" onClick={() => toCurrent(stale.kind)} className="ml-auto whitespace-nowrap font-medium text-accent-ink hover:underline">
+            Go to current
           </button>
         </div>
       )}
-      <div className={cx(stale && "pointer-events-none opacity-70")}>{children}</div>
+      <div className={cx(stale && "pointer-events-none opacity-80")}>{children}</div>
     </section>
   );
 }
@@ -165,7 +171,10 @@ const TAB_LABEL: Record<ForecastTab, string> = { chart: "This month", workstream
 
 function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: string }) {
   const { s, stale } = useView(snap, live);
-  const [open, setOpen] = useState(true);
+  // Unset: the live copy is open and earlier copies are collapsed, so a copy collapses as soon as a newer one is posted.
+  // Once the admin opens or collapses a copy, that choice sticks.
+  const [userOpen, setOpen] = useState<boolean | null>(null);
+  const open = userOpen ?? live;
   const [tab0, setTab] = useState<ForecastTab>("chart");
   const advanced = useStore((st) => st.advanced);
   const tabs = (Object.keys(TAB_LABEL) as ForecastTab[]).filter((t) => advanced || t === "chart" || t === "users" || t === "agents");
@@ -187,22 +196,34 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
       id={id}
       icon={<LineChart size={15} />}
       title="Spend forecast"
-      stale={stale && { ...stale, kind: "forecast" }}
+      stale={stale && { ...stale, kind: "forecast", open }}
       right={
-        <>
-          {live ? <TeamSwitch s={s} /> : <span className="text-[13px] text-muted">{s.group === "all" ? "All teams" : GROUPS[s.group].name}</span>}
-          <button type="button" onClick={() => setOpen(!open)} className="rounded-md px-2 py-1 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">
-            {open ? "Collapse" : "Expand"}
+        live ? (
+          <>
+            <TeamSwitch s={s} />
+            <button type="button" onClick={() => setOpen(!open)} className="rounded-md px-2 py-1 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">
+              {open ? "Collapse" : "Expand"}
+            </button>
+          </>
+        ) : (
+          // An earlier copy: one line with its numbers at that point; the whole line opens it.
+          <button type="button" onClick={() => setOpen(!open)} aria-expanded={open}
+            className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md px-2 py-1 text-left text-[13px] text-muted hover:bg-neutral-100">
+            <span>{open ? "" : "Earlier copy · "}{s.group === "all" ? "All teams" : GROUPS[s.group].name} lands at <span className="font-medium tabular-nums text-ink">{usd(f.p50)}</span> of {usd(f.pool)}</span>
+            <StatusPill status={f.status} funded={f.fundedVariance} />
+            <span className="inline-flex items-center gap-0.5 hover:text-ink">{open ? "Collapse" : "Expand"}<ChevronDown size={13} className={cx("transition-transform", open && "rotate-180")} /></span>
           </button>
-        </>
+        )
       }
     >
-      <div className="flex flex-wrap gap-x-10 gap-y-2 px-4 py-3">
+      {(live || open) && <div className="flex flex-wrap gap-x-10 gap-y-2 px-4 py-3">
         <Stat label="Lands at" value={usd(f.p50)} tone={f.p50 > f.pool ? "text-bad" : undefined} hint="if nothing changes" />
         <Stat label="Budget" value={usd(f.pool)} />
         <Stat label={third.label} value={third.value} tone={third.tone} learn={live ? third.learn : undefined} />
         <div className="ml-auto self-end whitespace-nowrap text-[13px] text-muted">Day {TODAY} of 30</div>
-      </div>
+      </div>}
+      {/* An earlier copy shows its chart as it was then; the tabs read today's numbers, so only the live copy has them. */}
+      {open && !live && <div className="border-t border-neutral-100"><PacingChart snap={s} /></div>}
       {open && live && (
         <>
           <div role="tablist" aria-label="Forecast views" className="flex gap-4 overflow-x-auto border-y border-neutral-100 px-4 text-[15px] [scrollbar-width:none]">
@@ -220,7 +241,7 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
           {tab === "activity" && <Activity />}
         </>
       )}
-      <Recs s={s} live={live} id={id ? "actions" : undefined} />
+      {(live || open) && <Recs s={s} live={live} id={id ? "actions" : undefined} />}
     </Frame>
   );
 }
@@ -394,7 +415,7 @@ function Draft({ x, all }: { x: ChatMessage; all: ChatMessage[] }) {
   const superseded = isSuperseded(x, all);
   const declineDraft = useStore((s) => s.declineDraft);
   const busy = busyOf(all);
-  const body = NEEDS_REVIEW.includes(x.artifact!.kind) ? <ReviewLink m={x} /> : <ArtifactCard a={x.artifact!} status={x.artifactStatus} />;
+  const body = NEEDS_REVIEW.includes(x.artifact!.kind) ? <ReviewLink m={x} /> : <ArtifactCard a={x.artifact!} status={x.artifactStatus} runOf={x.runOf} />;
   if (x.artifactStatus === "declined")
     return (
       <div>
@@ -450,7 +471,9 @@ function Message({ m, all, liveIds }: { m: ChatMessage; all: ChatMessage[]; live
       </div>
     );
   }
-  const artifacts = all.filter((x) => x.runOf === m.id && x.artifact);
+  // A hand-off drafted with a fix shows on that fix's card (one Apply sends it), not as a second card with its own button.
+  const diffIds = new Set(all.filter((x) => x.runOf === m.id && x.artifact?.kind === "policy_diff").flatMap((x) => (x.artifact as { driverIds: string[] }).driverIds));
+  const artifacts = all.filter((x) => x.runOf === m.id && x.artifact && !(x.artifact.kind === "handoff" && diffIds.has(x.artifact.driverId)));
   return (
     <div className="space-y-3">
       <AgentRunCard m={m} />

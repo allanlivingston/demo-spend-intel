@@ -5,7 +5,7 @@ import { GROUPS } from "./data";
 import { breakdown, kpis, usd } from "./insights";
 import { driverEffects, evidenceTier, forecast, MAX_TARGET_CHANGE, poolOf, rebalancePlan, throttle, isDeclined } from "./model";
 import { evidenceAge } from "./pacing";
-import { policyRow } from "./routing";
+import { ownerOf, policyRow } from "./routing";
 import { SIGNAL_COUNTS } from "./evidence";
 import { isAdvanced } from "./viewMode";
 import type { DemoState, GroupId } from "./types";
@@ -243,6 +243,11 @@ export const HandoffZ = z.object({
   body: z.string(),
 });
 export type Handoff = z.infer<typeof HandoffZ>;
+
+/** Who a hand-off goes to, in a sentence ("sent the ticket to the Jira connector's owner"). */
+export const handoffTo = (h: Handoff) => (h.driverId === "a-connector" ? "the Jira connector's owner" : ownerOf(h.driverId)?.short ?? h.recipient);
+/** What is sent, in a sentence ("a ticket", "a pre-loaded Claude Code diagnostic session"). */
+export const handoffWhat = (h: Handoff) => (h.channel === "Ticket draft" ? "a ticket" : `a ${h.channel.charAt(0).toLowerCase()}${h.channel.slice(1)}`);
 
 export function draftHandoff(s: DemoState, g: GroupId, driverId: string): Handoff {
   const d = driverEffects(s, g).find((e) => e.driver.id === driverId)?.driver;

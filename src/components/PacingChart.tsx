@@ -2,7 +2,7 @@
 import { ChevronDown, CircleHelp } from "lucide-react";
 import { Area, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, usePlotArea, useXAxisScale, useYAxisScale, XAxis, YAxis } from "recharts";
 import { dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, pacing, TODAY, type GroupId } from "@/engine";
-import { useStore } from "@/state/store";
+import { useStore, type Snapshot } from "@/state/store";
 import { usd, usdK } from "./ui";
 
 /** Chart readouts round to $100, like the rest of the app. */
@@ -11,9 +11,16 @@ const r100 = (v: number) => Math.round(v / 100) * 100;
 const FORMULA =
   "Likely landing = spend to date + remaining days at each driver's daily rate, shaped by the team's weekly pattern, plus active drivers, minus applied fixes. The shaded band runs to a high case, which widens as more spend comes from autonomous agents.";
 
-/** The month's spend curve. Clicking any day asks Claude what happened (or is forecast) that day. */
-export function PacingChart({ onDay }: { onDay?: (question: string, context: string) => void }) {
-  const { demo, group, ghost, advanced, dailyOpen, setDailyOpen } = useStore();
+/**
+ * The month's spend curve. Clicking any day asks Claude what happened (or is forecast) that day.
+ * With snap, it draws an earlier copy as it was at that point in the conversation.
+ */
+export function PacingChart({ onDay, snap }: { onDay?: (question: string, context: string) => void; snap?: Snapshot }) {
+  const store = useStore();
+  const { advanced, dailyOpen, setDailyOpen } = store;
+  const demo = snap?.demo ?? store.demo;
+  const group = snap?.group ?? store.group;
+  const ghost = snap ? null : store.ghost;
   const f = forecast(demo, group);
   const groups: GroupId[] = group === "all" ? GROUP_IDS : [group];
   const yAt = (day: number) => {

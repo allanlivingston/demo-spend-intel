@@ -4,7 +4,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { ownerOf, headline,
   setAdvancedView, storySummary, draftCfoBrief, draftOverride, draftPolicyDiff, draftRebalance, forecast, initialState,
-  type Artifact, type DayPoint, type DemoState, type GroupId, type GroupSelection, type ScenarioId, type SharingLevel, isDeclined, driverById
+  type Artifact, type DayPoint, type DemoState, type GroupId, type GroupSelection, type ScenarioId, type SharingLevel, isDeclined, driverById,
+  handoffTo, type Handoff,
 } from "@/engine";
 import type { AgentId, Backend, StepPhase } from "@/agents/types";
 
@@ -304,6 +305,13 @@ export const useStore = create<Store>()(
 
         // The admin applies only their own changes. Fixes owned by someone else are sent to that owner.
         applyPolicy: (driverIds, artifactId) => {
+          // A ticket drafted with the fix (same run) goes out with it: one approval, nothing left behind to send.
+          const runOf = artifactId ? get().messages.find((m) => m.artifact?.id === artifactId)?.runOf : undefined;
+          const tickets = runOf
+            ? get().messages.map((m) => (m.runOf === runOf && m.artifact?.kind === "handoff" ? m.artifact : null))
+              .filter((h): h is Handoff => !!h && driverIds.includes(h.driverId) && !ownerOf(h.driverId))
+            : [];
+          tickets.forEach((h) => get().sendHandoff(h.driverId));
           const d = get().demo;
           const mine = driverIds.filter((x) => !ownerOf(x));
           const theirs = driverIds.filter((x) => ownerOf(x));
@@ -315,7 +323,8 @@ export const useStore = create<Store>()(
           if (artifactId) get().setArtifactStatus(artifactId, "applied");
           if (mine.length) log({ actor: "Admin", action: "Apply policy", detail: mine.join(", "), evidenceTier: 1 });
           theirs.forEach((x) => log({ actor: "Admin", action: `Sent fix to ${ownerOf(x)!.name}`, detail: x, evidenceTier: 1 }));
-          update(theirs.length ? (mine.length ? "Applied your changes and sent the rest to its owner." : "Sent to its owner.") : "Applied.");
+          const done = theirs.length ? (mine.length ? "Applied your changes and sent the rest to its owner." : "Sent to its owner.") : "Applied.";
+          update(tickets.length ? `${done.replace(/\.$/, "")}, and sent the ticket to ${handoffTo(tickets[0])}.` : done);
         },
         sendHandoff: (driverId) => {
           const d = get().demo;
