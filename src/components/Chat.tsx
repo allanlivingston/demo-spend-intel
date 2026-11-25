@@ -2,7 +2,7 @@
 // Chat-first: one conversation that only moves forward. Claude opens with a briefing (forecast + recommendations).
 // Everything after appends below. Views (forecast, recommendations) can be posted again at the bottom; only the
 // newest copy of each is live, older copies render from the state they were posted with, so they match their text.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, LineChart, ListChecks, Sparkles, X } from "lucide-react";
 import {
   breakdown, confidenceOf, driverById, forecast, GROUP_IDS, GROUPS, headline, kpis, ownerOf, ruleFor, TODAY,
@@ -20,6 +20,7 @@ import { PacingChart } from "./PacingChart";
 import { cx, StatusPill, Term, TERMS, usd } from "./ui";
 import { markUsed, NewDot } from "./NewDot";
 import { RuleSuggestion, WhyAsk } from "./Rules";
+import { glide, glideTo } from "./glide";
 
 /** Money decisions an auditor or budget owner will ask about open in a full-page review. */
 
@@ -60,7 +61,7 @@ function Frame({ icon, title, right, children, id, stale }: {
   // The live copy is already in the conversation (the newest one): go to it rather than add another.
   const toCurrent = (kind: ViewKind) => {
     const el = document.querySelector<HTMLElement>(`[data-live-view][data-view="${kind}"]`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (el) glideTo(el);
     else postView(kind);
   };
   return (
@@ -689,7 +690,7 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
     if (a.type === "run") startAgentRun(a.run);
     else if (a.type === "ask") ask(a.q, a.context);
     else if (a.type === "view") postView(a.kind);
-    else if (a.type === "review") document.getElementById(`draft-${a.artifactId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    else if (a.type === "review") glideTo(document.getElementById(`draft-${a.artifactId}`));
     else if (a.type === "decline") useStore.getState().declineDraft(a.artifactId);
     else if (a.type === "shipped") useStore.getState().ownerShipped(a.driverId);
     else if (a.type === "approve") {
@@ -706,8 +707,6 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
   const seen = useRef(messages.length);
   const [viewH, setViewH] = useState(0);
   const [below, setBelow] = useState(false);
-  /** The message last moved to the top. Room is kept under it so it can get there even when it is short. */
-  const [anchor, setAnchor] = useState<string | null>(null);
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
@@ -720,30 +719,40 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => { ro.disconnect(); el.removeEventListener("scroll", onScroll); };
   }, []);
-  useEffect(() => {
+  // A layout effect, so the reply can be placed before the first paint (see below).
+  useLayoutEffect(() => {
     const el = scroller.current;
     const before = seen.current;
     seen.current = messages.length;
     if (!el || messages.length === before) return;
-    if (!messages.length) return void el.scrollTo({ top: 0, behavior: "smooth" });
+    if (!messages.length) return void glide(el, () => 0);
     if (messages.length < before) return;
     const added = messages.slice(before);
     const user = [...added].reverse().find((m) => m.role === "user");
-    // Like claude.ai: a new question goes to the top. Otherwise the first new reply ("Applied your changes…", "Why
-    // decline it?") goes to the top, so it is read from its first line. A run starting or its drafts don't move the page.
+    // A new question goes to the top, like claude.ai, and its answer streams in below it. New replies ("Applied your
+    // changes…", "Why decline it?") arrive whole: scroll down as far as possible to show them, but never so far that
+    // the first new line leaves the top. A run starting or its drafts don't move the page.
     const target = user ?? added.find((m) => m.role === "assistant" && !m.runOf && !m.run && (m.text || m.view));
     if (!target) return;
-    setAnchor(target.id);
-    // Two frames: the room under the target is rendered before the scroll is measured.
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const msg = document.getElementById(`msg-${target.id}`);
-      if (msg) el.scrollTo({ top: el.scrollTop + msg.getBoundingClientRect().top - el.getBoundingClientRect().top - 24, behavior: "smooth" });
-    }));
+    // The aim is re-read every frame, so a chart that gets its height mid-scroll doesn't make it land short. Earlier
+    // forecast copies fold when a new one arrives, so this can mean scrolling up a little.
+    const msg = document.getElementById(`msg-${target.id}`);
+    if (!msg) return;
+    // A draft folding to one line, or an earlier forecast copy folding, can leave the new reply above the screen. Then
+    // the page would jump and scroll back. Instead, put it mid-screen before the first paint, where the reader was
+    // looking, and let it glide up from there.
+    const top = msg.getBoundingClientRect().top - el.getBoundingClientRect().top;
+    if (top < 0) el.scrollTop += top - el.clientHeight * 0.5;
+    requestAnimationFrame(() => {
+      glide(el, () => {
+        const firstLine = el.scrollTop + msg.getBoundingClientRect().top - el.getBoundingClientRect().top - 24;
+        return target === user ? firstLine : Math.min(firstLine, el.scrollHeight - el.clientHeight);
+      });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
-  // Room under the newest question (or reply moved to the top) so it can sit at the top while what follows is short.
-  const anchorAt = anchor ? shown.findIndex((m) => m.id === anchor) : -1;
-  const lastUser = anchorAt >= 0 ? anchorAt : shown.map((m) => m.role).lastIndexOf("user");
+  // Room under the newest question so it can sit at the top while the reply is still short.
+  const lastUser = shown.map((m) => m.role).lastIndexOf("user");
 
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
@@ -789,7 +798,7 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
         </div>
       </div>
       <Composer chips={chips} onChip={onChip}
-        onJump={below && messages.length > 0 ? () => scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" }) : undefined} />
+        onJump={below && messages.length > 0 ? () => { const el = scroller.current; if (el) glide(el, () => el.scrollHeight); } : undefined} />
       {activityOpen && <ActivitySheet onClose={() => setActivityOpen(false)} />}
     </div>
   );
