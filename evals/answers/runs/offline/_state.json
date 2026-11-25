@@ -1,0 +1,60 @@
+{
+  "metrics": [
+    {
+      "id": "pass",
+      "label": "All checks",
+      "kind": "binary"
+    },
+    {
+      "id": "facts",
+      "label": "Facts found",
+      "kind": "float",
+      "scale": 1
+    },
+    {
+      "id": "grounded",
+      "label": "Grounded",
+      "kind": "binary"
+    },
+    {
+      "id": "draft_ok",
+      "label": "Right draft",
+      "kind": "binary"
+    },
+    {
+      "id": "forbidden_ok",
+      "label": "No bad claims",
+      "kind": "binary"
+    },
+    {
+      "id": "concise",
+      "label": "Short enough",
+      "kind": "binary"
+    },
+    {
+      "id": "plain",
+      "label": "No jargon",
+      "kind": "binary"
+    }
+  ],
+  "perf_fields": [
+    {
+      "id": "latency_s",
+      "label": "Latency",
+      "unit": "s"
+    },
+    {
+      "id": "tool_calls",
+      "label": "Tool calls"
+    },
+    {
+      "id": "in_tokens",
+      "label": "In tokens"
+    },
+    {
+      "id": "out_tokens",
+      "label": "Out tokens"
+    }
+  ],
+  "metrics_md": "See evals/answers/README.md for what each check means."
+}

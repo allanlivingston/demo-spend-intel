@@ -45,3 +45,10 @@ assignment.md
 *.pdf
 /.next-build/
 !.env.example
+
+# Eval output that is derived or bulky
+evals/**/traces/
+evals/**/report.html
+evals/**/trajectory/
+evals/**/state.json
+evals/**/errors.jsonl
