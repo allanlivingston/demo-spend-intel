@@ -68,7 +68,10 @@ export function freshSummary(s: DemoState, kind: string, art?: { kind: string; g
     const after = forecast({ ...s, appliedFixes: [...s.appliedFixes, ...mine.map((r) => r.driverId)] }, g).p50;
     if (mine.length)
       return `It stops spend that produced nothing: ${mine.map((r) => label(r.driverId)).join(" and ")}. With ${mine.length > 1 ? "those" : "that"} applied, ${GROUPS[g].name} lands at ${usd100(after)}.${owner ? ` The cache fix is a code change, so it goes to ${owner.short}.` : ""}`;
-    if (owner) return `${label(theirs[0].driverId)} needs a code change, so it goes to ${owner.name}. It saves ${usd(theirs[0].savings)} once they ship it.`;
+    if (owner) {
+      const what = label(theirs[0].driverId);
+      return `${what.charAt(0).toUpperCase()}${what.slice(1)}. The fix is a code change, so it goes to ${owner.short}. It saves ${usd(theirs[0].savings)} once they ship it.`;
+    }
   }
   return draftAnswer(s, "", kind);
 }

@@ -3,7 +3,7 @@
 // Everything after appends below. Views (forecast, recommendations) can be posted again at the bottom; only the
 // newest copy of each is live, older copies render from the state they were posted with, so they match their text.
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, FileText, LineChart, ListChecks, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, FileText, LineChart, ListChecks, ShieldCheck, Sparkles, X } from "lucide-react";
 import {
   breakdown, confidenceOf, forecast, GROUP_IDS, GROUPS, headline, kpis, ownerOf, TODAY,
   type Artifact, type BreakdownRow, type GroupSelection,
@@ -552,15 +552,21 @@ function Composer({ chips, onChip, onJump }: { chips: ChipSpec[]; onChip: (c: Ch
               placeholder={busy ? "Claude is working…" : "Ask about spend, or tell Claude what to fix"}
               className="h-7 flex-1 bg-transparent text-[16px] leading-[23px] text-ink outline-none placeholder:text-faint"
             />
+            {/* In the box, not in the chip row, so it never covers a card's buttons or pushes a chip onto a second line. */}
+            {onJump && (
+              <button type="button" aria-label="Scroll to the newest message" title="Scroll to the newest message" onClick={onJump}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-neutral-100 hover:text-ink">
+                <ArrowDown size={16} />
+              </button>
+            )}
             <ModelSelect />
             <button type="button" onClick={send} disabled={busy || !text.trim()} aria-label="Send" className="rounded-lg bg-accent p-1.5 text-white disabled:opacity-30">
               <ArrowUp size={16} />
             </button>
           </div>
         </div>
-        {(chips.length > 0 || onJump) && (
-          <div className="mt-2 flex items-start gap-1.5">
-          <div className="flex flex-1 flex-wrap gap-1.5">
+        {chips.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
             {chips.map((c) => (
               <button
                 key={c.text}
@@ -574,14 +580,6 @@ function Composer({ chips, onChip, onJump }: { chips: ChipSpec[]; onChip: (c: Ch
                 {c.text}
               </button>
             ))}
-          </div>
-            {/* Beside the chips, not floating over the conversation, so it never covers a card's buttons. */}
-            {onJump && (
-              <button type="button" aria-label="Scroll to the newest message" title="Scroll to the newest message" onClick={onJump}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-black/10 bg-white text-muted hover:text-ink">
-                <ChevronDown size={16} />
-              </button>
-            )}
           </div>
         )}
       </div>
