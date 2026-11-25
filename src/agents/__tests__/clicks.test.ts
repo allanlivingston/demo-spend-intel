@@ -150,6 +150,20 @@ describe("state moves the chips forward", () => {
     expect(cs.length).toBeLessThanOrEqual(MAX_CHIPS);
   });
 
+  test("after asking about one fix from its card, the next step fixes that one, with a recording to replay", async () => {
+    const demo = initialState("C");
+    for (const r of breakdown(demo, "pe").rows.filter((x) => x.side === "fix" && x.state === "open")) {
+      const cs = chips(demo, "pe", [user(`Tell me about this: ${r.driver.label}.`)]);
+      expect(cs[0].primary).toBe(true);
+      expect(cs[0].text).toMatch(/^Fix the /);
+      expect(cs.filter((c) => c.primary)).toHaveLength(1);
+      expect(new Set(cs.map((c) => c.text.toLowerCase())).size).toBe(cs.length);
+      const run = cs[0].action.type === "run" ? cs[0].action.run : null;
+      expect(run?.driverId).toBe(r.driver.id);
+      expect(await findRecording(run!.agent, "C", run!.driverId)).not.toBeNull();
+    }
+  });
+
   test("no chips while Claude is working", () => {
     const running = { id: "r", role: "assistant", run: { status: "running", steps: [] } } as unknown as ChatMessage;
     expect(chips(initialState("A"), "pe", [running])).toEqual([]);

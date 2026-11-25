@@ -30,7 +30,7 @@ export function ReviewScreen() {
           <ArrowLeft size={15} /> Back to chat
         </button>
         <span className="text-[15px] font-semibold">Review before approving</span>
-        {done && <span className="ml-auto flex items-center gap-1 text-[15px] text-ok"><CheckCircle2 size={15} /> Approved and recorded in Activity</span>}
+        {done && <span className="ml-auto flex items-center gap-1 text-[15px] text-ok-ink"><CheckCircle2 size={15} /> Approved and recorded in Activity</span>}
       </header>
       <div className="mx-auto grid min-h-0 w-full max-w-6xl flex-1 grid-cols-2 gap-8 overflow-y-auto px-6 py-6">
         <section className="space-y-4">
@@ -40,7 +40,7 @@ export function ReviewScreen() {
             <ol className="space-y-2">
               {mergeSteps(run.steps).map((s, i) => (
                 <li key={i} className="flex gap-2 text-[15px]">
-                  <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-ok" />
+                  <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-ok-ink" />
                   <span><span className="font-medium">{s.phase}</span><span className="block text-neutral-600">{s.summary}</span></span>
                 </li>
               ))}
@@ -57,7 +57,7 @@ export function ReviewScreen() {
           <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">The change</h2>
           <ArtifactCard a={art.artifact} status={art.artifactStatus} />
           {done && (
-            <button type="button" onClick={() => setReview(null)} className="w-full rounded-lg bg-accent px-4 py-2.5 text-[15px] font-medium text-white">
+            <button type="button" onClick={() => setReview(null)} className="w-full rounded-lg bg-ink px-4 py-2.5 text-[15px] font-medium text-white hover:bg-black">
               Back to chat
             </button>
           )}

@@ -82,28 +82,38 @@ function NavItem({ icon, label, onClick, collapsed, title }: { icon: React.React
 }
 
 export function Sidebar({ onTour, onActivity, onGuide }: { onTour: () => void; onActivity: () => void; onGuide: () => void }) {
-  const { newChat, reset, pastChats, openPastChat, audit, messages, currentChatId } = useStore();
+  const { newChat, reset, pastChats, openPastChat, audit, auditSeen, markAuditSeen, messages, currentChatId } = useStore();
+  const unseen = Math.max(0, audit.length - (auditSeen ?? 0));
   // The open conversation is always listed (with a live title), highlighted, even before it is first saved.
   const chats = currentChatId ? pastChats : [{ id: "current", title: "New chat", messages }, ...pastChats];
   const openId = currentChatId ?? "current";
   // Like claude.ai: open by default; the panel icon collapses it to a rail; hovering the rail opens it over the page
   // for a moment; clicking the logo (or the panel icon while collapsed) keeps it open.
-  const [pinned, setPinnedState] = useState(true);
+  // In a narrow window (under 1024px) it is always a rail, so the page keeps its width: expanding opens it over the
+  // page until you pick something or click away, and the wide-window choice is left as it was.
+  const [pinnedPref, setPinnedState] = useState(true);
   const [peek, setPeek] = useState(false);
+  const narrow = useNarrow();
   useEffect(() => {
     try { if (localStorage.getItem(PIN_KEY) === "0") setPinnedState(false); } catch {}
   }, []);
+  const pinned = pinnedPref && !narrow;
   const setPinned = (v: boolean) => {
-    setPinnedState(v);
     setPeek(false);
+    if (narrow) return setPeek(v);
+    setPinnedState(v);
     try { localStorage.setItem(PIN_KEY, v ? "1" : "0"); } catch {}
   };
   const collapsed = !pinned && !peek;
+  /** Over the page in a narrow window: close once something is picked. */
+  const then = (fn: () => void) => () => { fn(); if (narrow) setPeek(false); };
   return (
     <aside id="sidebar" className={cx("relative h-full shrink-0 transition-[width] duration-200", pinned ? "w-[288px]" : "w-[60px]")}>
+     {narrow && peek && <div className="fixed inset-0 z-20" onClick={() => setPeek(false)} aria-hidden />}
      <div
-      onMouseEnter={() => !pinned && setPeek(true)}
-      onMouseLeave={() => setPeek(false)}
+      // Hover opens it only in a wide window; in a narrow one it opens and closes on click, like a menu.
+      onMouseEnter={() => !pinned && !narrow && setPeek(true)}
+      onMouseLeave={() => !narrow && setPeek(false)}
       className={cx("absolute inset-y-0 left-0 z-30 flex flex-col border-r-[0.5px] border-black/10 bg-sidebar transition-[width,box-shadow] duration-200",
         collapsed ? "w-[60px]" : "w-[288px]", peek && !pinned && "shadow-xl")}
     >
@@ -115,10 +125,10 @@ export function Sidebar({ onTour, onActivity, onGuide }: { onTour: () => void; o
           </button>
         ) : (
           <>
-            <button type="button" onClick={() => setPinned(!pinned)} aria-label={pinned ? "Collapse sidebar" : "Keep sidebar open"} title={pinned ? "Collapse sidebar" : "Keep sidebar open"} className="rounded-md p-1.5 text-muted hover:bg-black/5 hover:text-ink">
+            <button type="button" onClick={() => setPinned(narrow ? false : !pinned)} aria-label={pinned || narrow ? "Collapse sidebar" : "Keep sidebar open"} title={pinned || narrow ? "Collapse sidebar" : "Keep sidebar open"} className="rounded-md p-1.5 text-muted hover:bg-black/5 hover:text-ink">
               <PanelLeft size={18} />
             </button>
-            <button type="button" onClick={() => setPinned(true)} title={pinned ? undefined : "Keep sidebar open"} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+            <button type="button" onClick={() => !narrow && setPinned(true)} title={pinned || narrow ? undefined : "Keep sidebar open"} className="flex min-w-0 flex-1 items-center gap-2 text-left">
               <span className="truncate font-serif text-[19px]">Spend Intelligence</span>
             </button>
             <DemoMenu />
@@ -127,10 +137,10 @@ export function Sidebar({ onTour, onActivity, onGuide }: { onTour: () => void; o
       </div>
 
       <nav className="space-y-0.5 px-2">
-        <NavItem icon={<Plus size={16} className="text-ink" />} label="New chat" onClick={newChat} collapsed={collapsed} title="Start a new conversation. Approved changes stay." />
-        <NavItem icon={<RotateCcw size={16} className="text-ink" />} label="Reset demo" onClick={reset} collapsed={collapsed} title="Restart this scenario from its starting numbers" />
-        <NavItem icon={<Compass size={16} className="text-ink" />} label="Run the welcome wizard" onClick={onTour} collapsed={collapsed} title="A short walkthrough of the screen" />
-        <NavItem icon={<CircleHelp size={16} className="text-ink" />} label="Ask about this demo" onClick={onGuide} collapsed={collapsed} title="Why it's built this way: the problem, workflows, layout and nav choices" />
+        <NavItem icon={<Plus size={16} className="text-ink" />} label="New chat" onClick={then(newChat)} collapsed={collapsed} title="Start a new conversation. Approved changes stay." />
+        <NavItem icon={<RotateCcw size={16} className="text-ink" />} label="Reset demo" onClick={then(reset)} collapsed={collapsed} title="Restart this scenario from its starting numbers" />
+        <NavItem icon={<Compass size={16} className="text-ink" />} label="Run the welcome wizard" onClick={then(onTour)} collapsed={collapsed} title="A short walkthrough of the screen" />
+        <NavItem icon={<CircleHelp size={16} className="text-ink" />} label="Ask about this demo" onClick={then(onGuide)} collapsed={collapsed} title="Why it's built this way: the problem, workflows, layout and nav choices" />
       </nav>
 
       {!collapsed && (chats.length > 1 || messages.length > 0 || pastChats.length > 0) && (
@@ -142,7 +152,7 @@ export function Sidebar({ onTour, onActivity, onGuide }: { onTour: () => void; o
               <button
                 key={c.id}
                 type="button"
-                onClick={() => openPastChat(c.id)}
+                onClick={then(() => openPastChat(c.id))}
                 aria-current={open ? "page" : undefined}
                 className={cx("flex h-8 w-full items-center rounded-lg px-2.5 text-left text-[15px] text-ink hover:bg-black/5", open && "bg-black/[0.06]")}
               >
@@ -161,9 +171,9 @@ export function Sidebar({ onTour, onActivity, onGuide }: { onTour: () => void; o
           </span>
         )}
         <ConnectionDot collapsed={collapsed} />
-        <button type="button" onClick={onActivity} title="Activity: everything approved or sent" className="relative rounded-md p-1.5 text-muted hover:bg-black/5 hover:text-ink">
+        <button type="button" onClick={then(() => { markAuditSeen(); onActivity(); })} title="Activity: everything approved or sent" aria-label={unseen ? `Activity, ${unseen} new` : "Activity"} className="relative rounded-md p-1.5 text-muted hover:bg-black/5 hover:text-ink">
           <History size={17} />
-          {audit.length > 0 && <span className="absolute -right-0.5 -top-0.5 rounded-full bg-accent px-1 text-[9px] font-semibold text-white">{audit.length}</span>}
+          {unseen > 0 && <span className="absolute -right-0.5 -top-0.5 rounded-full bg-accent px-1 text-[9px] font-semibold text-white">{unseen}</span>}
         </button>
       </div>
      </div>
@@ -172,6 +182,21 @@ export function Sidebar({ onTour, onActivity, onGuide }: { onTour: () => void; o
 }
 
 const PIN_KEY = "si-sidebar-pinned";
+
+/** True in a window narrower than 1024px (Tailwind's lg), where an open sidebar would squeeze the page. */
+const NARROW = "(max-width: 1023.98px)";
+function useNarrow() {
+  // Read on first render (the sidebar only renders in the browser), so a narrow window never flashes it open.
+  const [narrow, setNarrow] = useState(() => typeof window !== "undefined" && window.matchMedia(NARROW).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(NARROW);
+    const update = () => setNarrow(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return narrow;
+}
 
 /** Why the last answer was replayed, in plain words. */
 const why = (reason?: string) => {

@@ -220,7 +220,8 @@ export function windowsCounterfactual(s: DemoState) {
 // ---------- Users and agents ----------
 
 export interface PeopleSummary { people: number; newPeople: number; landing: number; blocked: number; workstreams: { name: string; people: number; blocked: number }[] }
-export interface AgentRow { id: string; label: string; landing: number; state: "running" | "fixed" | "waiting" }
+/** kind: what the spend is (base: scheduled runs and service accounts; waste or growth: from a driver). */
+export interface AgentRow { id: string; label: string; landing: number; state: "running" | "fixed" | "waiting"; kind: "base" | "waste" | "growth" }
 
 /** Spend run by people (aggregates only, never per person) and by autonomous agents, for one team. */
 export function usersAndAgents(s: DemoState, g: GroupId): { people: PeopleSummary; agents: AgentRow[] } {
@@ -236,13 +237,14 @@ export function usersAndAgents(s: DemoState, g: GroupId): { people: PeopleSummar
     }),
   };
   const agents: AgentRow[] = [
-    { id: "service", label: "Scheduled runs and service accounts", landing: Math.round((1 - GROUPS[g].memberShare) * baseLanding(g) / 100) * 100, state: "running" },
+    { id: "service", label: "Scheduled runs and service accounts", landing: Math.round((1 - GROUPS[g].memberShare) * baseLanding(g) / 100) * 100, state: "running", kind: "base" },
     ...driverEffects(s, g).filter((e) => e.driver.agentShare > 0).map((e) => ({
       id: e.driver.id,
       // Growth drivers are people; this row is only the agent runs they start.
       label: e.driver.kind === "growth" ? `Agent runs: ${e.driver.label.charAt(0).toLowerCase()}${e.driver.label.slice(1)}` : e.driver.label,
       landing: Math.round(e.driver.agentShare * (e.sunk + e.forward) / 100) * 100,
       state: (e.fixed ? "fixed" : waitingOnOwner(s, e.driver.id) ? "waiting" : "running") as AgentRow["state"],
+      kind: (e.driver.kind === "waste" ? "waste" : "growth") as AgentRow["kind"],
     })),
   ];
   return { people, agents };

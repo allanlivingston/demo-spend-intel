@@ -34,17 +34,17 @@ export function Card({ children, className, title, right }: { children: ReactNod
 }
 
 const STATUS_STYLE: Record<Status, string> = {
-  "On track": "bg-emerald-50 text-ok border-emerald-200",
+  "On track": "bg-emerald-50 text-ok-ink border-emerald-200",
   "Budget remaining": "bg-neutral-50 text-neutral-600 border-neutral-200",
   "Over budget": "bg-red-50 text-bad border-red-200",
 };
 
 export function StatusPill({ status, funded }: { status: Status; funded?: boolean }) {
-  if (funded) return <span className="rounded-full border border-amber-300 bg-amber-50 whitespace-nowrap px-2 py-0.5 text-[13px] font-medium text-warn" title="Still over budget; funding steps are underway">Over budget, funding underway</span>;
+  if (funded) return <span className="rounded-full border border-amber-300 bg-amber-50 whitespace-nowrap px-2 py-0.5 text-[13px] font-medium text-warn-ink" title="Still over budget; funding steps are underway">Over budget, funding underway</span>;
   return <span className={cx("whitespace-nowrap rounded-full border px-2 py-0.5 text-[13px] font-medium", STATUS_STYLE[status])}>{status}</span>;
 }
 
-const LEVEL_TONE = { High: "bg-emerald-50 text-ok border-emerald-200", Medium: "bg-amber-50 text-warn border-amber-200", Low: "bg-neutral-50 text-muted border-neutral-200" };
+const LEVEL_TONE = { High: "bg-emerald-50 text-ok-ink border-emerald-200", Medium: "bg-amber-50 text-warn-ink border-amber-200", Low: "bg-neutral-50 text-muted border-neutral-200" };
 
 /** Evidence strength as High / Medium / Low (the engine's tiers stay internal). */
 export function TierBadge({ tier }: { tier: number | string }) {
@@ -58,9 +58,9 @@ export function Button({
   children: ReactNode; onClick?: () => void; variant?: "primary" | "secondary" | "ghost"; disabled?: boolean; title?: string; className?: string; size?: "sm" | "md";
 }) {
   const v = {
-    primary: "bg-accent text-white hover:brightness-95 border-transparent",
+    primary: "bg-ink text-white hover:bg-black border-transparent",
     secondary: "bg-white text-ink border-neutral-300 hover:bg-neutral-50",
-    ghost: "bg-transparent text-accent border-transparent hover:bg-orange-50",
+    ghost: "bg-transparent text-accent-ink border-transparent hover:bg-orange-50",
   }[variant];
   return (
     <button
@@ -82,5 +82,5 @@ export function Button({
 
 export function Delta({ value }: { value: number }) {
   const over = value > 0;
-  return <span className={over ? "text-bad" : "text-ok"}>{over ? "+" : "-"}{usd(Math.abs(value))} vs budget</span>;
+  return <span className={over ? "text-bad" : "text-ok-ink"}>{over ? "+" : "-"}{usd(Math.abs(value))} vs budget</span>;
 }

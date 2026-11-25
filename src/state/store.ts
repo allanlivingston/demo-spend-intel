@@ -97,6 +97,11 @@ interface Store {
   drawerOpen: boolean;
   /** Daily bars under the chart: closed behind a one-line summary until the admin opens them. */
   dailyOpen: boolean;
+  /** Bumped on reset and scenario switch, so views return to their first tab. */
+  epoch: number;
+  /** How many Activity entries the admin has seen; the sidebar badge counts the rest. */
+  auditSeen: number;
+  markAuditSeen: () => void;
   setDailyOpen: (open: boolean) => void;
   /** The drawer received something while closed. */
   unseen: boolean;
@@ -229,6 +234,9 @@ export const useStore = create<Store>()(
         chatStart: { demo: initialState("C"), group: "pe" },
         postView: (kind, text) => get().addMessage({ role: "assistant", view: kind, text, snap: { demo: get().demo, group: get().group } }),
         audit: [],
+        epoch: 0,
+        auditSeen: 0,
+        markAuditSeen: () => set({ auditSeen: get().audit.length }),
         seq: 0,
         msgSeq: 0,
         offline: false,
@@ -282,7 +290,7 @@ export const useStore = create<Store>()(
         addUsage: (costUsd) => set({ usage: { calls: get().usage.calls + 1, costUsd: get().usage.costUsd + costUsd } }),
 
         setScenario: (id) => {
-          set({ ...fresh(id), group: focusGroup(id), review: null, audit: [], seq: 0, threads: [], chatStart: { demo: initialState(id), group: focusGroup(id) } });
+          set({ ...fresh(id), group: focusGroup(id), review: null, audit: [], auditSeen: 0, epoch: get().epoch + 1, seq: 0, threads: [], chatStart: { demo: initialState(id), group: focusGroup(id) } });
         },
         setGroup: (group) => set({ group, ghost: null }),
         pin: (c) => set({ pinned: get().pinned.some((p) => p.id === c.id) ? get().pinned : [...get().pinned, c] }),
@@ -402,7 +410,7 @@ export const useStore = create<Store>()(
         },
         reset: () => {
           const id = get().demo.scenarioId;
-          set({ ...fresh(id), group: focusGroup(id), audit: [], seq: 0, threads: [], review: null, ghost: null, chatStart: { demo: initialState(id), group: focusGroup(id) } });
+          set({ ...fresh(id), group: focusGroup(id), audit: [], auditSeen: 0, epoch: get().epoch + 1, seq: 0, threads: [], review: null, ghost: null, chatStart: { demo: initialState(id), group: focusGroup(id) } });
         },
       };
     },

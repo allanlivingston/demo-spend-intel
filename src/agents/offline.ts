@@ -54,7 +54,24 @@ function aboutDriver(s: DemoState, d: Driver, fixed: boolean): string {
 const DRAFT_Q = /why these changes|risk if i approve|only approve part/;
 
 /** A live summary of a draft, used when a recorded run's wording no longer matches the numbers. */
-export const freshSummary = (s: DemoState, kind: string) => draftAnswer(s, "", kind);
+/**
+ * What a replayed draft does, from today's numbers, when the recorded wording no longer matches them.
+ * A fix draft is described from its own rows, so a one-fix draft never talks about the others.
+ */
+export function freshSummary(s: DemoState, kind: string, art?: { kind: string; groupId?: GroupId; rows?: { driverId: string; savings: number }[] }): string {
+  if (art?.kind === "policy_diff" && art.rows?.length && art.groupId) {
+    const g = art.groupId;
+    const label = (id: string) => lc(driverEffects(s, g).find((e) => e.driver.id === id)?.driver.label ?? id);
+    const mine = art.rows.filter((r) => !ownerOf(r.driverId));
+    const theirs = art.rows.filter((r) => ownerOf(r.driverId));
+    const owner = theirs.length ? ownerOf(theirs[0].driverId)! : null;
+    const after = forecast({ ...s, appliedFixes: [...s.appliedFixes, ...mine.map((r) => r.driverId)] }, g).p50;
+    if (mine.length)
+      return `It stops spend that produced nothing: ${mine.map((r) => label(r.driverId)).join(" and ")}. With ${mine.length > 1 ? "those" : "that"} applied, ${GROUPS[g].name} lands at ${usd100(after)}.${owner ? ` The cache fix is a code change, so it goes to ${owner.short}.` : ""}`;
+    if (owner) return `${label(theirs[0].driverId)} needs a code change, so it goes to ${owner.name}. It saves ${usd(theirs[0].savings)} once they ship it.`;
+  }
+  return draftAnswer(s, "", kind);
+}
 
 function draftAnswer(s: DemoState, p: string, kind: string): string {
   const g: GroupId = "pe";

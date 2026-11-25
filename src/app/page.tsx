@@ -20,8 +20,8 @@ export default function Home() {
   if (!ready)
     return (
       <div className="flex h-screen bg-canvas" aria-busy="true">
-        <div className="w-[288px] shrink-0 border-r-[0.5px] border-black/10 bg-sidebar px-4 pt-4">
-          <div className="font-serif text-[19px] text-ink">Spend Intelligence</div>
+        <div className="w-[60px] shrink-0 border-r-[0.5px] border-black/10 bg-sidebar px-4 pt-4 lg:w-[288px]">
+          <div className="hidden font-serif text-[19px] text-ink lg:block">Spend Intelligence</div>
         </div>
         <div className="mx-auto w-full max-w-[816px] animate-pulse space-y-4 px-6 pt-8">
           <div className="h-4 w-48 rounded bg-black/5" />

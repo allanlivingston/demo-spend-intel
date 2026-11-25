@@ -8,7 +8,8 @@ import { TierBadge, cx, usd } from "./ui";
 const groupsOf = (g: GroupId | "all"): GroupId[] => (g === "all" ? GROUP_IDS : [g]);
 
 type FollowUp = (question: string, context: string) => void;
-const FOLLOW = "rounded-md px-2 py-1 text-[13px] text-neutral-600 hover:bg-neutral-100 hover:text-ink disabled:opacity-40";
+// Shown on the row the pointer is on (or keyboard focus is in); always shown where there is no hover, like touch screens.
+const FOLLOW = "rounded-md px-2 py-1 text-[13px] text-neutral-600 hover:bg-neutral-100 hover:text-ink disabled:opacity-40 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100";
 
 // ---------- Workstreams ----------
 
@@ -26,7 +27,7 @@ export function Workstreams({ onFollowUp, busy }: { onFollowUp: FollowUp; busy: 
             const over = w.landing > w.target;
             const barPct = Math.min(100, (w.landing / Math.max(w.target, w.landing)) * 100);
             return (
-              <div key={w.ws.id} className="grid grid-cols-[250px_1fr_90px_90px_140px_80px] items-center gap-3 px-4 py-2 text-[15px]">
+              <div key={w.ws.id} className="group grid grid-cols-[250px_1fr_90px_90px_140px_80px] items-center gap-3 px-4 py-2 text-[15px] hover:bg-neutral-50/70">
                 <span className="flex min-w-0 items-center gap-2">
                   <TierBadge tier={w.tier} />
                   <span className="min-w-0">
@@ -47,7 +48,7 @@ export function Workstreams({ onFollowUp, busy }: { onFollowUp: FollowUp; busy: 
                 </div>
                 <span className={cx("text-right tabular-nums", over && "text-bad")}>{usd(w.landing)}<span className="block text-[12px] text-muted">lands at</span></span>
                 <span className="text-right tabular-nums">{usd(w.target)}<span className="block text-[12px] text-muted">target</span></span>
-                <span className={cx("text-right text-[13px]", share >= 0.2 ? "text-bad" : pm.length ? "text-warn" : "text-muted")} title={pm.length ? `${pm.length} people. Cheaper model first, then paused runs, then runs held for a few hours.` : undefined}>{who}</span>
+                <span className={cx("text-right text-[13px]", share >= 0.2 ? "text-bad" : pm.length ? "text-warn-ink" : "text-muted")} title={pm.length ? `${pm.length} people. Cheaper model first, then paused runs, then runs held for a few hours.` : undefined}>{who}</span>
                 <button type="button" disabled={busy} className={FOLLOW}
                   onClick={() => onFollowUp(`Follow up on workstream: ${w.ws.name}`, `${w.ws.name} (${GROUPS[g].name}): lands at ${usd(w.landing)} against a ${usd(w.target)} target, ${who.toLowerCase()}, ${levelOfTier(w.tier)} confidence; ${(() => { const a = evidenceAge(demo, w.ws.id); return `${a.label}, the estimate leans ${Math.round(a.ownWeight * 100)}% on its own data${a.settles ? `, ${a.settles}` : ""}${a.protectedRamp ? ", in a protected ramp" : ""}`; })()}.`)}>
                   Follow up
@@ -73,11 +74,11 @@ export function Users({ onFollowUp, busy }: { onFollowUp: FollowUp; busy: boolea
   // Over their monthly limit first, then others slowed by the team's pacing, then the rest.
   const statusOf = (id: string, capsDay: number | null, isNew = false) => {
     const p = pace.get(id);
-    if (!p && capsDay && isNew) return { text: "Protected: fund it", tone: "text-ok", rank: 0, title: `Over their monthly limit, but their work is producing results, so other spend is slowed first. A plain monthly limit would cut them off on day ${capsDay}.` };
+    if (!p && capsDay && isNew) return { text: "Protected: fund it", tone: "text-ok-ink", rank: 0, title: `Over their monthly limit, but their work is producing results, so other spend is slowed first. A plain monthly limit would cut them off on day ${capsDay}.` };
     if (!p) return { text: "Under limit", tone: "text-muted", rank: 2, title: capsDay ? "Funded: moved budget covers this person." : undefined };
     if (p.step === "blocked") return { text: `Blocked day ${p.blockDay}`, tone: "text-bad", rank: 0, title: `Hard caps would block them on day ${p.capsBlockDay}.` };
     const title = `From day ${TODAY + 1}: ${Math.round(p.trim * 100)}% of runs slowed or held, ${Math.round(p.hardShare * 100)}% of them held for a few hours.${p.capsBlockDay ? ` A plain monthly limit would cut them off on day ${p.capsBlockDay}.` : ""}`;
-    return { text: `${Math.round(p.trim * 100)}% slowed or held`, tone: p.capsBlockDay ? "text-bad" : "text-warn", rank: p.capsBlockDay ? 0 : 1, title };
+    return { text: `${Math.round(p.trim * 100)}% slowed or held`, tone: p.capsBlockDay ? "text-bad" : "text-warn-ink", rank: p.capsBlockDay ? 0 : 1, title };
   };
   const users = users0.map((u) => ({ ...u, st: statusOf(u.id, u.blockDay, u.isNew), note: userNote(u, pace.get(u.id) ?? null) })).sort((a, b) => a.st.rank - b.st.rank || (a.blockDay ?? 99) - (b.blockDay ?? 99) || b.landing - a.landing);
   // In the default view with one team selected, every row would show the same team, so the column is dropped.
@@ -85,29 +86,35 @@ export function Users({ onFollowUp, busy }: { onFollowUp: FollowUp; busy: boolea
   const cols = showTeam ? "grid-cols-[1.2fr_1.3fr_80px_80px_70px_150px_80px]" : "grid-cols-[2fr_80px_80px_70px_150px_80px]";
   const blocked = users.filter((u) => u.st.rank === 0).length;
   const slowed = users.filter((u) => u.st.rank === 1).length;
+  // The first rows, then the rest on request: no scroll box inside the scrolling page.
+  const [all, setAll] = useState(false);
+  const FIRST = 10;
+  const shown = all ? users : users.slice(0, FIRST);
   return (
     <div className="pb-2">
       <div className="flex items-center px-4 pb-1 pt-3 text-[13px] text-muted">
-        {users.length} people{blocked ? <span className="text-bad">&nbsp;· {blocked} over their monthly limit</span> : null}{slowed ? <span className="text-warn">&nbsp;· {slowed} more slowed</span> : null}
+        {users.length} people{blocked ? <span className="text-bad">&nbsp;· {blocked} over their monthly limit</span> : null}{slowed ? <span className="text-warn-ink">&nbsp;· {slowed} more slowed</span> : null}
         <span className="ml-auto">Over limit first</span>
       </div>
-      <div className="max-h-[340px] overflow-y-auto">
-        <div className={cx("sticky top-0 grid gap-2", cols, " bg-white px-4 py-1.5 text-[12px] uppercase tracking-wide text-muted")}>
-          <span>Name</span>{showTeam && <span>{simple ? "Team" : "Workstream"}</span>}<span className="text-right">So far</span><span className="text-right">Lands at</span><span className="text-right">Limit</span><span>Status</span><span />
+      <div>
+        <div className={cx("grid gap-2", cols, " bg-white px-4 py-1.5 text-[12px] uppercase tracking-wide text-muted")}>
+          <span>Name</span>{showTeam && <span>{simple ? "Team" : "Workstream"}</span>}<span className="text-right">So far</span><span className="text-right">Lands at</span><span className="text-right">Limit</span><span className="pl-3">Status</span><span />
         </div>
-        {users.map((u) => {
+        {shown.map((u) => {
           const status = u.st.text;
+          const isProtected = status.startsWith("Protected");
           return (
-            <div key={u.id} className={cx("grid items-center gap-2", cols, " border-t border-neutral-50 px-4 py-1.5 text-[15px]")}>
+            <div key={u.id} className={cx("group grid items-center gap-2", cols, " border-t border-neutral-50 px-4 py-1.5 text-[15px] hover:bg-neutral-50/70")}>
               <span className="truncate">
                 {u.name}
                 {u.isNew && <span className="ml-1.5 rounded bg-sky-50 px-1 text-[11px] text-sky-700">New</span>}
               </span>
               {showTeam && <span className="truncate text-[13px] text-muted">{simple ? u.team : `${group === "all" ? `${u.team} · ` : ""}${u.workstream}`}</span>}
               <span className="text-right tabular-nums">{usd(u.spent)}</span>
-              <span className={cx("text-right tabular-nums", u.landing > u.limit && "text-bad")}>{usd(u.landing)}</span>
+              {/* Over the limit is only a warning when the work isn't protected; protected work is the case for funding. */}
+              <span className={cx("text-right tabular-nums", u.landing > u.limit && !isProtected && "text-bad")}>{usd(u.landing)}</span>
               <span className="text-right tabular-nums text-muted">{usd(u.limit)}</span>
-              <span className={cx("truncate text-[13px]", u.st.tone)} title={`${u.st.title ? `${u.st.title}\n\n` : ""}${u.note ? `What they see: "${u.note}"` : "No note shown to them yet."}`}>{status}</span>
+              <span className={cx("truncate pl-3 text-[13px]", u.st.tone)} title={`${u.st.title ? `${u.st.title}\n\n` : ""}${u.note ? `What they see: "${u.note}"` : "No note shown to them yet."}`}>{status}</span>
               <button type="button" disabled={busy} className={FOLLOW}
                 onClick={() => onFollowUp(`Follow up on ${u.name}`, `${u.name}, ${u.team}${simple ? "" : `, ${u.workstream}`}${u.isNew ? ", joined this month" : ""}: ${usd(u.spent)} so far, lands at ${usd(u.landing)}, limit ${usd(u.limit)}, ${status.toLowerCase()}${u.st.title ? ` (${u.st.title})` : ""}.${u.note ? ` They see: "${u.note}"` : ""}`)}>
                 Follow up
@@ -115,6 +122,11 @@ export function Users({ onFollowUp, busy }: { onFollowUp: FollowUp; busy: boolea
             </div>
           );
         })}
+        {users.length > FIRST && (
+          <button type="button" onClick={() => setAll(!all)} className="w-full border-t border-neutral-100 px-4 py-2 text-left text-[13px] font-medium text-accent-ink hover:bg-neutral-50">
+            {all ? "Show fewer" : `Show all ${users.length} people`}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -122,29 +134,43 @@ export function Users({ onFollowUp, busy }: { onFollowUp: FollowUp; busy: boolea
 
 // ---------- Agents ----------
 
-const AGENT_STATE = { running: { text: "Running", tone: "text-muted" }, fixed: { text: "Fixed", tone: "text-ok" }, waiting: { text: "With owner", tone: "text-warn" } };
+/** What each agent source is doing, in words that say whether to act. */
+function agentStatus(a: { state: "running" | "fixed" | "waiting"; kind: "base" | "waste" | "growth" }) {
+  if (a.state === "fixed") return { text: "Fixed", tone: "text-ok-ink" };
+  if (a.state === "waiting") return { text: "With owner", tone: "text-warn-ink" };
+  if (a.kind === "waste") return { text: "Waste: fix it", tone: "text-warn-ink" };
+  if (a.kind === "growth") return { text: "New work", tone: "text-ok-ink" };
+  return { text: "Running", tone: "text-muted" };
+}
 
 export function Agents({ onFollowUp, busy }: { onFollowUp: FollowUp; busy: boolean }) {
   const { demo, group } = useStore();
-  const agents = agentsOf(demo, group);
+  // Most expensive first, as the caption says.
+  const agents = agentsOf(demo, group).slice().sort((a, b) => b.landing - a.landing);
+  // One team selected: every row would show the same team, so the column is dropped.
+  const showTeam = group === "all";
+  const cols = showTeam ? "grid-cols-[2fr_1fr_100px_110px_80px]" : "grid-cols-[3fr_100px_110px_80px]";
   return (
     <div className="pb-2">
-      <div className="grid grid-cols-[2fr_1fr_90px_90px_80px] gap-2 px-4 pb-1.5 pt-3 text-[12px] uppercase tracking-wide text-muted">
-        <span>Agent source</span><span>Team</span><span className="text-right">Lands at</span><span>Status</span><span />
+      <div className={cx("grid gap-2 px-4 pb-1.5 pt-3 text-[12px] uppercase tracking-wide text-muted", cols)}>
+        <span>Agent source</span>{showTeam && <span>Team</span>}<span className="text-right">This month</span><span className="pl-3">Status</span><span />
       </div>
-      {agents.map((a) => (
-        <div key={a.id} className="grid grid-cols-[2fr_1fr_90px_90px_80px] items-center gap-2 border-t border-neutral-50 px-4 py-1.5 text-[15px]">
-          <span className="truncate" title={a.label}>{a.label}</span>
-          <span className="truncate text-[13px] text-muted">{a.team}</span>
+      {agents.map((a) => {
+        const st = agentStatus(a);
+        return (
+        <div key={a.id} className={cx("group grid items-center gap-2 border-t border-neutral-50 px-4 py-1.5 text-[15px] hover:bg-neutral-50/70", cols)}>
+          <span className="leading-snug" title={a.label}>{a.label}</span>
+          {showTeam && <span className="truncate text-[13px] text-muted">{a.team}</span>}
           <span className="text-right tabular-nums">{usd(a.landing)}</span>
-          <span className={cx("text-[13px]", AGENT_STATE[a.state].tone)}>{AGENT_STATE[a.state].text}</span>
+          <span className={cx("pl-3 text-[13px]", st.tone)}>{st.text}</span>
           <button type="button" disabled={busy} className={FOLLOW}
-            onClick={() => onFollowUp(`Follow up on agent: ${a.label}`, `${a.label} (${a.team}): lands at ${usd(a.landing)} this month, ${AGENT_STATE[a.state].text.toLowerCase()}.`)}>
+            onClick={() => onFollowUp(`Follow up on agent: ${a.label}`, `${a.label} (${a.team}): lands at ${usd(a.landing)} this month, ${st.text.toLowerCase()}.`)}>
             Follow up
           </button>
         </div>
-      ))}
-      <p className="px-4 pt-2 text-[13px] text-muted">Claude Code helpers, connectors to other tools and scheduled runs, by what they cost this month.</p>
+        );
+      })}
+      <p className="px-4 pt-2 text-[13px] text-muted">Claude Code helpers, connectors to other tools and scheduled runs, most expensive first: what each costs by month end.</p>
     </div>
   );
 }

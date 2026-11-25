@@ -6,7 +6,7 @@ import { cx } from "./ui";
 import { useStore } from "@/state/store";
 
 /** fallback: what to highlight when the target isn't on screen (nobody is slowed, so there is no summary line). */
-interface Step { target?: string; fallback?: string; title: string; body: string; advancedBody?: string }
+interface Step { target?: string; fallback?: string; title: string; body: string; advancedBody?: string; narrowBody?: string }
 
 const STEPS: Step[] = [
   {
@@ -23,8 +23,8 @@ const STEPS: Step[] = [
     target: "slowed",
     fallback: "forecast",
     title: "What gets slowed",
-    body: "The line under the chart sums up what pacing slows this month: runs moved to a cheaper model, paused, or held for a few hours. Show daily bars opens it day by day. Users shows who is affected, and Agents shows scheduled runs, subagents and connectors.",
-    advancedBody: "The line under the chart sums up what pacing slows this month: runs moved to a cheaper model, paused, or held for a few hours. Show daily bars opens it day by day. Users and Workstreams show who is affected. Health shows how forecasts and pacing did over the last six months.",
+    body: "The line under the chart says how much pacing slows from today: runs moved to a cheaper model, paused, or held for a few hours. Show daily bars opens the month day by day. Users shows who is affected, and Agents shows scheduled runs, subagents and connectors.",
+    advancedBody: "The line under the chart says how much pacing slows from today: runs moved to a cheaper model, paused, or held for a few hours. Show daily bars opens it day by day. Users and Workstreams show who is affected. Health shows how forecasts and pacing did over the last six months.",
   },
   {
     target: "actions",
@@ -40,6 +40,7 @@ const STEPS: Step[] = [
     target: "sidebar",
     title: "Start over any time",
     body: "Reset demo starts the scenario again. Ask about this demo explains what the app does and why. The ··· menu switches scenarios and turns on the advanced view.",
+    narrowBody: "Reset demo starts the scenario again. Ask about this demo explains what the app does and why. Open the sidebar for the ··· menu, which switches scenarios and turns on the advanced view.",
   },
 ];
 
@@ -150,15 +151,15 @@ export function Tour({ onClose }: { onClose: () => void }) {
           <button type="button" onClick={close} aria-label="Close tour" className="absolute right-3 top-3 text-muted hover:text-ink">
             <X size={16} />
           </button>
-          <div className="text-[13px] font-medium uppercase tracking-wide text-accent">Welcome tour · {i + 1} of {STEPS.length}</div>
+          <div className="text-[13px] font-medium uppercase tracking-wide text-accent-ink">Welcome tour · {i + 1} of {STEPS.length}</div>
           <h2 className="mt-1 font-serif text-xl">{step.title}</h2>
-          <p className="mt-2 text-[15px] leading-relaxed text-neutral-700">{(advanced && step.advancedBody) || step.body}</p>
+          <p className="mt-2 text-[15px] leading-relaxed text-neutral-700">{(typeof window !== "undefined" && window.innerWidth < 1024 && step.narrowBody) || (advanced && step.advancedBody) || step.body}</p>
           <div className="mt-4 flex items-center gap-2">
             <div className="flex gap-1">
               {STEPS.map((_, j) => <span key={j} className={cx("h-1.5 w-1.5 rounded-full", j === i ? "bg-accent" : "bg-neutral-200")} />)}
             </div>
             {!last && <button type="button" onClick={close} className="ml-auto text-[15px] text-muted hover:text-ink">Skip</button>}
-            {i > 0 && <button type="button" onClick={() => setI(i - 1)} className={cx("rounded-full px-3 py-1 text-[15px] text-accent hover:bg-accent/10", last && "ml-auto")}>Back</button>}
+            {i > 0 && <button type="button" onClick={() => setI(i - 1)} className={cx("rounded-full px-3 py-1 text-[15px] text-accent-ink hover:bg-accent/10", last && "ml-auto")}>Back</button>}
             <button
               type="button"
               onClick={() => (last ? close() : setI(i + 1))}

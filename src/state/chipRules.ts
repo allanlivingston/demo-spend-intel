@@ -1,6 +1,6 @@
 // Which suggestion chips show under the message box. Pure: state in, chips out, so every state is testable.
 // Order: the next step first, then questions that fit now, then "show again" chips for views that scrolled away.
-import { forecast, isAdvanced, ownerOf, pacing, type DemoState, type GroupSelection } from "@/engine";
+import { breakdown, forecast, isAdvanced, ownerOf, pacing, type BreakdownRow, type DemoState, type GroupSelection } from "@/engine";
 import type { StartRun } from "./agentClient";
 import { nextAction, wasteSources } from "./nextAction";
 import type { ChatMessage, ViewKind } from "./store";
@@ -45,6 +45,30 @@ export function isSuperseded(m: ChatMessage, messages: ChatMessage[]): boolean {
 
 const ask = (q: string, context?: string[]): ChipSpec => ({ text: q, action: { type: "ask", q, context } });
 
+const SHORT: Record<string, string> = { "a-subagents": "Opus subagents", "a-connector": "Jira retry loop", "a-cache": "prompt cache drop" };
+
+/** The agent run behind a recommendation's Fix it / Fund it button. */
+export function runFor(r: BreakdownRow): StartRun {
+  const fix = r.side === "fix";
+  return {
+    agent: r.agent,
+    // Default view has no workstreams: funding goes to the brief, so no driver (its recording is a budget move).
+    driverId: fix || isAdvanced() || r.driver.id === "b-soc2" ? r.driver.id : undefined,
+    prompt: fix ? `Fix with agent: ${r.driver.label}.`
+      : r.driver.id === "b-soc2" ? `Fund with agent: ${r.driver.label}. Draft the planned spend approval.`
+      : isAdvanced() ? `Fund with agent: ${r.driver.label}. Plan a rebalance.` : "Draft the budget owner brief.",
+    say: fix ? `Fix the ${SHORT[r.driver.id] ?? r.driver.label.charAt(0).toLowerCase() + r.driver.label.slice(1)}.` : r.driver.id === "b-soc2" ? "Approve the SOC 2 sprint as planned spend." : `Fund ${r.driver.label.toLowerCase()}.`,
+  };
+}
+
+/** The open fix the admin just asked about from its card ("Tell me about this: …"), so the next chip can fix that one. */
+function askedFix(i: ChipInput): BreakdownRow | undefined {
+  const lastUser = [...i.messages].reverse().find((m) => m.role === "user")?.text ?? "";
+  const label = /^Tell me about this: (.+)\.$/.exec(lastUser)?.[1];
+  if (!label) return undefined;
+  return breakdown(i.demo, "all").rows.find((r) => r.driver.label === label && r.side === "fix" && r.state === "open");
+}
+
 export function chipsFor(i: ChipInput): ChipSpec[] {
   if (i.messages.some((m) => m.run?.status === "running")) return [];
   const asked = new Set(i.messages.filter((m) => m.role === "user").map((m) => m.text));
@@ -75,6 +99,15 @@ export function chipsFor(i: ChipInput): ChipSpec[] {
       main.push(ask("What waits on the dev tools team?"));
       // Demo control: play the owner's side so the story can finish.
       for (const id of i.demo.handedOff.filter((x) => !i.demo.appliedFixes.includes(x))) main.push({ text: "Owner shipped the fix (demo)", action: { type: "shipped", driverId: id } });
+    }
+    // Just asked about one fix from its card: fixing that one is the next step (the answer says "Fix it drafts the change").
+    const one = askedFix(i);
+    if (one) {
+      const run = runFor(one);
+      const text = `Fix the ${SHORT[one.driver.id] ?? one.driver.label.toLowerCase()}`;
+      for (let k = main.length - 1; k >= 0; k--) if (main[k].text.toLowerCase() === text.toLowerCase()) main.splice(k, 1);
+      main.forEach((c) => (c.primary = false));
+      main.unshift({ text, primary: true, action: { type: "run", run: { ...run, say: text } } });
     }
     main.push(ask(f.p50 > f.pool ? "Why are we over budget?" : "Summarize spend"));
     if (next.verdict === "fix" || next.verdict === "fund") main.push(ask("What happens if we do nothing?"));

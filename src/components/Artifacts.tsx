@@ -13,7 +13,7 @@ function Shell({ icon, title, tag, status, children }: { icon: React.ReactNode; 
         {icon} {title}
         {tag && <span className="rounded border border-neutral-300 px-1.5 py-px text-[11px] font-medium text-muted">{tag}</span>}
         {status && status !== "proposed" && (
-          <span className={cx("ml-auto rounded-full px-2 py-0.5 text-[12px] font-medium capitalize", status === "reverted" || status === "declined" ? "bg-neutral-100 text-muted" : "bg-emerald-50 text-ok")}>{status}</span>
+          <span className={cx("ml-auto rounded-full px-2 py-0.5 text-[12px] font-medium capitalize", status === "reverted" || status === "declined" ? "bg-neutral-100 text-muted" : "bg-emerald-50 text-ok-ink")}>{status}</span>
         )}
       </div>
       <div className="space-y-3 p-3 text-[15px]">{children}</div>
@@ -37,14 +37,13 @@ function DiffRow({ r }: { r: PolicyDiff["rows"][number] }) {
     <div className="px-3 py-2">
       <div className="flex items-baseline justify-between gap-2">
         <span className="font-medium">{r.control}</span>
-        <span className="tabular-nums text-ok">-{usd(r.savings)}</span>
+        <span className="tabular-nums text-ok-ink">-{usd(r.savings)}</span>
       </div>
-      <div className="mt-0.5 font-mono text-[13px]">
-        <span className="text-bad line-through decoration-1">{r.before}</span>
-        <span className="mx-1 text-muted">to</span>
-        <span className="text-ok">{r.after}</span>
-      </div>
-      <div className="mt-0.5 text-[12px] text-muted">{r.method}</div>
+      <dl className="mt-1 grid grid-cols-[48px_1fr] gap-x-2 gap-y-0.5 text-[13px] leading-5">
+        <dt className="text-muted">Now</dt><dd className="text-neutral-600">{r.before}</dd>
+        <dt className="text-muted">After</dt><dd className="font-medium text-ink">{r.after}</dd>
+      </dl>
+      <div className="mt-1 text-[12px] text-muted">{r.method}</div>
     </div>
   );
 }
@@ -82,11 +81,11 @@ function PolicyDiffCard({ a, status }: { a: PolicyDiff; status?: ArtifactStatus 
                   <DiffRow r={r} />
                   <div className="flex items-center gap-2 px-3 pb-2 text-[13px] text-muted">
                     <Send size={12} />
-                    {shipped ? <span className="text-ok">Fixed by {ownerOf(r.driverId)!.short}.</span>
+                    {shipped ? <span className="text-ok-ink">Fixed by {ownerOf(r.driverId)!.short}.</span>
                       : sent ? <>Sent to {ownerOf(r.driverId)!.name}. Not counted until they ship it.</>
                       : <>Owned by {ownerOf(r.driverId)!.name}. Applying sends it to them.</>}
                     {sent && !shipped && (
-                      <button type="button" onClick={() => ownerShipped(r.driverId)} className="ml-auto rounded border border-neutral-300 px-2 py-0.5 text-[12px] hover:border-ok hover:text-ok" title="Demo control: play the owner's side">
+                      <button type="button" onClick={() => ownerShipped(r.driverId)} className="ml-auto rounded border border-neutral-300 px-2 py-0.5 text-[12px] hover:border-ok hover:text-ok-ink" title="Demo control: play the owner's side">
                         Mark as shipped
                       </button>
                     )}
@@ -127,7 +126,7 @@ function RebalanceCard({ a, status }: { a: RebalanceArtifact; status?: ArtifactS
         ))}
         <div className="flex justify-between px-3 py-1.5 text-[13px] font-semibold">
           <span>To {a.recipientName}</span>
-          <span className="tabular-nums text-ok">+{usd(a.moved)}</span>
+          <span className="tabular-nums text-ok-ink">+{usd(a.moved)}</span>
         </div>
       </div>
       <div className="flex items-center gap-2 rounded-md bg-neutral-50 px-3 py-2">
@@ -141,7 +140,7 @@ function RebalanceCard({ a, status }: { a: RebalanceArtifact; status?: ArtifactS
         <div className="space-y-1">
           <div className="text-[12px] font-semibold uppercase tracking-wide text-muted">Limits checked</div>
           {a.limits.map((l) => (
-            <div key={l} className="flex gap-2 text-[13px] leading-5"><Check size={13} className="mt-[3px] shrink-0 text-ok" /><span>{l}</span></div>
+            <div key={l} className="flex gap-2 text-[13px] leading-5"><Check size={13} className="mt-[3px] shrink-0 text-ok-ink" /><span>{l}</span></div>
           ))}
         </div>
       )}
@@ -169,7 +168,7 @@ function OverrideCard({ a, status }: { a: OverrideArtifact; status?: ArtifactSta
         <div className="font-medium">{a.driverLabel}</div>
         <div className="text-[13px] text-muted">+{usd(a.amount)} to month end · {levelOfTier(a.tier)} confidence: {a.evidence.join(", ")}</div>
       </div>
-      <div className="text-[13px]">Count as <span className="font-semibold text-ok">planned, funded work</span></div>
+      <div className="text-[13px]">Count as <span className="font-semibold text-ok-ink">planned, funded work</span></div>
       <label className="block text-[13px]">
         <span className="text-muted">Reason</span>
         <select disabled={done} className="mt-1 w-full rounded-md border border-neutral-300 px-2 py-1.5 text-[15px]" value={reason} onChange={(e) => setReason(e.target.value)}>
@@ -207,6 +206,7 @@ function CfoBriefCard({ a, status }: { a: CfoBrief; status?: ArtifactStatus }) {
       <table className="w-full text-[13px]">
         <thead><tr className="text-left text-muted"><th className="font-normal" /><th className="font-normal">Now</th><th className="font-normal">If approved</th></tr></thead>
         <tbody className="tabular-nums">
+          <tr><td className="text-muted">Budget</td><td>{usd(a.currentBudget)}</td><td className="font-semibold">{usd(a.newBudget)}</td></tr>
           <tr><td className="text-muted">Lands at</td><td>{usd(a.p50)}</td><td>{usd(a.p50)}</td></tr>
           <tr><td className="text-muted">High case</td><td>{usd(Math.round(a.p90 / 100) * 100)}</td><td>{usd(Math.round(a.p90 / 100) * 100)}</td></tr>
           <tr><td className="text-muted">Status</td><td><StatusPill status={a.statusBefore} /></td><td><StatusPill status={a.statusAfter} /></td></tr>

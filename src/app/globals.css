@@ -12,6 +12,10 @@
   --color-warn: #C98A1B;
   --color-bad: #C4452F;
   --color-muted: #666666;
+  /* The same hues, dark enough for text (4.5:1 or better on white and on their tinted badges). Fills keep the lighter ones. */
+  --color-warn-ink: #94640F;
+  --color-ok-ink: #2F7346;
+  --color-accent-ink: #B5532F;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-source-serif), Georgia, serif;
@@ -27,4 +31,15 @@ body {
 .recharts-surface:focus,
 .recharts-wrapper *:focus {
   outline: none;
+}
+
+/* One focus ring for keyboard users, in the app's accent. */
+:where(button, a, [role="tab"], select, textarea, input[type="checkbox"]):focus-visible {
+  outline: 2px solid var(--color-accent-ink);
+  outline-offset: 2px;
+}
+
+/* Tabs sit in a strip that scrolls sideways, which clips anything outside them: draw their ring inside. */
+[role="tab"]:focus-visible {
+  outline-offset: -2px;
 }

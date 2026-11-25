@@ -5,12 +5,11 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, FileText, LineChart, ListChecks, ShieldCheck, Sparkles, X } from "lucide-react";
 import {
-  breakdown, confidenceOf, forecast, GROUP_IDS, GROUPS, headline, kpis, TODAY,
+  breakdown, confidenceOf, forecast, GROUP_IDS, GROUPS, headline, kpis, ownerOf, TODAY,
   type Artifact, type BreakdownRow, type GroupSelection,
-  isAdvanced,
 } from "@/engine";
-import { startAgentRun, type StartRun } from "@/state/agentClient";
-import { chipsFor, isSuperseded, pendingDraft, type ChipSpec } from "@/state/chipRules";
+import { startAgentRun } from "@/state/agentClient";
+import { chipsFor, isSuperseded, pendingDraft, runFor, type ChipSpec } from "@/state/chipRules";
 import { nextAction, verdictFor, type Verdict } from "@/state/nextAction";
 import { useStore, type ChatMessage, type Snapshot, type ViewKind } from "@/state/store";
 import { AgentRunCard } from "./AgentRunCard";
@@ -59,15 +58,15 @@ function Frame({ icon, title, right, children, id, stale }: {
   const postView = useStore((s) => s.postView);
   return (
     <section id={id} className={cx("overflow-hidden rounded-xl border bg-white", stale ? "border-black/[0.06]" : "border-black/10")}>
-      <header className="flex items-center gap-2 border-b border-neutral-100 px-4 py-2.5">
+      <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-neutral-100 px-4 py-2.5">
         <span className="text-muted">{icon}</span>
-        <h2 className="text-[15px] font-semibold">{title}</h2>
-        <div className="ml-auto flex items-center gap-2">{right}</div>
+        <h2 className="whitespace-nowrap text-[15px] font-semibold">{title}</h2>
+        <div className="ml-auto flex flex-wrap items-center gap-2">{right}</div>
       </header>
       {stale && (
         <div className="flex items-center gap-2 border-b border-neutral-100 bg-neutral-50 px-4 py-1.5 text-[13px] text-muted">
           {stale.changed ? "Earlier copy. The numbers have changed since." : "Earlier copy."}
-          <button type="button" onClick={() => postView(stale.kind)} className="ml-auto font-medium text-accent hover:underline">
+          <button type="button" onClick={() => postView(stale.kind)} className="ml-auto font-medium text-accent-ink hover:underline">
             Show current
           </button>
         </div>
@@ -95,13 +94,14 @@ function TeamSwitch({ s }: { s: Snapshot }) {
     ...GROUP_IDS.map((g) => ({ id: g as GroupSelection, label: GROUPS[g].name, dot: DOT[verdictFor(s.demo, g)] })),
   ];
   return (
-    <div className="flex gap-0.5 rounded-lg bg-neutral-100 p-0.5">
+    <div role="group" aria-label="Team" className="flex flex-wrap gap-0.5 rounded-lg bg-neutral-100 p-0.5">
       {items.map((t) => (
         <button
           key={t.id}
           type="button"
           onClick={() => setGroup(t.id)}
-          className={cx("flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px]", s.group === t.id ? "bg-white font-medium shadow-sm" : "text-neutral-600 hover:text-ink")}
+          aria-pressed={s.group === t.id}
+          className={cx("flex items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1 text-[13px]", s.group === t.id ? "bg-white font-medium shadow-sm" : "text-neutral-600 hover:text-ink")}
         >
           {t.dot && <span className={cx("h-1.5 w-1.5 rounded-full", t.dot)} />}
           {t.label}
@@ -111,17 +111,51 @@ function TeamSwitch({ s }: { s: Snapshot }) {
   );
 }
 
-function Stat({ label, value, tone, onLearn, hint }: { label: string; value: string; tone?: string; onLearn?: () => void; hint?: string }) {
+type Learn = { lines: { label: string; value: string }[]; note: string; q: string };
+
+/** "Learn more" opens a small breakdown in place; asking Claude is one click further, inside it. */
+function LearnMore({ learn }: { learn: Learn }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("mousedown", close);
+    window.addEventListener("keydown", esc);
+    return () => { window.removeEventListener("mousedown", close); window.removeEventListener("keydown", esc); };
+  }, [open]);
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="text-[13px] text-muted underline decoration-dotted hover:text-ink">
+        Learn more
+      </button>
+      {open && (
+        <div role="dialog" className="absolute left-0 top-6 z-30 w-[320px] rounded-xl border border-neutral-200 bg-white p-3 text-[13px] shadow-lg">
+          {learn.lines.length > 0 && (
+            <ul className="mb-2 space-y-1">
+              {learn.lines.map((l) => (
+                <li key={l.label} className="flex gap-3"><span className="flex-1 text-ink">{l.label}</span><span className="tabular-nums text-ink">{l.value}</span></li>
+              ))}
+            </ul>
+          )}
+          <p className="text-muted">{learn.note}</p>
+          <button type="button" onClick={() => { setOpen(false); ask(learn.q); }} className="mt-2 inline-flex items-center gap-1 font-medium text-accent-ink hover:underline">
+            Ask Claude <ArrowRight size={13} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value, tone, learn, hint }: { label: string; value: string; tone?: string; learn?: Learn; hint?: string }) {
   return (
     <div>
       <div className="text-[12px] uppercase tracking-wide text-muted">{label}</div>
       <div className={cx("text-[26px] font-semibold tabular-nums", tone)}>{value}</div>
       {hint && <div className="text-[13px] text-muted">{hint}</div>}
-      {onLearn && (
-        <button type="button" onClick={onLearn} className="text-[13px] text-muted underline decoration-dotted hover:text-accent">
-          Learn more
-        </button>
-      )}
+      {learn && <LearnMore learn={learn} />}
     </div>
   );
 }
@@ -140,12 +174,14 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
   const busy = busyOf(useStore((st) => st.messages));
   const f = forecast(s.demo, s.group);
   const k = kpis(s.demo, s.group);
-  const third =
-    k.fixableWaste > 0 ? { label: "Fixable waste", value: usd(k.fixableWaste), tone: "text-warn", q: "Where does the fixable waste come from?" }
-    : k.waitingOnOwner > 0 ? { label: "Waiting on owner", value: usd(k.waitingOnOwner), tone: "text-neutral-600", q: "What waits on the dev tools team?" }
-    : k.throttledValue > 0 ? { label: "Work at risk", value: usd(k.throttledValue), tone: "text-bad", q: "What work is at risk, and for whom?" }
-    : f.p50 > f.pool ? { label: "Over budget", value: usd(f.p50 - f.pool), tone: "text-bad", q: "Why are we over budget?" }
-    : { label: "Under budget", value: usd(f.pool - f.p50), tone: "text-ok", q: "Summarize spend" };
+  const rowsNow = breakdown(s.demo, s.group).rows;
+  const fixLines = (state: string) => rowsNow.filter((r) => r.side === "fix" && r.state === state).sort((a, b) => b.recoverable - a.recoverable).map((r) => ({ label: r.driver.label, value: usd(r.recoverable) }));
+  const third: { label: string; value: string; tone: string; learn: Learn } =
+    k.fixableWaste > 0 ? { label: "Fixable waste", value: usd(k.fixableWaste), tone: "text-warn-ink", learn: { lines: fixLines("open"), note: "Spend that produced no completed work by month end. Fixing it loses nothing.", q: "Where does the fixable waste come from?" } }
+    : k.waitingOnOwner > 0 ? { label: "Waiting on owner", value: usd(k.waitingOnOwner), tone: "text-neutral-600", learn: { lines: fixLines("sent"), note: `Sent to ${rowsNow.filter((r) => r.state === "sent").map((r) => ownerOf(r.driver.id)?.short).filter(Boolean)[0] ?? "its owner"}. The forecast drops once they ship it.`, q: "What waits on the dev tools team?" } }
+    : k.throttledValue > 0 ? { label: "Work at risk", value: usd(k.throttledValue), tone: "text-bad", learn: { lines: [], note: "Work producing results that would be slowed or held if nothing changes. Funding it removes the risk.", q: "What work is at risk, and for whom?" } }
+    : f.p50 > f.pool ? { label: "Over budget", value: usd(f.p50 - f.pool), tone: "text-bad", learn: { lines: [], note: `Lands at ${usd(f.p50)} against a ${usd(f.pool)} budget.`, q: "Why are we over budget?" } }
+    : { label: "Under budget", value: usd(f.pool - f.p50), tone: "text-ok-ink", learn: { lines: [], note: `Lands at ${usd(f.p50)}, under its ${usd(f.pool)} budget.`, q: "Summarize spend" } };
   return (
     <Frame
       id={id}
@@ -161,17 +197,17 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
         </>
       }
     >
-      <div className="flex gap-10 px-4 py-3">
+      <div className="flex flex-wrap gap-x-10 gap-y-2 px-4 py-3">
         <Stat label="Lands at" value={usd(f.p50)} tone={f.p50 > f.pool ? "text-bad" : undefined} hint="if nothing changes" />
         <Stat label="Budget" value={usd(f.pool)} />
-        <Stat label={third.label} value={third.value} tone={third.tone} onLearn={live ? () => ask(third.q) : undefined} />
-        <div className="ml-auto self-end text-[13px] text-muted">Day {TODAY} of 30</div>
+        <Stat label={third.label} value={third.value} tone={third.tone} learn={live ? third.learn : undefined} />
+        <div className="ml-auto self-end whitespace-nowrap text-[13px] text-muted">Day {TODAY} of 30</div>
       </div>
       {open && live && (
         <>
-          <div className="flex gap-4 border-y border-neutral-100 px-4 text-[15px]">
+          <div role="tablist" aria-label="Forecast views" className="flex gap-4 overflow-x-auto border-y border-neutral-100 px-4 text-[15px] [scrollbar-width:none]">
             {tabs.map((t) => (
-              <button key={t} type="button" onClick={() => setTab(t)} className={cx("-mb-px border-b-2 py-2", tab === t ? "border-accent font-medium" : "border-transparent text-muted hover:text-ink")}>
+              <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={cx("-mb-px whitespace-nowrap border-b-2 py-2", tab === t ? "border-accent font-medium" : "border-transparent text-muted hover:text-ink")}>
                 {TAB_LABEL[t]}{t === "activity" && auditCount > 0 ? ` (${auditCount})` : ""}
               </button>
             ))}
@@ -191,21 +227,6 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
 
 // ---------- Recommendations view: a compact carousel ----------
 
-const SHORT: Record<string, string> = { "a-subagents": "Opus subagents", "a-connector": "Jira retry loop", "a-cache": "Prompt cache drop" };
-
-export function runFor(r: BreakdownRow): StartRun {
-  const fix = r.side === "fix";
-  return {
-    agent: r.agent,
-    // Default view has no workstreams: funding goes to the brief, so no driver (its recording is a budget move).
-    driverId: fix || isAdvanced() || r.driver.id === "b-soc2" ? r.driver.id : undefined,
-    prompt: fix ? `Fix with agent: ${r.driver.label}.`
-      : r.driver.id === "b-soc2" ? `Fund with agent: ${r.driver.label}. Draft the planned spend approval.`
-      : isAdvanced() ? `Fund with agent: ${r.driver.label}. Plan a rebalance.` : "Draft the budget owner brief.",
-    say: fix ? `Fix the ${(SHORT[r.driver.id] ?? r.driver.label).toLowerCase()}.` : r.driver.id === "b-soc2" ? "Approve the SOC 2 sprint as planned spend." : `Fund ${r.driver.label.toLowerCase()}.`,
-  };
-}
-
 export const askAboutRow = (r: BreakdownRow) => {
   const c = confidenceOf(r.driver);
   return {
@@ -214,7 +235,7 @@ export const askAboutRow = (r: BreakdownRow) => {
   };
 };
 
-const CONF_TONE = { High: "bg-emerald-50 text-ok", Medium: "bg-amber-50 text-warn", Low: "bg-neutral-100 text-muted" };
+const CONF_TONE = { High: "bg-emerald-50 text-ok-ink", Medium: "bg-amber-50 text-warn-ink", Low: "bg-neutral-100 text-muted" };
 const CARD = "flex h-[192px] w-[280px] shrink-0 snap-start flex-col rounded-xl border border-neutral-200 bg-white p-3.5";
 
 function RecCard({ r, live, draftWaiting }: { r: BreakdownRow; live: boolean; draftWaiting: boolean }) {
@@ -227,10 +248,12 @@ function RecCard({ r, live, draftWaiting }: { r: BreakdownRow; live: boolean; dr
   return (
     <div className={cx(CARD, done && "bg-neutral-50", r.state === "declined" && "opacity-75")}>
       <div className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide">
-        <span className={fix ? "text-warn" : "text-ok"}>{fix ? "Fix" : "Fund"}</span>
+        <span className={fix ? "text-warn-ink" : "text-ok-ink"}>{fix ? "Fix" : "Fund"}</span>
         <span title={c.reason} className={cx("cursor-help rounded px-1.5 py-px text-[11px] normal-case tracking-normal", CONF_TONE[c.level])}>{c.level} confidence</span>
         <span className="ml-auto text-[14px] normal-case tracking-normal tabular-nums">
-          {fix ? <span className="text-warn">{usd(r.recoverable)}</span> : <span className="text-ink">+{usd(r.projected)}</span>}
+          {fix
+            ? <span className="text-warn-ink" title="What fixing it saves by month end"><span className="text-[12px] font-normal text-muted">saves </span>{usd(r.recoverable)}</span>
+            : <span className="text-ink" title="What this work adds by month end"><span className="text-[12px] font-normal text-muted">adds </span>{usd(r.projected)}</span>}
         </span>
       </div>
       <div className="mt-1.5 line-clamp-2 text-[15px] font-medium leading-snug">{r.driver.label}</div>
@@ -238,7 +261,7 @@ function RecCard({ r, live, draftWaiting }: { r: BreakdownRow; live: boolean; dr
       <div className="mt-auto flex items-center justify-end gap-1.5 pt-2">
         {done ? (
           <>
-            <span className={cx("text-[13px] font-medium", r.state === "sent" || r.state === "declined" ? "text-muted" : "text-ok")}>{done}</span>
+            <span className={cx("text-[13px] font-medium", r.state === "sent" || r.state === "declined" ? "text-muted" : "text-ok-ink")}>{done}</span>
             {r.state === "declined" && live && (
               <button type="button" disabled={busy} onClick={() => restoreRec(r.driver.id)} className="rounded-md px-2 py-1 text-[13px] text-neutral-600 hover:bg-neutral-100 hover:text-ink disabled:opacity-40">
                 Restore
@@ -258,7 +281,7 @@ function RecCard({ r, live, draftWaiting }: { r: BreakdownRow; live: boolean; dr
               Ask
             </button>
             {draftWaiting ? (
-              <span className="rounded-md border border-accent px-2.5 py-1.5 text-[13px] font-medium text-accent">Draft waiting</span>
+              <span className="rounded-md border border-accent px-2.5 py-1.5 text-[13px] font-medium text-accent-ink">Draft waiting</span>
             ) : (
               <button type="button" disabled={busy} onClick={() => startAgentRun(runFor(r))}
                 className="rounded-md bg-ink px-3 py-1.5 text-[13px] font-medium text-white hover:bg-black disabled:opacity-40">
@@ -288,6 +311,20 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
   const busy = busyOf(messages);
   const open = rows.filter((r) => r.state === "open").length + (briefOpen ? 1 : 0);
   const page = (dir: number) => track.current?.scrollBy({ left: dir * 280, behavior: "smooth" });
+  const [edge, setEdge] = useState({ left: false, right: false });
+  useEffect(() => {
+    const el = track.current;
+    if (!el) return;
+    const update = () => setEdge({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", update); ro.disconnect(); };
+  }, [rows.length]);
+  const fade = edge.left && edge.right ? "[mask-image:linear-gradient(to_right,transparent,black_32px,black_calc(100%-48px),transparent)]"
+    : edge.right ? "[mask-image:linear-gradient(to_right,black_calc(100%-48px),transparent)]"
+    : edge.left ? "[mask-image:linear-gradient(to_right,transparent,black_32px)]" : "";
   return (
     <div id={id} className="border-t border-neutral-100">
       <div className="flex items-center gap-2 px-4 pt-3">
@@ -301,10 +338,10 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
           </>
         )}
       </div>
-      <div ref={track} className="flex snap-x gap-3 overflow-x-auto px-4 py-3 [scrollbar-width:none]">
+      <div ref={track} className={cx("flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 py-3 [scrollbar-width:none]", fade)}>
         {briefOpen && (
           <div className={CARD}>
-            <div className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-accent">Budget<span className="ml-auto font-semibold normal-case tracking-normal tabular-nums text-bad">+{usd(Math.ceil((fc.p50 - fc.pool) / 500) * 500)}</span></div>
+            <div className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-accent-ink">Budget<span className="ml-auto font-semibold normal-case tracking-normal tabular-nums text-bad">+{usd(Math.ceil((fc.p50 - fc.pool) / 500) * 500)}</span></div>
             <div className="mt-1.5 text-[15px] font-medium leading-snug">Ask the budget owner for more</div>
             <div className="mt-1 line-clamp-2 text-[13px] text-muted">Fixes, budget moves and approvals are done. Still lands at {usd(fc.p50)} of {usd(fc.pool)}.</div>
             {live && (
@@ -319,7 +356,7 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
           rows.map((r) => <RecCard key={r.driver.id} r={r} live={live} draftWaiting={draftFor(r)} />)
         ) : (
           <div className={cx(CARD, "w-full items-start justify-center bg-emerald-50/40")}>
-            <div className="text-[12px] font-semibold uppercase tracking-wide text-ok">Nothing to do</div>
+            <div className="text-[12px] font-semibold uppercase tracking-wide text-ok-ink">Nothing to do</div>
             <div className="mt-1.5 text-[15px] font-medium">{s.group === "all" ? "Every team" : GROUPS[s.group].name} is pacing to plan.</div>
             <div className="mt-1 text-[13px] text-muted">{headline(s.demo, s.group)} No waste to fix and no growth that needs funding.</div>
           </div>
@@ -343,12 +380,12 @@ function ReviewLink({ m }: { m: ChatMessage }) {
   const done = m.artifactStatus === "approved" || m.artifactStatus === "confirmed";
   return (
     <button type="button" onClick={() => setReview(m.artifact!.id)} className="flex w-full items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-left shadow-sm hover:border-accent">
-      <Icon size={16} className="text-accent" />
+      <Icon size={16} className="text-accent-ink" />
       <span className="flex-1 text-[15px]">
         <span className="font-medium">{kind === "cfo_brief" ? "Budget owner brief" : "Planned spend approval"}</span>
         <span className="block text-[13px] text-muted">{done ? "Approved. Open to view the record." : "Drafted. Review it before approving."}</span>
       </span>
-      <span className="flex items-center gap-1 text-[15px] font-medium text-accent">{done ? "View" : "Review"} <ArrowRight size={14} /></span>
+      <span className="flex items-center gap-1 text-[15px] font-medium text-accent-ink">{done ? "View" : "Review"} <ArrowRight size={14} /></span>
     </button>
   );
 }
@@ -395,7 +432,7 @@ function Message({ m, all, liveIds }: { m: ChatMessage; all: ChatMessage[]; live
       <div className="space-y-3">
         {m.text && (
           <div className="flex gap-2">
-            <Sparkles size={14} className="mt-1.5 shrink-0 text-accent" />
+            <Sparkles size={14} className="mt-1.5 shrink-0 text-accent-ink" />
             <p className="font-serif text-[17px] leading-[26px]">{m.text}</p>
           </div>
         )}
@@ -408,7 +445,7 @@ function Message({ m, all, liveIds }: { m: ChatMessage; all: ChatMessage[]; live
     if (!m.text || m.artifact) return null;
     return (
       <div className="flex gap-2">
-        <Sparkles size={14} className="mt-1.5 shrink-0 text-accent" />
+        <Sparkles size={14} className="mt-1.5 shrink-0 text-accent-ink" />
         <p className="font-serif text-[17px] leading-[26px]">{m.text}</p>
       </div>
     );
@@ -461,7 +498,7 @@ function ModelSelect() {
                 <span className="block text-[15px] font-[450] text-ink">{o.name}</span>
                 <span className="block text-[13px] text-muted">{o.hint}</span>
               </span>
-              {o.id === model && <Check size={15} className="mt-0.5 text-accent" />}
+              {o.id === model && <Check size={15} className="mt-0.5 text-accent-ink" />}
             </button>
           ))}
         </div>
@@ -470,7 +507,7 @@ function ModelSelect() {
   );
 }
 
-function Composer({ chips, onChip }: { chips: ChipSpec[]; onChip: (c: ChipSpec) => void }) {
+function Composer({ chips, onChip, onJump }: { chips: ChipSpec[]; onChip: (c: ChipSpec) => void; onJump?: () => void }) {
   const busy = busyOf(useStore((s) => s.messages));
   const [text, setText] = useState("");
   const send = () => {
@@ -498,8 +535,9 @@ function Composer({ chips, onChip }: { chips: ChipSpec[]; onChip: (c: ChipSpec) 
             </button>
           </div>
         </div>
-        {chips.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
+        {(chips.length > 0 || onJump) && (
+          <div className="mt-2 flex items-start gap-1.5">
+          <div className="flex flex-1 flex-wrap gap-1.5">
             {chips.map((c) => (
               <button
                 key={c.text}
@@ -507,12 +545,20 @@ function Composer({ chips, onChip }: { chips: ChipSpec[]; onChip: (c: ChipSpec) 
                 onClick={() => onChip(c)}
                 className={cx(
                   "h-7 rounded-lg border px-2.5 text-[14px] leading-[19px]",
-                  c.primary ? "border-accent/40 bg-orange-50 font-[450] text-accent hover:bg-orange-100" : "border-black/10 bg-white text-ink hover:bg-black/[0.03]",
+                  c.primary ? "border-accent/40 bg-orange-50 font-[450] text-accent-ink hover:bg-orange-100" : "border-black/10 bg-white text-ink hover:bg-black/[0.03]",
                 )}
               >
                 {c.text}
               </button>
             ))}
+          </div>
+            {/* Beside the chips, not floating over the conversation, so it never covers a card's buttons. */}
+            {onJump && (
+              <button type="button" aria-label="Scroll to the newest message" title="Scroll to the newest message" onClick={onJump}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-black/10 bg-white text-muted hover:text-ink">
+                <ChevronDown size={16} />
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -523,6 +569,9 @@ function Composer({ chips, onChip }: { chips: ChipSpec[]; onChip: (c: ChipSpec) 
 // ---------- Activity sheet ----------
 
 function ActivitySheet({ onClose }: { onClose: () => void }) {
+  const auditLen = useStore((s) => s.audit.length);
+  const markAuditSeen = useStore((s) => s.markAuditSeen);
+  useEffect(() => markAuditSeen(), [auditLen, markAuditSeen]);
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", k);
@@ -544,7 +593,7 @@ function ActivitySheet({ onClose }: { onClose: () => void }) {
 // ---------- Page ----------
 
 export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boolean; setActivityOpen: (v: boolean) => void }) {
-  const { messages, chatStart, demo, group, audit, postView, setReview } = useStore();
+  const { messages, chatStart, demo, group, audit, postView, setReview, epoch } = useStore();
   const shown = messages.filter((m) => !m.runOf);
   const scroller = useRef<HTMLDivElement>(null);
 
@@ -648,20 +697,20 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
         <div className="mx-auto w-full max-w-[816px] 2xl:max-w-[1008px] space-y-7 px-6 pb-56 pt-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-[13px] text-muted">
-              <Sparkles size={13} className="text-accent" /> Today, day {TODAY} of the month
+              <Sparkles size={13} className="text-accent-ink" /> Today, day {TODAY} of the month
             </div>
             <h1 id="headline" className="font-serif text-[34px] font-light leading-[41px]">{headline(briefingSnap.demo, briefingSnap.group)}</h1>
             {!messages.length && chips.find((c) => c.primary) && (
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <button type="button" onClick={() => onChip(chips.find((c) => c.primary)!)}
-                  className="rounded-lg bg-ink px-4 py-2 text-[15px] font-medium text-white hover:bg-neutral-800">
+                  className="shrink-0 whitespace-nowrap rounded-lg bg-ink px-4 py-2 text-[15px] font-medium text-white hover:bg-neutral-800">
                   {chips.find((c) => c.primary)!.text}
                 </button>
                 <span className="text-[13px] text-muted">Claude drafts the change. Nothing is applied until you approve it.</span>
               </div>
             )}
             <div data-live-view={briefingLive ? "" : undefined} data-view="forecast">
-              <View snap={chatStart} live={briefingLive} id="forecast" />
+              <View key={epoch} snap={chatStart} live={briefingLive} id="forecast" />
             </div>
           </div>
           {shown.slice(0, Math.max(0, lastUser)).map((m) => (
@@ -685,13 +734,8 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
           ))}
         </div>
       </div>
-      {below && messages.length > 0 && (
-        <button type="button" aria-label="Scroll to the newest message" onClick={() => scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" })}
-          className="absolute bottom-40 left-1/2 z-10 -translate-x-1/2 rounded-full border border-neutral-200 bg-white p-1.5 text-muted shadow-md hover:text-ink">
-          <ChevronDown size={18} />
-        </button>
-      )}
-      <Composer chips={chips} onChip={onChip} />
+      <Composer chips={chips} onChip={onChip}
+        onJump={below && messages.length > 0 ? () => scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" }) : undefined} />
       {activityOpen && <ActivitySheet onClose={() => setActivityOpen(false)} />}
     </div>
   );

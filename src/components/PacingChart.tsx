@@ -1,9 +1,12 @@
 "use client";
-import { ChevronDown } from "lucide-react";
-import { Area, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, TODAY, type GroupId } from "@/engine";
+import { ChevronDown, CircleHelp } from "lucide-react";
+import { Area, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, usePlotArea, useXAxisScale, useYAxisScale, XAxis, YAxis } from "recharts";
+import { dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, pacing, TODAY, type GroupId } from "@/engine";
 import { useStore } from "@/state/store";
 import { usd, usdK } from "./ui";
+
+/** Chart readouts round to $100, like the rest of the app. */
+const r100 = (v: number) => Math.round(v / 100) * 100;
 
 const FORMULA =
   "Likely landing = spend to date + remaining days at each driver's daily rate, shaped by the team's weekly pattern, plus active drivers, minus applied fixes. The shaded band runs to a high case, which widens as more spend comes from autonomous agents.";
@@ -39,34 +42,15 @@ export function PacingChart({ onDay }: { onDay?: (question: string, context: str
     heldSoFar += thrArr[i] + blkArr[i];
     return { ...p, forecastLine: i + 1 >= TODAY ? Math.round(cum(i)) : undefined, noLimits: Math.round(cum(i)), limited: anyHeld ? Math.round(cum(i) - heldSoFar) : undefined, ghost: ghost && ghost[i]?.p50 !== undefined ? ghost[i].p50 : undefined };
   });
-  // Event labels: one per dot (throttle days within 4 days share one), above the dot on a leader line,
-  // left-aligned, stacked into rows so no two labels overlap.
+  // Event labels: one per dot (throttle days within 4 days share one). EventLabels places them in pixels so none overlap.
   const throttleLabels = Object.entries(blockDays)
     .filter(([day], i, all) => !(i > 0 && +day - +all[i - 1][0] < 4))
-    .map(([day]) => ({ key: `b${day}`, day: +day, text: `${Object.entries(blockDays).filter(([d]) => +d >= +day && +d - +day < 4).reduce((a, [, c]) => a + c, 0)} people: some runs held`, color: "#C4452F" }));
-  const labels = [...markers.map((d) => ({ key: d.id, day: d.startDay, text: d.marker!.replace(/^Day \d+:\s*/, ""), color: "#555" })), ...throttleLabels].sort((a, b) => a.day - b.day);
-  const rowOf = new Map<string, number>();
-  const rowEnds: number[] = [];
-  for (const l of labels) {
-    const width = l.text.length * 0.27 + 0.8; // in days: ~6px a character at ~24px a day, plus a gap
-    let row = rowEnds.findIndex((end) => end <= l.day);
-    if (row < 0) row = rowEnds.length;
-    rowEnds[row] = l.day + width;
-    rowOf.set(l.key, row);
-  }
-  const labelFor = (key: string, text: string, color: string) =>
-    function EventLabel({ viewBox }: { viewBox?: { x?: number; y?: number; width?: number; height?: number } }) {
-      // The dot's viewBox is its bounding box; the leader line starts at its centre.
-      const x = (viewBox?.x ?? 0) + (viewBox?.width ?? 0) / 2;
-      const y = (viewBox?.y ?? 0) + (viewBox?.height ?? 0) / 2;
-      const ty = y - 24 - (rowOf.get(key) ?? 0) * 18;
-      return (
-        <g pointerEvents="none">
-          <line x1={x} x2={x} y1={y - 7} y2={ty + 3} stroke={color} strokeOpacity={0.35} />
-          <text x={x - 3} y={ty} fontSize={11} fill={color} paintOrder="stroke" stroke="#fff" strokeWidth={3}>{text}</text>
-        </g>
-      );
-    };
+    .map(([day]) => ({ key: `b${day}`, day: +day, value: yAt(+day), text: `${Object.entries(blockDays).filter(([d]) => +d >= +day && +d - +day < 4).reduce((a, [, c]) => a + c, 0)} people: some runs held`, color: "#C4452F" }));
+  const labels: EventLabel[] = [
+    ...markers.map((d) => ({ key: d.id, day: d.startDay, value: yAt(d.startDay), text: d.marker!.replace(/^Day \d+:\s*/, ""), color: fixedState(d.id) ? "#999" : "#555" })),
+    ...throttleLabels,
+  ].sort((a, b) => a.day - b.day);
+  const dots = [...markers.map((d) => ({ day: d.startDay, value: yAt(d.startDay) })), ...Object.keys(blockDays).map((d) => ({ day: +d, value: yAt(+d) }))];
   const yMax = Math.max(f.pool, ...f.series.map((p) => p.p90 ?? 0), ...(ghost ?? []).map((p) => p.p90 ?? 0)) * 1.05;
 
   return (
@@ -89,7 +73,7 @@ export function PacingChart({ onDay }: { onDay?: (question: string, context: str
             <XAxis dataKey="day" tick={{ fontSize: 12 }} tickLine={false} axisLine={{ stroke: "#e2e8f0" }} interval={1} />
             <YAxis domain={[0, Math.ceil(yMax / 5000) * 5000]} tickFormatter={usdK} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={52} />
             <Tooltip
-              formatter={(v, name) => (Array.isArray(v) ? [`${usd(Number(v[0]))} to ${usd(Number(v[1]))}`, "Likely to high case"] : [usd(Number(v)), String(name)])}
+              formatter={(v, name) => (Array.isArray(v) ? [`${usd(r100(Number(v[0])))} to ${usd(r100(Number(v[1])))}`, "Likely to high case"] : [usd(r100(Number(v))), String(name)])}
               labelFormatter={(d) => `Day ${d}${Number(d) === TODAY ? " (today)" : ""}`}
               contentStyle={{ fontSize: 12, borderRadius: 6 }}
             />
@@ -111,7 +95,6 @@ export function PacingChart({ onDay }: { onDay?: (question: string, context: str
                 stroke="#fff"
                 strokeWidth={2}
                 style={{ cursor: "pointer" }}
-                label={labelFor(d.id, d.marker!.replace(/^Day \d+:\s*/, ""), fixedState(d.id) ? "#999" : "#555")}
               />
             ))}
             {Object.entries(blockDays).map(([day]) => (
@@ -124,9 +107,14 @@ export function PacingChart({ onDay }: { onDay?: (question: string, context: str
                 stroke="#fff"
                 strokeWidth={2}
                 style={{ cursor: "pointer" }}
-                label={(() => { const l = throttleLabels.find((x) => x.key === `b${day}`); return l ? labelFor(l.key, l.text, l.color) : undefined; })()}
               />
             ))}
+            <EventLabels
+              labels={labels}
+              dots={dots}
+              lines={[data.map((p) => p.noLimits), ...(advanced && anyHeld ? [data.map((p) => p.limited)] : []), ...(advanced ? [data.map((p) => p.plan as number | undefined)] : [])]}
+              fixed={[{ text: `Budget ${usd(f.pool)}`, value: f.pool, at: "budget" }, { text: "Today", day: TODAY, at: "top" }]}
+            />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -136,18 +124,120 @@ export function PacingChart({ onDay }: { onDay?: (question: string, context: str
         {advanced && anyHeld && <span><span className="mr-1 inline-block w-4 border-t-2 border-dotted align-middle" style={{ borderColor: "#D97757" }} />Spend with pacing and caps</span>}
         <span><span className="mr-1 inline-block h-2.5 w-4 bg-accent/20 align-middle" />Likely to high case</span>
         {advanced && <span><span className="mr-1 inline-block h-px w-4 bg-accent align-middle" />Pacing plan</span>}
-        <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-warn align-middle" />Waste starts</span>
-        <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-ok align-middle" />Growth starts</span>
+        {/* Only the markers this chart shows. */}
+        {markers.some((d) => d.kind === "waste" && !fixedState(d.id)) && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-warn align-middle" />Waste starts</span>}
+        {markers.some((d) => d.kind !== "waste" && !fixedState(d.id)) && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-ok align-middle" />Growth starts</span>}
         {markers.some((d) => fixedState(d.id)) && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ background: "#B8B8B8" }} />Fixed or sent to owner</span>}
         {Object.keys(blockDays).length > 0 && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-bad align-middle" />People with runs first held</span>}
-        <span className="ml-auto cursor-help underline decoration-dotted" title={FORMULA}>How is this calculated?</span>
+        <button type="button" className="ml-auto inline-flex cursor-help items-center text-muted hover:text-ink" title={FORMULA} aria-label={`How is this calculated? ${FORMULA}`}>
+          <CircleHelp size={15} />
+        </button>
       </div>
-      {anyHeld && <DailySummary data={stripDays} open={!!dailyOpen} onToggle={() => setDailyOpen(!dailyOpen)} />}
+      {anyHeld && <DailySummary data={stripDays} share={pacing(demo, group).teamShare} open={!!dailyOpen} onToggle={() => setDailyOpen(!dailyOpen)} />}
       {anyHeld && dailyOpen && <DailyStrip data={stripDays} />}
     </div>
   );
 }
 
+type EventLabel = { key: string; day: number; value: number; text: string; color: string };
+type Box = { l: number; t: number; r: number; b: number };
+
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+/** Width of an 11px chart label in the page's font. */
+function labelWidth(text: string) {
+  if (measureCtx === undefined) measureCtx = typeof document === "undefined" ? null : document.createElement("canvas").getContext("2d");
+  if (!measureCtx) return text.length * 6;
+  measureCtx.font = `11px ${getComputedStyle(document.body).fontFamily}`;
+  return measureCtx.measureText(text).width;
+}
+
+const hit = (a: Box, b: Box, gap = 2) => a.l < b.r + gap && b.l < a.r + gap && a.t < b.b + gap && b.t < a.b + gap;
+
+/**
+ * The chart's event labels, laid out in pixels from the chart's own scales. Each sits on a leader line above its dot,
+ * left-aligned; if that spot overlaps another label, a dot, a spend line or the chart's Budget and Today labels, it
+ * tries right-aligned, then a row higher, then below the dot, until it finds a free spot.
+ */
+function EventLabels({ labels, dots, lines, fixed }: {
+  labels: EventLabel[];
+  dots: { day: number; value: number }[];
+  lines: (number | undefined)[][];
+  fixed: { text: string; value?: number; day?: number; at: "budget" | "top" }[];
+}) {
+  const xs = useXAxisScale();
+  const ys = useYAxisScale();
+  const plot = usePlotArea();
+  if (!xs || !ys || !plot) return null;
+  const X = (day: number) => xs(day, { position: "middle" });
+  const Y = (v: number) => ys(v);
+  const H = 13; // one 11px line of text
+  const obstacles: Box[] = [];
+  for (const d of dots) {
+    const x = X(d.day), y = Y(d.value);
+    if (x !== undefined && y !== undefined) obstacles.push({ l: x - 7, t: y - 7, r: x + 7, b: y + 7 });
+  }
+  // Spend lines, sampled between days so a label never sits on one.
+  for (const line of lines) {
+    for (let i = 0; i + 1 < line.length; i++) {
+      const a = line[i], b = line[i + 1];
+      const x0 = X(i + 1), x1 = X(i + 2);
+      if (a === undefined || b === undefined || x0 === undefined || x1 === undefined) continue;
+      for (const t of [0, 0.25, 0.5, 0.75]) {
+        const x = x0 + (x1 - x0) * t, y = Y(a + (b - a) * t);
+        if (y !== undefined) obstacles.push({ l: x - 2, t: y - 2, r: x + 2, b: y + 2 });
+      }
+    }
+  }
+  for (const f of fixed) {
+    const w = labelWidth(f.text) + 8;
+    if (f.at === "budget" && f.value !== undefined) {
+      const y = Y(f.value);
+      if (y !== undefined) obstacles.push({ l: plot.x, t: y, r: plot.x + w + 6, b: y + 18 });
+    } else if (f.day !== undefined) {
+      const x = X(f.day);
+      if (x !== undefined) obstacles.push({ l: x - w / 2, t: plot.y, r: x + w / 2, b: plot.y + 16 });
+    }
+  }
+  const right = plot.x + plot.width;
+  const placed: { l: EventLabel; box: Box; x: number; y: number; above: boolean }[] = [];
+  // Closest spot first: above the dot (left-aligned, then right-aligned), a row higher each time; below only when above is full.
+  const spots = [
+    ...Array.from({ length: 8 }, (_, k) => [{ above: true, k, end: false, cost: k }, { above: true, k, end: true, cost: k + 0.5 }]).flat(),
+    ...Array.from({ length: 5 }, (_, k) => [{ above: false, k, end: false, cost: k + 2.2 }, { above: false, k, end: true, cost: k + 2.7 }]).flat(),
+  ].sort((a, b) => a.cost - b.cost);
+  for (const l of labels) {
+    const x = X(l.day), y = Y(l.value);
+    if (x === undefined || y === undefined) continue;
+    const w = labelWidth(l.text) + 4;
+    const taken = [...obstacles, ...placed.map((p) => p.box)];
+    let chosen: { box: Box; above: boolean } | null = null;
+    for (const s of spots) {
+      const t = s.above ? y - 20 - s.k * 16 - H : y + 12 + s.k * 16;
+      const left = Math.max(plot.x, Math.min(s.end ? x + 3 - w : x - 3, right - w));
+      const box = { l: left, t, r: left + w, b: t + H };
+      if (box.t < plot.y - 8 || box.b > plot.y + plot.height - 2) continue;
+      if (taken.some((o) => hit(box, o))) continue;
+      chosen = { box, above: s.above };
+      break;
+    }
+    if (!chosen) {
+      const left = Math.max(plot.x, Math.min(x - 3, right - w));
+      chosen = { box: { l: left, t: y - 20 - H, r: left + w, b: y - 20 }, above: true };
+    }
+    placed.push({ l, x, y, ...chosen });
+  }
+  return (
+    <g pointerEvents="none">
+      {/* Every leader line first, then every label on top, so a label's white halo covers a line passing behind it. */}
+      {placed.map(({ l, box, x, y, above }) => (
+        <line key={`${l.key}-line`} x1={x} x2={x} y1={above ? y - 7 : y + 7} y2={above ? box.b - 1 : box.t + 1} stroke={l.color} strokeOpacity={0.35} />
+      ))}
+      {placed.map(({ l, box }) => (
+        <text key={`${l.key}-text`} x={box.l + 2} y={box.t + 10} fontSize={11} fill={l.color} paintOrder="stroke" stroke="#fff" strokeWidth={4}>{l.text}</text>
+      ))}
+    </g>
+  );
+}
 
 type StripDay = { day: number; ran: number; rerouted: number; paused: number; hard: number; stopped: number };
 type StepKey = Exclude<keyof StripDay, "day">;
@@ -177,26 +267,28 @@ function StripTip({ active, payload, label }: { active?: boolean; payload?: { pa
 /** How each step reads in a sentence. */
 const STEP_PHRASE: Record<Exclude<StepKey, "ran">, string> = { rerouted: "moved to a cheaper model", paused: "paused", hard: "held a few hours", stopped: "stopped" };
 
-/** The daily bars in one line: what pacing slows this month. Opens the bars, with their legend, on click. */
-function DailySummary({ data, open, onToggle }: { data: StripDay[]; open: boolean; onToggle: () => void }) {
-  const t = (k: StepKey) => data.reduce((a, d) => a + d[k], 0);
+/**
+ * The daily bars in one line: from today, the share of runs pacing slows (the same figure the brief and Claude give),
+ * and the step most of it takes. Opens the bars, with the month's totals as their legend, on click.
+ */
+function DailySummary({ data, share, open, onToggle }: { data: StripDay[]; share: number; open: boolean; onToggle: () => void }) {
+  const t = (k: StepKey, from = 1) => data.filter((d) => d.day >= from).reduce((a, d) => a + d[k], 0);
   const steps = STEPS.filter((st) => Math.round(t(st.key) / 100) > 0);
-  const slowed = steps.reduce((a, st) => a + t(st.key), 0);
-  const all = slowed + t("ran");
-  const pct = all ? Math.round((slowed / all) * 100) : 0;
-  const top = [...steps].sort((a, b) => t(b.key) - t(a.key))[0];
-  const sentence = pct ? `Slowed this month: about ${pct}% of spend${top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}` : "Slowed this month: under 1% of spend";
+  const pct = Math.round(share * 100);
+  const top = [...STEPS].sort((a, b) => t(b.key, TODAY + 1) - t(a.key, TODAY + 1)).find((st) => t(st.key, TODAY + 1) > 0);
+  const sentence = pct ? `From today, about ${pct}% of runs are slowed${top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}` : "From today, under 1% of runs are slowed";
   return (
     <div id="slowed" className={`border-t border-neutral-100 px-4 py-2.5 text-[13px]${open ? " pb-1" : ""}`}>
       <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-3 text-left text-muted hover:text-ink">
         <span className="text-ink">{sentence}</span>
-        <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-accent">
+        <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-accent-ink">
           {open ? "Hide daily bars" : "Show daily bars"}
           <ChevronDown size={14} className={open ? "rotate-180 transition-transform" : "transition-transform"} />
         </span>
       </button>
       {open && (
         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-muted">
+          <span className="font-medium text-ink">This month</span>
           <span><span className="mr-1 inline-block h-2.5 w-2.5 align-middle" style={{ background: C_RAN_PAST }} />Ran {usd(Math.round(t("ran") / 100) * 100)}</span>
           {steps.map((st) => <span key={st.key}><span className="mr-1 inline-block h-2.5 w-2.5 align-middle" style={{ background: st.color }} />{st.label} {usd(Math.round(t(st.key) / 100) * 100)}</span>)}
         </div>

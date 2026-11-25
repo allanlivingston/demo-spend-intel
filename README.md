@@ -88,7 +88,7 @@ npm run build && npm start
 
 ## Demo walkthrough (about 5 minutes)
 
-The app is one Claude conversation that only moves forward. It opens with a headline, a button for the next step, and a live **Spend forecast**: the chart, a one-line summary of what pacing slows this month (**Show daily bars** opens it day by day) and a row of **Recommendations** (Fix or Fund, the amount, High / Medium / Low confidence).
+The app is one Claude conversation that only moves forward. It opens with a headline, a button for the next step, and a live **Spend forecast**: the chart, a one-line summary of how much pacing slows from today (**Show daily bars** opens the month day by day) and a row of **Recommendations** (Fix or Fund, the amount, High / Medium / Low confidence).
 
 Default scenario, **Waste and new work**, Platform Engineering: heading for $56,900 on a $40,000 budget. This is the write-up's example: $10,800 of waste (a Jira connector retrying a failing call, Claude Code subagents on Opus doing Sonnet-level tasks, a shared Claude Code setup that broke prompt caching) and 14 new engineers who joined mid-month and are shipping. Per-person limits would cut off 9 of them by day 18 while the connector keeps spending.
 

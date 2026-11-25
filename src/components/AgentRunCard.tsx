@@ -21,7 +21,7 @@ export function AgentRunCard({ m }: { m: ChatMessage }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 text-[13px] text-muted">
-        <Sparkles size={13} className="text-accent" />
+        <Sparkles size={13} className="text-accent-ink" />
         <span className="font-medium text-neutral-600">{AGENT_LABEL[run.agent]}</span>
         {running && <><Loader2 size={12} className="animate-spin" /> {run.steps.at(-1)?.phase ?? "Thinking"}…</>}
         {!running && run.steps.length > 0 && (
@@ -34,7 +34,7 @@ export function AgentRunCard({ m }: { m: ChatMessage }) {
         <ol className="space-y-1 border-l-2 border-neutral-200 pl-3">
           {mergeSteps(run.steps).map((s, i) => (
             <li key={i} className="flex gap-2 text-[13px] text-neutral-600">
-              <CheckCircle2 size={12} className="mt-0.5 shrink-0 text-ok" />
+              <CheckCircle2 size={12} className="mt-0.5 shrink-0 text-ok-ink" />
               <span><span className="font-medium text-ink">{s.phase}.</span> {s.summary}</span>
             </li>
           ))}
@@ -43,7 +43,7 @@ export function AgentRunCard({ m }: { m: ChatMessage }) {
       {run.status === "error" && (
         <div className="flex items-center gap-2 text-[15px] text-bad">
           <CircleAlert size={14} /> {run.error}
-          <button type="button" onClick={() => retryRun(m.id)} className="flex items-center gap-1 font-medium text-accent hover:underline">
+          <button type="button" onClick={() => retryRun(m.id)} className="flex items-center gap-1 font-medium text-accent-ink hover:underline">
             <RotateCcw size={12} /> Try again
           </button>
         </div>
@@ -57,7 +57,7 @@ export function AgentRunCard({ m }: { m: ChatMessage }) {
           {canEscalate && (
             <button
               type="button"
-              className="inline-flex items-center gap-1 hover:text-accent"
+              className="inline-flex items-center gap-1 hover:text-accent-ink"
               onClick={() => startAgentRun({ agent: run.agent, prompt: run.prompt, driverId: run.driverId, escalate: true, context: run.context, revision: run.revision })}
               title="Re-run this answer on Opus"
             >

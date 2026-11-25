@@ -200,8 +200,9 @@ async function* replay(req: AgentRequest, reason: string, started: number): Asyn
   await sleep(REPLAY_STEP_MS);
   // Recorded prose is shown only while its figures still match the current engine state.
   const grounded = ground(rec.text, results).ok;
-  const art = ctx.artifacts.at(-1) as { kind?: string } | undefined;
-  const fresh = art?.kind && art.kind !== "handoff" ? freshSummary(req.demo, art.kind) : "State has changed since this run was recorded, so only the engine's fresh results are shown above.";
+  // The draft is what the admin acts on; a message preview to its owner rides along with it.
+  const art = ctx.artifacts.filter((a) => (a as { kind?: string }).kind !== "handoff").at(-1) as { kind: string } | undefined;
+  const fresh = art ? freshSummary(req.demo, art.kind, art) : "State has changed since this run was recorded, so only the engine's fresh results are shown above.";
   yield { type: "text", text: polish(grounded ? rec.text : fresh) };
   for (const a of ctx.artifacts) yield { type: "artifact", artifact: a };
   yield { type: "done", costUsd: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, latencyMs: Date.now() - started, grounded, steps: rec.calls.length };
