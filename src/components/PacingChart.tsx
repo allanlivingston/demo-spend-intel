@@ -1,4 +1,5 @@
 "use client";
+import { ChevronDown } from "lucide-react";
 import { Area, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, TODAY, type GroupId } from "@/engine";
 import { useStore } from "@/state/store";
@@ -9,7 +10,7 @@ const FORMULA =
 
 /** The month's spend curve. Clicking any day asks Claude what happened (or is forecast) that day. */
 export function PacingChart({ onDay }: { onDay?: (question: string, context: string) => void }) {
-  const { demo, group, ghost, advanced } = useStore();
+  const { demo, group, ghost, advanced, dailyOpen, setDailyOpen } = useStore();
   const f = forecast(demo, group);
   const groups: GroupId[] = group === "all" ? GROUP_IDS : [group];
   const yAt = (day: number) => {
@@ -129,7 +130,6 @@ export function PacingChart({ onDay }: { onDay?: (question: string, context: str
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      {anyHeld && <DailyStrip data={stripDays} />}
       <div className="flex flex-wrap gap-x-4 gap-y-1 px-4 pb-3 pt-1 text-[13px] text-muted">
         <span><span className="mr-1 inline-block h-0.5 w-4 bg-ink align-middle" />Actual</span>
         <span><span className="mr-1 inline-block w-4 border-t-2 border-dashed border-ink align-middle" />{advanced ? "No limits, from day 1" : "Forecast"}</span>
@@ -142,6 +142,8 @@ export function PacingChart({ onDay }: { onDay?: (question: string, context: str
         {Object.keys(blockDays).length > 0 && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-bad align-middle" />People with runs first held</span>}
         <span className="ml-auto cursor-help underline decoration-dotted" title={FORMULA}>How is this calculated?</span>
       </div>
+      {anyHeld && <DailySummary data={stripDays} open={!!dailyOpen} onToggle={() => setDailyOpen(!dailyOpen)} />}
+      {anyHeld && dailyOpen && <DailyStrip data={stripDays} />}
     </div>
   );
 }
@@ -172,18 +174,44 @@ function StripTip({ active, payload, label }: { active?: boolean; payload?: { pa
   );
 }
 
-/** One stacked bar a day along the ladder: ran, then cheaper model, paused, hard throttled, stopped. */
+/** How each step reads in a sentence. */
+const STEP_PHRASE: Record<Exclude<StepKey, "ran">, string> = { rerouted: "moved to a cheaper model", paused: "paused", hard: "held a few hours", stopped: "stopped" };
+
+/** The daily bars in one line: what pacing slows this month. Opens the bars, with their legend, on click. */
+function DailySummary({ data, open, onToggle }: { data: StripDay[]; open: boolean; onToggle: () => void }) {
+  const t = (k: StepKey) => data.reduce((a, d) => a + d[k], 0);
+  const steps = STEPS.filter((st) => Math.round(t(st.key) / 100) > 0);
+  const slowed = steps.reduce((a, st) => a + t(st.key), 0);
+  const all = slowed + t("ran");
+  const pct = all ? Math.round((slowed / all) * 100) : 0;
+  const top = [...steps].sort((a, b) => t(b.key) - t(a.key))[0];
+  const sentence = pct ? `Slowed this month: about ${pct}% of spend${top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}` : "Slowed this month: under 1% of spend";
+  return (
+    <div id="slowed" className={`border-t border-neutral-100 px-4 py-2.5 text-[13px]${open ? " pb-1" : ""}`}>
+      <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-3 text-left text-muted hover:text-ink">
+        <span className="text-ink">{sentence}</span>
+        <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-accent">
+          {open ? "Hide daily bars" : "Show daily bars"}
+          <ChevronDown size={14} className={open ? "rotate-180 transition-transform" : "transition-transform"} />
+        </span>
+      </button>
+      {open && (
+        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-muted">
+          <span><span className="mr-1 inline-block h-2.5 w-2.5 align-middle" style={{ background: C_RAN_PAST }} />Ran {usd(Math.round(t("ran") / 100) * 100)}</span>
+          {steps.map((st) => <span key={st.key}><span className="mr-1 inline-block h-2.5 w-2.5 align-middle" style={{ background: st.color }} />{st.label} {usd(Math.round(t(st.key) / 100) * 100)}</span>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** One stacked bar a day along the ladder: ran, then cheaper model, paused, hard throttled, stopped. The summary above is its legend. */
 function DailyStrip({ data }: { data: StripDay[] }) {
   const t = (k: StepKey) => data.reduce((a, d) => a + d[k], 0);
   // Hide steps that round to $0 for the month (for example, no cheaper-model runs left once the waste is fixed).
   const steps = STEPS.filter((st) => Math.round(t(st.key) / 100) > 0);
   return (
-    <div className="px-4 pt-2">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
-        <span className="text-[13px] font-medium text-ink">Each day</span>
-        <span><span className="mr-1 inline-block h-2.5 w-2.5 align-middle" style={{ background: C_RAN_PAST }} />Ran {usd(Math.round(t("ran") / 100) * 100)}</span>
-        {steps.map((st) => <span key={st.key}><span className="mr-1 inline-block h-2.5 w-2.5 align-middle" style={{ background: st.color }} />{st.label} {usd(Math.round(t(st.key) / 100) * 100)}</span>)}
-      </div>
+    <div className="px-4 pb-3">
       <div className="h-[120px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 6, right: 24, bottom: 0, left: 8 }} barCategoryGap="15%">

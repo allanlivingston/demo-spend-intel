@@ -88,7 +88,7 @@ npm run build && npm start
 
 ## Demo walkthrough (about 5 minutes)
 
-The app is one Claude conversation that only moves forward. It opens with a headline, a button for the next step, and a live **Spend forecast**: the chart, the daily bars and a row of **Recommendations** (Fix or Fund, the amount, High / Medium / Low confidence).
+The app is one Claude conversation that only moves forward. It opens with a headline, a button for the next step, and a live **Spend forecast**: the chart, a one-line summary of what pacing slows this month (**Show daily bars** opens it day by day) and a row of **Recommendations** (Fix or Fund, the amount, High / Medium / Low confidence).
 
 Default scenario, **Waste and new work**, Platform Engineering: heading for $56,900 on a $40,000 budget. This is the write-up's example: $10,800 of waste (a Jira connector retrying a failing call, Claude Code subagents on Opus doing Sonnet-level tasks, a shared Claude Code setup that broke prompt caching) and 14 new engineers who joined mid-month and are shipping. Per-person limits would cut off 9 of them by day 18 while the connector keeps spending.
 
@@ -98,7 +98,7 @@ Default scenario, **Waste and new work**, Platform Engineering: heading for $56,
 
 At any point, the chips under the message box suggest the next step first, then useful questions ("Why are we over budget?", "What happens if we do nothing?", "How is spend slowed?"). Every answer ends with the next step. Click any day on the chart to ask what happened that day.
 
-**Tabs (default view):** This month (chart and daily bars), Users (everyone's spend, limit and whether they are slowed; the new engineers show "Protected: fund it"; hover a status to see the private note that person sees about their own spend), Agents (subagents, connectors and scheduled runs).
+**Tabs (default view):** This month (chart, the slowing summary and, on request, daily bars), Users (everyone's spend, limit and whether they are slowed; the new engineers show "Protected: fund it"; hover a status to see the private note that person sees about their own spend), Agents (subagents, connectors and scheduled runs).
 
 **··· menu:** switch scenario (Waste and new work, Normal month, Agents wasting spend, New engineers ramping), turn on **Advanced view**, turn on **Offline replay**, and see the version.
 

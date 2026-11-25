@@ -95,6 +95,9 @@ interface Store {
   usage: { calls: number; costUsd: number };
   lastBackend: { backend: Backend; model: string; replayReason?: string } | null;
   drawerOpen: boolean;
+  /** Daily bars under the chart: closed behind a one-line summary until the admin opens them. */
+  dailyOpen: boolean;
+  setDailyOpen: (open: boolean) => void;
   /** The drawer received something while closed. */
   unseen: boolean;
   /** Artifact id open in the full-page review, or null. */
@@ -179,6 +182,7 @@ const fresh = (scenario: ScenarioId = "C") => ({
   pinned: [] as PinnedContext[],
   messages: [] as ChatMessage[],
   ghost: null as DayPoint[] | null,
+  dailyOpen: false,
   pastChats: [] as PastChat[],
   currentChatId: null as string | null,
 });
@@ -237,6 +241,7 @@ export const useStore = create<Store>()(
         unseen: false,
         review: null,
 
+        setDailyOpen: (dailyOpen) => set({ dailyOpen }),
         setDrawer: (drawerOpen) => set({ drawerOpen, unseen: drawerOpen ? false : get().unseen }),
         setReview: (review) => set({ review }),
         threads: [],

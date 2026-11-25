@@ -27,6 +27,8 @@ export async function startAgentRun({ agent, prompt: basePrompt, driverId, escal
     : basePrompt;
   // Work about one spot on the page stays under it as a thread; everything else goes to the chat drawer.
   if (echo || say) s.addMessage({ role: "user", text: say ?? revision ?? basePrompt, anchor });
+  // A question about how spend is slowed opens the daily bars, which show it day by day.
+  if (/\bhow (is|was) (spend|it) slowed\b|\bslowed (each|per) day\b|\bdaily bars\b/i.test(basePrompt)) s.setDailyOpen(true);
   // Keep each context item short enough for the server, whatever the thread holds.
   const ctx = context?.map((c) => (c.length > 1_200 ? `${c.slice(0, 1_197)}...` : c));
   const runId = s.addMessage({

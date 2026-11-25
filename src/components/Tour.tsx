@@ -5,7 +5,8 @@ import { ArrowRight, X } from "lucide-react";
 import { cx } from "./ui";
 import { useStore } from "@/state/store";
 
-interface Step { target?: string; title: string; body: string; advancedBody?: string }
+/** fallback: what to highlight when the target isn't on screen (nobody is slowed, so there is no summary line). */
+interface Step { target?: string; fallback?: string; title: string; body: string; advancedBody?: string }
 
 const STEPS: Step[] = [
   {
@@ -19,10 +20,11 @@ const STEPS: Step[] = [
     body: "Spend so far and where the month will likely end against the budget. Switch teams at the top. Click any day to ask what happened.",
   },
   {
-    target: "forecast",
-    title: "What was slowed each day",
-    body: "The bars under the chart show each day's runs: what ran, what moved to a cheaper model, what was paused and what was held for a few hours. Users shows who is affected, and Agents shows scheduled runs, subagents and connectors.",
-    advancedBody: "The bars under the chart show each day's runs: what ran, what moved to a cheaper model, what was paused and what was held for a few hours. Users and Workstreams show who is affected. Health shows how forecasts and pacing did over the last six months.",
+    target: "slowed",
+    fallback: "forecast",
+    title: "What gets slowed",
+    body: "The line under the chart sums up what pacing slows this month: runs moved to a cheaper model, paused, or held for a few hours. Show daily bars opens it day by day. Users shows who is affected, and Agents shows scheduled runs, subagents and connectors.",
+    advancedBody: "The line under the chart sums up what pacing slows this month: runs moved to a cheaper model, paused, or held for a few hours. Show daily bars opens it day by day. Users and Workstreams show who is affected. Health shows how forecasts and pacing did over the last six months.",
   },
   {
     target: "actions",
@@ -75,7 +77,7 @@ export function Tour({ onClose }: { onClose: () => void }) {
   };
 
   useLayoutEffect(() => {
-    const el = step.target ? document.getElementById(step.target) : null;
+    const el = (step.target && document.getElementById(step.target)) || (step.fallback && document.getElementById(step.fallback)) || null;
     if (!el) return setRect(null);
     if (step.target !== "sidebar" && step.target !== "composer") el.scrollIntoView({ block: "center" });
     const update = () => setRect(el.getBoundingClientRect());
@@ -86,7 +88,7 @@ export function Tour({ onClose }: { onClose: () => void }) {
       window.removeEventListener("resize", update);
       clearTimeout(t);
     };
-  }, [step.target]);
+  }, [step.target, step.fallback]);
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
