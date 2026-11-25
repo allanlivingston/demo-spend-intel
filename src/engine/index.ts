@@ -3,6 +3,7 @@ export * from "./calendar";
 export * from "./data";
 export * from "./scenarios";
 export * from "./routing";
+export * from "./rules";
 export * from "./model";
 export * from "./nudge";
 export * from "./evidence";

@@ -118,6 +118,8 @@ export interface DemoState {
   overrides: string[];
   /** Recommendations the admin declined: they stay in the forecast but stop being suggested. */
   declined?: string[];
+  /** The admin's saved rules. They carry over to the next month; Reset demo clears them. */
+  rules?: PrefRule[];
   rebalanceApplied: boolean;
   sharingLevel: SharingLevel;
   /** Approved budget revisions by group (new pool budget). */
@@ -149,4 +151,22 @@ export interface Forecast {
   fundedVariance: boolean;
   overForecastPct: number;
   series: DayPoint[];
+}
+
+/** What a rule does with recommendations of its kind. Same three levels as Managed Agents permission policies. */
+export type RuleLevel = "allow" | "ask" | "skip";
+/** The kind of recommendation a rule covers. */
+export type RuleTopic = "loop" | "model" | "cache" | "fund-new" | "planned";
+
+/** A preference the admin approved. Stored as data and enforced by the engine, never left to the prompt. */
+export interface PrefRule {
+  id: string;
+  topic: RuleTopic;
+  groupId: GroupId;
+  level: RuleLevel;
+  /** The decision it came from, in a sentence. */
+  basedOn: string;
+  /** Claude's wording of the rule at each level. Unset: the app's template. Scope and level always come from the app. */
+  wording?: Partial<Record<RuleLevel, string>>;
+  createdAt: string;
 }

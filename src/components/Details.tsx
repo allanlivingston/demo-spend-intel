@@ -4,6 +4,7 @@ import { Check, Copy } from "lucide-react";
 import { evidenceAge, levelOfTier, pacing, userNote, SCENARIOS, TODAY, RUNG_LABEL as LEVEL_LABEL, GROUP_IDS, GROUPS, agentsOf, usersOf, workstreamPaces, type GroupId } from "@/engine";
 import { useStore } from "@/state/store";
 import { TierBadge, cx, usd } from "./ui";
+import { YourRules } from "./Rules";
 
 const groupsOf = (g: GroupId | "all"): GroupId[] => (g === "all" ? GROUP_IDS : [g]);
 
@@ -194,6 +195,8 @@ function activityTitle(action: string): { title: string; tone: string } {
   if (action === "Shipped fix") return { title: "Owner shipped fix", tone: "bg-ok" };
   if (action.startsWith("Sent")) return { title: "Sent fix to owner", tone: "bg-accent" };
   if (action.startsWith("Declined")) return { title: action, tone: "bg-neutral-400" };
+  if (action.endsWith("by your rule")) return { title: action, tone: "bg-ok" };
+  if (action === "Removed rule" || action === "Gave a reason") return { title: action, tone: "bg-neutral-400" };
   return { title: action, tone: "bg-accent" };
 }
 
@@ -209,14 +212,15 @@ export function Activity() {
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
-  if (!rows.length) return <p className="px-4 py-6 text-[15px] text-muted">No policy changes yet. Everything you apply, send or approve in the chat is recorded here.</p>;
   return (
     <div className="pb-2">
-      <div className="flex justify-end px-4 pt-2">
+      <YourRules />
+      {!rows.length && <p className="px-4 py-6 text-[15px] text-muted">No policy changes yet. Everything you apply, send or approve in the chat is recorded here.</p>}
+      {rows.length > 0 && <div className="flex justify-end px-4 pt-2">
         <button type="button" onClick={csv} className="flex items-center gap-1 text-[13px] text-muted hover:text-ink">
           {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copied" : "Copy as CSV"}
         </button>
-      </div>
+      </div>}
       <div className="divide-y divide-black/[0.06]">
         {rows.map((e) => {
           const what = activityTitle(e.action);
@@ -225,7 +229,7 @@ export function Activity() {
               <span className={cx("mt-[7px] h-2 w-2 shrink-0 rounded-full", what.tone)} />
               <div className="min-w-0 flex-1">
                 <div className="text-[15px] font-[450] text-ink">{what.title}</div>
-                <div className="truncate text-[14px] text-muted">{readable(e.detail)}</div>
+                <div className={cx("text-[14px] text-muted", !/rule/i.test(e.action) && "truncate")}>{/rule/i.test(e.action) && !e.action.endsWith("by your rule") ? e.detail : readable(e.detail)}</div>
                 {(e.reasonCode || e.fundingPath) && <div className="text-[13px] text-muted">{[e.reasonCode, e.fundingPath].filter(Boolean).join(" · ")}</div>}
               </div>
               <div className="shrink-0 text-right text-[13px] leading-5 text-muted">

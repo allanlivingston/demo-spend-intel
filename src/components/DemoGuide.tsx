@@ -14,6 +14,7 @@ export const GUIDE_CHIPS = [
   "What research backs this up?",
   "What are the steps?",
   "How does Claude fit in?",
+  "How does it learn what I prefer?",
   "What's real and what's simulated?",
   "What is the advanced view?",
   "How do companies handle AI cost overruns today?",

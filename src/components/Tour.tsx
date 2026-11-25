@@ -1,12 +1,14 @@
 "use client";
-// First-visit walkthrough. Each step highlights the real element it describes. Dismiss with ✕, Skip, Esc or a click outside.
+// First-visit walkthrough. Each step highlights the real element it describes. Steps about something that may not be
+// on screen yet (rules, slowed spend, asking) show a still example, so the tour reads the same whatever the page's state. Dismiss with ✕, Skip, Esc or a click outside.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, X } from "lucide-react";
 import { cx } from "./ui";
 import { useStore } from "@/state/store";
+import { TourMock, type MockKind } from "./TourMocks";
 
 /** fallback: what to highlight when the target isn't on screen (nobody is slowed, so there is no summary line). */
-interface Step { target?: string; fallback?: string; title: string; body: string; advancedBody?: string; narrowBody?: string }
+interface Step { target?: string; fallback?: string; mock?: MockKind; title: string; body: string; advancedBody?: string; narrowBody?: string }
 
 const STEPS: Step[] = [
   {
@@ -29,24 +31,39 @@ const STEPS: Step[] = [
     body: "Fix spending that produced nothing, like a Jira connection retrying a broken call over and over. Fund new work that's paying off, like new engineers shipping code.",
   },
   {
+    target: "actions",
+    mock: "rules",
+    title: "It learns what you prefer",
+    body: "Decline a suggestion and say why. If the reason will still hold next month, Claude suggests a rule. A rule only starts once you save it, and you can change it in Activity.",
+  },
+  {
     target: "slowed",
     fallback: "forecast",
+    mock: "slowed",
     title: "If a team still goes over",
     body: "Some of its work moves to a cheaper Claude model or waits a few hours. Nobody is locked out. The Users and Agents tabs show who and what is affected.",
     advancedBody: "Some of its work moves to a cheaper Claude model or waits a few hours. Nobody is locked out. Workstreams and Users show who is affected, and Health shows the last six months.",
   },
   {
     target: "composer",
+    mock: "composer",
     title: "Ask anything",
     body: "Type a question about spending in your own words. The first suggestion under the box is always your next step.",
   },
   {
     target: "sidebar",
     title: "Try another month",
-    body: "Try another situation plays out a different month. Activity lists everything you approved. Orange dots mark features you haven't tried yet.",
-    narrowBody: "Open the sidebar to try another situation or see Activity. Orange dots mark features you haven't tried yet.",
+    body: "Try another situation plays out a different month, with your rules already applied. Activity lists your rules and everything you approved. Orange dots mark features you haven't tried yet.",
+    narrowBody: "Open the sidebar to try another situation or see Activity, where your rules are. Orange dots mark features you haven't tried yet.",
   },
 ];
+
+/** The nearest scrolling container above an element. */
+function scrollerOf(el: HTMLElement): HTMLElement | null {
+  let p = el.parentElement;
+  while (p && !(p.scrollHeight > p.clientHeight && /auto|scroll/.test(getComputedStyle(p).overflowY))) p = p.parentElement;
+  return p;
+}
 
 const KEY = "csi-tour-done";
 export const tourSeen = () => {
@@ -75,16 +92,22 @@ export function Tour({ onClose }: { onClose: () => void }) {
       localStorage.setItem(KEY, "1");
     } catch {}
     // Back to the top of the chat so the headline and its next-step button are in view.
-    let el = document.getElementById("headline")?.parentElement ?? null;
-    while (el && !(el.scrollHeight > el.clientHeight && /auto|scroll/.test(getComputedStyle(el).overflowY))) el = el.parentElement;
-    el?.scrollTo({ top: 0, behavior: "smooth" });
+    const h = document.getElementById("headline");
+    if (h) scrollerOf(h)?.scrollTo({ top: 0, behavior: "smooth" });
     onClose();
   };
 
   useLayoutEffect(() => {
     const el = (step.target && document.getElementById(step.target)) || (step.fallback && document.getElementById(step.fallback)) || null;
     if (!el) return setRect(null);
-    if (step.target !== "sidebar" && step.target !== "composer") el.scrollIntoView({ block: "center" });
+    if (step.target !== "sidebar" && step.target !== "composer") {
+      el.scrollIntoView({ block: "center" });
+      // Short targets sit just above the message box, so the card, with its example, fits above them.
+      if (el.offsetHeight < 120) {
+        const floor = (document.getElementById("composer")?.getBoundingClientRect().top ?? window.innerHeight) - 16;
+        scrollerOf(el)?.scrollBy({ top: -(floor - el.getBoundingClientRect().bottom) });
+      }
+    }
     const update = () => setRect(el.getBoundingClientRect());
     update();
     window.addEventListener("resize", update);
@@ -107,7 +130,7 @@ export function Tour({ onClose }: { onClose: () => void }) {
 
   // Place the card beside the highlighted element, always fully inside the window: right of the sidebar; below or
   // above other targets when it fits; otherwise over the target's lower right (tall targets like the forecast).
-  const W = 360;
+  const W = Math.min(400, (typeof window !== "undefined" ? window.innerWidth : 1200) - 32);
   const M = 16;
   let pos: React.CSSProperties = { left: "50%", top: "50%", transform: "translate(-50%, -50%)" };
   let arrow: "left" | "up" | "down" | null = null;
@@ -158,6 +181,7 @@ export function Tour({ onClose }: { onClose: () => void }) {
           <div className="text-[13px] font-medium uppercase tracking-wide text-accent-ink">Welcome tour · {i + 1} of {STEPS.length}</div>
           <h2 className="mt-1 font-serif text-xl">{step.title}</h2>
           <p className="mt-2 text-[15px] leading-relaxed text-neutral-700">{(typeof window !== "undefined" && window.innerWidth < 1024 && step.narrowBody) || (advanced && step.advancedBody) || step.body}</p>
+          {step.mock && <TourMock key={i} kind={step.mock} />}
           <div className="mt-4 flex items-center gap-2">
             <div className="flex gap-1">
               {STEPS.map((_, j) => <span key={j} className={cx("h-1.5 w-1.5 rounded-full", j === i ? "bg-accent" : "bg-neutral-200")} />)}

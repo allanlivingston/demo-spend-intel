@@ -104,7 +104,7 @@ export function Situations() {
           <h2 className="font-serif text-lg">Try another situation</h2>
           <button type="button" onClick={close} aria-label="Close" className="ml-auto rounded-md p-1 text-muted hover:bg-black/5 hover:text-ink"><X size={16} /></button>
         </div>
-        <p className="mt-1 text-[14px] text-muted">Each one starts the month again with different spend. Approved changes are cleared.</p>
+        <p className="mt-1 text-[14px] text-muted">Each one starts the month again with different spend. Approved changes are cleared; your rules carry over.</p>
         <div className="mt-3 space-y-1">
           {SCENARIOS.map((s) => (
             <button key={s.id} type="button"
@@ -179,7 +179,7 @@ export function Sidebar({ onTour, onActivity, onGuide }: { onTour: () => void; o
         <NavItem icon={<Plus size={16} className="text-ink" />} label="New chat" onClick={then(newChat)} collapsed={collapsed} title="Start a new conversation. Approved changes stay." />
         <NavItem icon={<RotateCcw size={16} className="text-ink" />} label="Reset demo" onClick={then(reset)} collapsed={collapsed} title="Restart this scenario from its starting numbers" />
         <NavItem icon={<Shuffle size={16} className="text-ink" />} label="Try another situation" dot={<NewDot f="situations" label="Play a different month" className="ml-auto" />} onClick={then(() => { markUsed("situations"); useUi.getState().set({ situations: true }); })} collapsed={collapsed} title="Play a different month: waste only, new work only, or a normal month" />
-        <NavItem icon={<History size={16} className="text-ink" />} label="Activity" badge={unseen} ariaLabel={unseen ? `Activity, ${unseen} new` : "Activity"} onClick={then(() => { markAuditSeen(); onActivity(); })} collapsed={collapsed} title="Everything approved or sent, with undo" />
+        <NavItem icon={<History size={16} className="text-ink" />} label="Activity" badge={unseen} ariaLabel={unseen ? `Activity, ${unseen} new` : "Activity"} onClick={then(() => { markAuditSeen(); onActivity(); })} collapsed={collapsed} title="Your rules, and everything approved or sent" />
         <NavItem icon={<Compass size={16} className="text-ink" />} label="Take the tour" onClick={then(onTour)} collapsed={collapsed} title="A short walkthrough of the screen" />
         <NavItem icon={<CircleHelp size={16} className="text-ink" />} label="Ask about this demo" onClick={then(onGuide)} collapsed={collapsed} title="Why it's built this way: the problem, workflows, layout and nav choices" />
       </nav>

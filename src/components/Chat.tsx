@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, LineChart, ListChecks, Sparkles, X } from "lucide-react";
 import {
-  breakdown, confidenceOf, driverById, forecast, GROUP_IDS, GROUPS, headline, kpis, ownerOf, TODAY,
+  breakdown, confidenceOf, driverById, forecast, GROUP_IDS, GROUPS, headline, kpis, ownerOf, ruleFor, TODAY,
   type Artifact, type BreakdownRow, type GroupSelection,
 } from "@/engine";
 import { startAgentRun } from "@/state/agentClient";
@@ -19,6 +19,7 @@ import { HealthPanel } from "./HealthPanel";
 import { PacingChart } from "./PacingChart";
 import { cx, StatusPill, Term, TERMS, usd } from "./ui";
 import { markUsed, NewDot } from "./NewDot";
+import { RuleSuggestion, WhyAsk } from "./Rules";
 
 /** Money decisions an auditor or budget owner will ask about open in a full-page review. */
 
@@ -265,9 +266,11 @@ const CARD = "flex h-[192px] w-[280px] shrink-0 snap-start flex-col rounded-xl b
 function RecCard({ r, live, draftWaiting }: { r: BreakdownRow; live: boolean; draftWaiting: boolean }) {
   const busy = busyOf(useStore((s) => s.messages));
   const { declineRec, restoreRec } = useStore();
+  // Not suggested because of a saved rule (rather than declined by hand): changed under Activity, not restored here.
+  const byRule = useStore((s) => r.state === "declined" && !(s.demo.declined ?? []).includes(r.driver.id) && ruleFor(s.demo, r.driver.id)?.level === "skip");
   const fix = r.side === "fix";
   const c = confidenceOf(r.driver);
-  const done = { applied: "Fixed", funded: "Funded", overridden: "Approved as planned", sent: "Sent to owner", declined: "Declined" }[r.state as string];
+  const done = { applied: "Fixed", funded: "Funded", overridden: "Approved as planned", sent: "Sent to owner", declined: byRule ? "Skipped by your rule" : "Declined" }[r.state as string];
   const notWorth = fix && r.driver.kind === "growth";
   return (
     <div className={cx(CARD, done && "bg-neutral-50", r.state === "declined" && "opacity-75")}>
@@ -286,7 +289,7 @@ function RecCard({ r, live, draftWaiting }: { r: BreakdownRow; live: boolean; dr
         {done ? (
           <>
             <span className={cx("text-[13px] font-medium", r.state === "sent" || r.state === "declined" ? "text-muted" : "text-ok-ink")}>{done}</span>
-            {r.state === "declined" && live && (
+            {r.state === "declined" && live && !byRule && (
               <button type="button" disabled={busy} onClick={() => restoreRec(r.driver.id)} className="rounded-md px-2 py-1 text-[13px] text-neutral-600 hover:bg-neutral-100 hover:text-ink disabled:opacity-40">
                 Restore
               </button>
@@ -484,6 +487,8 @@ function Message({ m, all, liveIds }: { m: ChatMessage; all: ChatMessage[]; live
       </div>
     );
   }
+  if (m.why) return <WhyAsk m={m} />;
+  if (m.rules) return <RuleSuggestion m={m} />;
   if (!m.run) {
     // A plain note from Claude (for example after a decline).
     if (!m.text || m.artifact) return null;
@@ -698,10 +703,11 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
 
   // Like claude.ai: a new question moves to the top of the screen and the reply streams in below it. Streaming text
   // and new steps never scroll the page, so the start of a long reply stays put; a button jumps to the end.
-  const last = messages.at(-1);
   const seen = useRef(messages.length);
   const [viewH, setViewH] = useState(0);
   const [below, setBelow] = useState(false);
+  /** The message last moved to the top. Room is kept under it so it can get there even when it is short. */
+  const [anchor, setAnchor] = useState<string | null>(null);
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
@@ -723,17 +729,21 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
     if (messages.length < before) return;
     const added = messages.slice(before);
     const user = [...added].reverse().find((m) => m.role === "user");
-    // A new question goes to the top; otherwise a new forecast ("Applied your changes…") is shown from its first line.
-    const target = user ?? (last?.view && last.text ? last : null);
+    // Like claude.ai: a new question goes to the top. Otherwise the first new reply ("Applied your changes…", "Why
+    // decline it?") goes to the top, so it is read from its first line. A run starting or its drafts don't move the page.
+    const target = user ?? added.find((m) => m.role === "assistant" && !m.runOf && !m.run && (m.text || m.view));
     if (!target) return;
-    requestAnimationFrame(() => {
+    setAnchor(target.id);
+    // Two frames: the room under the target is rendered before the scroll is measured.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
       const msg = document.getElementById(`msg-${target.id}`);
       if (msg) el.scrollTo({ top: el.scrollTop + msg.getBoundingClientRect().top - el.getBoundingClientRect().top - 24, behavior: "smooth" });
-    });
+    }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
-  // Room under the newest question so it can sit at the top while the reply is still short.
-  const lastUser = shown.map((m) => m.role).lastIndexOf("user");
+  // Room under the newest question (or reply moved to the top) so it can sit at the top while what follows is short.
+  const anchorAt = anchor ? shown.findIndex((m) => m.id === anchor) : -1;
+  const lastUser = anchorAt >= 0 ? anchorAt : shown.map((m) => m.role).lastIndexOf("user");
 
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">

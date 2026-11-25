@@ -30,7 +30,7 @@ High, Medium and Low. A fix is usually High because the spend produced nothing. 
 The app reads billing, usage and cache data, never prompt text. Admins see each person's spend and limit, as they already can in the Claude Enterprise console. Results (merged PRs, passing tests) are counted for the team and the piece of work, not for each person, to address people's concerns about being measured one by one.
 
 ## What's real and what's simulated?
-The engine, forecasts, savings, checks and the Claude agents are real. The spend data is a made-up month for three teams. Sending to owners and budget owner approval are simulated and recorded in Activity. Nothing leaves the app.
+The engine, forecasts, savings, checks and the Claude agents are real. The spend data is a made-up month for three teams. Sending to owners and budget owner approval are simulated and recorded in Activity. Nothing leaves the app. Suggested rules are worded by Claude (Haiku, as structured output) when the app is live, and by a fixed template in Offline replay. Either way the app decides what a rule covers and applies it.
 
 ## What are the scenarios?
 Waste and new work (the default): fix the waste, then fund the new engineers. Normal month: every team on budget. Agents wasting spend: $10,800 of waste from agents that a per-person limit would miss. New engineers ramping: 14 new engineers whose work is producing results.
@@ -61,3 +61,6 @@ On Anthropic's pricing, reading a prompt from the cache costs a tenth of the nor
 
 ## What would come next?
 Real billing and usage data, results imported from Jira and code history, budget owner approval inside the app, and alerts that open this conversation already focused on the problem.
+
+## How does it learn what I prefer?
+When you decline a suggestion, Claude asks why. If the reason will still hold next month ("The team needs it", "It's planned work"), it suggests a rule, such as "For Platform Engineering, don't suggest moving work to a cheaper Claude model." When you apply a fix you could have made alone, it offers to make that fix without asking next month. Claude words the rule; the app sets what it covers and checks the wording (right team, short, plain), falling back to its own wording if a check fails. Nothing becomes a rule until you save it. Each rule has one of three levels: Apply without asking, Ask me first, or Don't suggest. These match the always allow, always ask and deny permission levels in Claude Code and Managed Agents. Rules are stored as data and applied by the app, not left to the model to remember. They are listed at the top of Activity, where you can change or remove them, and they carry over when you try another situation. Reset demo clears them.

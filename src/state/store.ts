@@ -5,7 +5,8 @@ import { persist } from "zustand/middleware";
 import { ownerOf, headline,
   setAdvancedView, storySummary, draftCfoBrief, draftOverride, draftPolicyDiff, draftRebalance, forecast, initialState,
   type Artifact, type DayPoint, type DemoState, type GroupId, type GroupSelection, type ScenarioId, type SharingLevel, isDeclined, driverById,
-  handoffTo, type Handoff,
+  handoffTo, type Handoff, applyRulesAtStart, DECLINE_REASONS, ruleFromDecline, rulesFromApply, ruleSentence, topicOf, withRules,
+  type PrefRule, type RuleLevel, type DeclineReasonId,
 } from "@/engine";
 import type { AgentId, Backend, StepPhase } from "@/agents/types";
 
@@ -71,6 +72,13 @@ export interface ChatMessage {
   view?: ViewKind;
   /** The state when this message was posted. Older copies render from it, so they match the text around them. */
   snap?: Snapshot;
+  /** After a decline: Claude asks why. The answer is kept here. */
+  why?: { driverId: string; answer?: string };
+  /** Suggested rules, waiting for the admin's approval. */
+  rules?: PrefRule[];
+  rulesStatus?: "proposed" | "saved" | "dismissed";
+  /** Who wrote the rule's sentence: Claude, or the app's template (offline, or Claude's answer failed a check). */
+  rulesWording?: "pending" | "claude" | "template";
 }
 
 export type ViewKind = "forecast" | "actions";
@@ -142,6 +150,15 @@ interface Store {
   restoreRec: (driverId: string) => void;
   /** Decline a draft: nothing changes, and it is logged. */
   declineDraft: (artifactId: string) => void;
+  /** Answer "why decline it?". A lasting reason leads to a suggested rule. */
+  answerWhy: (messageId: string, reason: DeclineReasonId) => void;
+  /** Save suggested rules, with the level the admin picked for each. */
+  saveRules: (messageId: string, levels: RuleLevel[]) => void;
+  dismissRules: (messageId: string) => void;
+  setRuleLevel: (ruleId: string, level: RuleLevel) => void;
+  removeRule: (ruleId: string) => void;
+  /** Kinds of rule the admin said no to ("topic:group"), so they aren't suggested again. */
+  ruleNoThanks: string[];
   /** Send a hand-off to the owner of a fix the admin can't apply. */
   sendHandoff: (driverId: string) => void;
   /** Demo control: the owner ships their fix. */
@@ -227,6 +244,31 @@ export const useStore = create<Store>()(
           return pastChats.map((c) => (c.id === currentChatId ? { ...c, ...entry } : c));
         return [{ id: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, ...entry }, ...pastChats].slice(0, 12);
       };
+      /** After a decline: ask why, so a lasting reason can become a rule. */
+      const askWhy = (driverId?: string) => {
+        if (!driverId || !topicOf(driverId)) return;
+        get().addMessage({ role: "assistant", text: "Why decline it? Your answer helps me suggest better changes next month.", why: { driverId } });
+      };
+      /** Suggest rules from what the admin just approved. */
+      const suggestRules = (rules: PrefRule[], text: string, why: { decision: "declined" | "applied"; reason?: string }) => {
+        if (!rules.length) return;
+        // Offline (and in tests) the app's template words the rule. Live, Claude words it; the scope never changes.
+        const live = !get().offline && typeof window !== "undefined";
+        const id = get().addMessage({ role: "assistant", text, rules, rulesStatus: "proposed", rulesWording: live ? "pending" : "template" });
+        if (live) void wordRules(id, rules, why);
+      };
+      /** Ask Claude to word each suggested rule; keep the template for any it can't. */
+      const wordRules = async (id: string, rules: PrefRule[], why: { decision: "declined" | "applied"; reason?: string }) => {
+        const worded = await Promise.all(rules.map((rule) =>
+          fetch("/api/rule", { method: "POST", headers: { "content-type": "application/json", "x-demo-session": get().sessionId }, body: JSON.stringify({ rule, ...why }) })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((j: { wording?: PrefRule["wording"] | null } | null) => j?.wording ?? undefined)
+            .catch(() => undefined)));
+        const m = get().messages.find((x) => x.id === id);
+        if (!m?.rules || m.rulesStatus !== "proposed") return;
+        const all = worded.every(Boolean);
+        get().patchMessage(id, (x) => ({ ...x, rules: all ? x.rules!.map((r, i) => ({ ...r, wording: worded[i] })) : x.rules, rulesWording: all ? "claude" : "template" }));
+      };
       /** After any approved change: say what it did and show the updated forecast, at the bottom. */
       const update = (what: string) => get().postView("forecast", `${what} ${headline(get().demo, get().group)}`);
       return {
@@ -249,6 +291,7 @@ export const useStore = create<Store>()(
         drawerOpen: true,
         unseen: false,
         review: null,
+        ruleNoThanks: [],
 
         setDailyOpen: (dailyOpen) => set({ dailyOpen }),
         setDrawer: (drawerOpen) => set({ drawerOpen, unseen: drawerOpen ? false : get().unseen }),
@@ -290,8 +333,16 @@ export const useStore = create<Store>()(
         noteRun: (e) => set({ lastBackend: e }),
         addUsage: (costUsd) => set({ usage: { calls: get().usage.calls + 1, costUsd: get().usage.costUsd + costUsd } }),
 
+        // A new month. Saved rules carry over and act first; everything else starts fresh.
         setScenario: (id) => {
-          set({ ...fresh(id), group: focusGroup(id), review: null, audit: [], auditSeen: 0, epoch: get().epoch + 1, seq: 0, threads: [], chatStart: { demo: initialState(id), group: focusGroup(id) } });
+          const rules = get().demo.rules ?? [];
+          const { state, applied, approved } = applyRulesAtStart({ ...initialState(id), rules });
+          set({ ...fresh(id), demo: state, group: focusGroup(id), review: null, audit: [], auditSeen: 0, epoch: get().epoch + 1, seq: 0, threads: [], chatStart: { demo: state, group: focusGroup(id) } });
+          applied.forEach((x) => log({ actor: "Your rule", action: "Applied by your rule", detail: x, evidenceTier: 1 }));
+          approved.forEach((x) => log({ actor: "Your rule", action: "Approved by your rule", detail: x }));
+          const done = [...applied, ...approved].map((x) => driverById(x)?.label).filter(Boolean);
+          if (done.length)
+            get().say({ role: "assistant", text: `Your rules already handled ${done.length === 1 ? "one thing" : `${done.length} things`} this month: ${done.join("; ")}. ${done.length === 1 ? "It is" : "They are"} listed in Activity, under your rules.` });
         },
         setGroup: (group) => set({ group, ghost: null }),
         pin: (c) => set({ pinned: get().pinned.some((p) => p.id === c.id) ? get().pinned : [...get().pinned, c] }),
@@ -325,6 +376,10 @@ export const useStore = create<Store>()(
           theirs.forEach((x) => log({ actor: "Admin", action: `Sent fix to ${ownerOf(x)!.name}`, detail: x, evidenceTier: 1 }));
           const done = theirs.length ? (mine.length ? "Applied your changes and sent the rest to its owner." : "Sent to its owner.") : "Applied.";
           update(tickets.length ? `${done.replace(/\.$/, "")}, and sent the ticket to ${handoffTo(tickets[0])}.` : done);
+          const rules = rulesFromApply(get().demo, mine, get().ruleNoThanks);
+          suggestRules(rules, rules.length > 1
+            ? "You could apply changes like these yourself. Want me to make them without asking next month?"
+            : "You could apply this change yourself. Want me to make it without asking next month?", { decision: "applied" });
         },
         sendHandoff: (driverId) => {
           const d = get().demo;
@@ -349,7 +404,8 @@ export const useStore = create<Store>()(
             messages: get().messages.map((m) => (m.artifactStatus === "proposed" && m.runOf && runs.has(m.runOf) ? { ...m, artifactStatus: "declined" as const } : m)),
           });
           log({ actor: "Admin", action: "Declined recommendation", detail: driverId });
-          update(`Declined: ${label}. It stays in the forecast and won't be suggested again.`);
+          update(`Declined: ${label}. It stays in the forecast and won't be suggested again this month.`);
+          askWhy(driverId);
         },
         restoreRec: (driverId) => {
           const d = get().demo;
@@ -362,8 +418,54 @@ export const useStore = create<Store>()(
           if (!m?.artifact || m.artifactStatus !== "proposed") return;
           get().setArtifactStatus(artifactId, "declined");
           const name = DRAFT_NAME[m.artifact.kind] ?? "draft";
-          log({ actor: "Admin", action: `Declined ${name}`, detail: m.runOf ? get().messages.find((x) => x.id === m.runOf)?.run?.driverId ?? name : name });
+          const driverId = (m.runOf ? get().messages.find((x) => x.id === m.runOf)?.run?.driverId : undefined)
+            ?? ("driverIds" in m.artifact ? (m.artifact.driverIds as string[])[0] : "driverId" in m.artifact ? (m.artifact.driverId as string) : undefined);
+          log({ actor: "Admin", action: `Declined ${name}`, detail: driverId ?? name });
           get().say({ role: "assistant", text: `Declined the ${name}. Nothing changed.` });
+          askWhy(driverId);
+        },
+        answerWhy: (messageId, reasonId) => {
+          const m = get().messages.find((x) => x.id === messageId);
+          const reason = DECLINE_REASONS.find((r) => r.id === reasonId);
+          if (!m?.why || m.why.answer || !reason) return;
+          get().patchMessage(messageId, (x) => ({ ...x, why: { ...x.why!, answer: reason.label } }));
+          log({ actor: "Admin", action: "Gave a reason", detail: `${m.why.driverId}: ${reason.label}` });
+          const rule = reason.lasting ? ruleFromDecline(m.why.driverId, reason.label) : null;
+          const g = rule?.groupId;
+          if (rule && !get().ruleNoThanks.includes(`${rule.topic}:${g}`))
+            suggestRules([rule], "That sounds like it will hold next month too. Want me to keep it as a rule?", { decision: "declined", reason: reason.label });
+          else if (!reason.lasting && "reply" in reason) get().say({ role: "assistant", text: reason.reply });
+        },
+        saveRules: (messageId, levels) => {
+          const m = get().messages.find((x) => x.id === messageId);
+          if (!m?.rules || m.rulesStatus !== "proposed") return;
+          const rules = m.rules.map((r, i) => ({ ...r, level: levels[i] ?? r.level, createdAt: new Date().toISOString() }));
+          // A rule that stops suggestions applies now; the others start with next month.
+          set({ demo: withRules(get().demo, rules) });
+          get().patchMessage(messageId, (x) => ({ ...x, rules, rulesStatus: "saved" }));
+          rules.forEach((r) => log({ actor: "Admin", action: "Saved rule", detail: ruleSentence(r) }));
+          const later = rules.some((r) => r.level === "allow");
+          get().say({ role: "assistant", text: later
+            ? "Saved. It starts next month: try another situation to see it. You can change or remove it under Activity."
+            : "Saved. You can change or remove it under Activity." });
+        },
+        dismissRules: (messageId) => {
+          const m = get().messages.find((x) => x.id === messageId);
+          if (!m?.rules || m.rulesStatus !== "proposed") return;
+          get().patchMessage(messageId, (x) => ({ ...x, rulesStatus: "dismissed" }));
+          set({ ruleNoThanks: [...get().ruleNoThanks, ...m.rules.map((r) => `${r.topic}:${r.groupId}`)] });
+        },
+        setRuleLevel: (ruleId, level) => {
+          const r = (get().demo.rules ?? []).find((x) => x.id === ruleId);
+          if (!r || r.level === level) return;
+          set({ demo: withRules(get().demo, [{ ...r, level }]) });
+          log({ actor: "Admin", action: "Changed rule", detail: ruleSentence({ ...r, level }) });
+        },
+        removeRule: (ruleId) => {
+          const r = (get().demo.rules ?? []).find((x) => x.id === ruleId);
+          if (!r) return;
+          set({ demo: { ...get().demo, rules: (get().demo.rules ?? []).filter((x) => x.id !== ruleId) } });
+          log({ actor: "Admin", action: "Removed rule", detail: ruleSentence(r) });
         },
         undoPolicy: (driverIds, artifactId) => {
           const d = get().demo;
@@ -419,7 +521,7 @@ export const useStore = create<Store>()(
         },
         reset: () => {
           const id = get().demo.scenarioId;
-          set({ ...fresh(id), group: focusGroup(id), audit: [], auditSeen: 0, epoch: get().epoch + 1, seq: 0, threads: [], review: null, ghost: null, chatStart: { demo: initialState(id), group: focusGroup(id) } });
+          set({ ...fresh(id), ruleNoThanks: [], group: focusGroup(id), audit: [], auditSeen: 0, epoch: get().epoch + 1, seq: 0, threads: [], review: null, ghost: null, chatStart: { demo: initialState(id), group: focusGroup(id) } });
         },
       };
     },

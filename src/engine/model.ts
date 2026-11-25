@@ -10,6 +10,7 @@
 import { DAYS, TODAY, Z90, planFraction, weights } from "./calendar";
 import { GROUP_IDS, GROUPS, PROFILES, tenuredMembers, workstreamsOf } from "./data";
 import { recoveryOf } from "./routing";
+import { ruleFor } from "./rules";
 import { SCENARIOS } from "./scenarios";
 import { shownInView } from "./viewMode";
 import type {
@@ -32,8 +33,8 @@ export function initialState(scenarioId: ScenarioId = "baseline"): DemoState {
   };
 }
 
-/** True when the admin declined this recommendation. */
-export const isDeclined = (s: DemoState, driverId: string) => (s.declined ?? []).includes(driverId);
+/** True when the admin declined this recommendation, or one of their rules says not to suggest it. */
+export const isDeclined = (s: DemoState, driverId: string) => (s.declined ?? []).includes(driverId) || ruleFor(s, driverId)?.level === "skip";
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 const zeros = () => new Array<number>(DAYS).fill(0);
