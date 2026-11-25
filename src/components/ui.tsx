@@ -1,6 +1,6 @@
 "use client";
 import { levelOfTier } from "@/engine";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { Status } from "@/engine";
 
 export const cx = (...xs: (string | false | null | undefined)[]) => xs.filter(Boolean).join(" ");
@@ -83,4 +83,32 @@ export function Button({
 export function Delta({ value }: { value: number }) {
   const over = value > 0;
   return <span className={over ? "text-bad" : "text-ok-ink"}>{over ? "+" : "-"}{usd(Math.abs(value))} vs budget</span>;
+}
+
+/** Plain-word definitions for the app's terms, shown in place. */
+export const TERMS = {
+  landsAt: "Where this month's spend will likely end: spend so far plus the forecast for the rest of the month.",
+  slowed: "Pacing slows runs instead of stopping people: a run moves to a cheaper model, waits for a quieter time, or is held for a few hours.",
+  likely: "The shaded band. The month most likely ends inside it; the top edge is a bad-luck month.",
+  fixable: "Spend that produced nothing, like a connector retrying a broken call. Fixing it doesn't slow anyone's work.",
+  waiting: "Fixes sent to another team. They count once that team ships them.",
+} as const;
+
+/** A term with a dotted underline; hover, focus or tap shows its definition. */
+export function Term({ children, def }: { children: ReactNode; def: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-block">
+      <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(!open); }} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} aria-expanded={open}
+        className="cursor-help underline decoration-dotted decoration-from-font underline-offset-[3px] [text-transform:inherit]">
+        {children}
+      </button>
+      {open && (
+        <span role="tooltip" className="absolute left-0 top-full z-30 mt-1 block w-64 rounded-lg bg-ink px-3 py-2 text-left text-[13px] font-normal normal-case leading-[18px] tracking-normal text-white shadow-lg">
+          {def}
+        </span>
+      )}
+    </span>
+  );
 }

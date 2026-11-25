@@ -3,7 +3,8 @@ import { ChevronDown, CircleHelp } from "lucide-react";
 import { Area, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, usePlotArea, useXAxisScale, useYAxisScale, XAxis, YAxis } from "recharts";
 import { dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, pacing, TODAY, type GroupId } from "@/engine";
 import { useStore, type Snapshot } from "@/state/store";
-import { usd, usdK } from "./ui";
+import { Term, TERMS, usd, usdK } from "./ui";
+import { markUsed, NewDot, useNew } from "./NewDot";
 
 /** Chart readouts round to $100, like the rest of the app. */
 const r100 = (v: number) => Math.round(v / 100) * 100;
@@ -17,6 +18,7 @@ const FORMULA =
  */
 export function PacingChart({ onDay, snap }: { onDay?: (question: string, context: string) => void; snap?: Snapshot }) {
   const store = useStore();
+  const daySeen = useNew((s) => s.seen.includes("chart-day"));
   const { advanced, dailyOpen, setDailyOpen } = store;
   const demo = snap?.demo ?? store.demo;
   const group = snap?.group ?? store.group;
@@ -71,6 +73,7 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
             onClick={(st) => {
               const day = Number(st?.activeLabel);
               if (!day || !onDay) return;
+              markUsed("chart-day");
               const d = dayInfo(demo, group, day);
               const parts = [d.past ? `Day ${day}: ${usd(d.spend)} spent` : `Day ${day}: about ${usd(d.spend)} forecast`, ...d.events.map((e) => `started: ${e}`), d.blocked ? `${d.blocked} people go over their monthly limit` : ""].filter(Boolean);
               onDay(day > TODAY ? `What's expected on day ${day}?` : `What happened on day ${day}?`, parts.join("; "));
@@ -129,16 +132,25 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
         <span><span className="mr-1 inline-block h-0.5 w-4 bg-ink align-middle" />Actual</span>
         <span><span className="mr-1 inline-block w-4 border-t-2 border-dashed border-ink align-middle" />{advanced ? "No limits, from day 1" : "Forecast"}</span>
         {advanced && anyHeld && <span><span className="mr-1 inline-block w-4 border-t-2 border-dotted align-middle" style={{ borderColor: "#D97757" }} />Spend with pacing and caps</span>}
-        <span><span className="mr-1 inline-block h-2.5 w-4 bg-accent/20 align-middle" />Likely to high case</span>
+        <span><span className="mr-1 inline-block h-2.5 w-4 bg-accent/20 align-middle" /><Term def={TERMS.likely}>Likely to high case</Term></span>
         {advanced && <span><span className="mr-1 inline-block h-px w-4 bg-accent align-middle" />Pacing plan</span>}
         {/* Only the markers this chart shows. */}
         {markers.some((d) => d.kind === "waste" && !fixedState(d.id)) && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-warn align-middle" />Waste starts</span>}
         {markers.some((d) => d.kind !== "waste" && !fixedState(d.id)) && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-ok align-middle" />Growth starts</span>}
         {markers.some((d) => fixedState(d.id)) && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ background: "#B8B8B8" }} />Fixed or sent to owner</span>}
         {Object.keys(blockDays).length > 0 && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-bad align-middle" />People with runs first held</span>}
-        <button type="button" className="ml-auto inline-flex cursor-help items-center text-muted hover:text-ink" title={FORMULA} aria-label={`How is this calculated? ${FORMULA}`}>
-          <CircleHelp size={15} />
-        </button>
+        {/* The note and the ? stay together on the right, so neither wraps onto a line of its own. */}
+        <span className="ml-auto inline-flex items-center gap-3 whitespace-nowrap">
+          {onDay && (
+            <span className="inline-flex items-center gap-1.5 text-ink">
+              <NewDot f="chart-day" label="Click any day to ask what happened" />
+              <span className={daySeen ? "text-muted" : undefined}>Click any day to ask about it</span>
+            </span>
+          )}
+          <button type="button" className="inline-flex cursor-help items-center text-muted hover:text-ink" title={FORMULA} aria-label={`How is this calculated? ${FORMULA}`}>
+            <CircleHelp size={15} />
+          </button>
+        </span>
       </div>
       {anyHeld && <DailySummary data={stripDays} share={pacing(demo, group).teamShare} open={!!dailyOpen} onToggle={() => setDailyOpen(!dailyOpen)} />}
       {anyHeld && dailyOpen && <DailyStrip data={stripDays} />}
@@ -283,16 +295,19 @@ function DailySummary({ data, share, open, onToggle }: { data: StripDay[]; share
   const steps = STEPS.filter((st) => Math.round(t(st.key) / 100) > 0);
   const pct = Math.round(share * 100);
   const top = [...STEPS].sort((a, b) => t(b.key, TODAY + 1) - t(a.key, TODAY + 1)).find((st) => t(st.key, TODAY + 1) > 0);
-  const sentence = pct ? `From today, about ${pct}% of runs are slowed${top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}` : "From today, under 1% of runs are slowed";
+  const sentence = <>{pct ? `From today, about ${pct}% of runs are ` : "From today, under 1% of runs are "}<Term def={TERMS.slowed}>slowed</Term>{pct && top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}</>;
   return (
     <div id="slowed" className={`border-t border-neutral-100 px-4 py-2.5 text-[13px]${open ? " pb-1" : ""}`}>
-      <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-3 text-left text-muted hover:text-ink">
+      <div className="flex w-full items-center gap-3">
         <span className="text-ink">{sentence}</span>
-        <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-accent-ink">
+      <button type="button" onClick={() => { onToggle(); markUsed("daily-bars"); }} aria-expanded={open} className="ml-auto flex shrink-0 items-center text-left text-muted hover:text-ink">
+        <span className="inline-flex shrink-0 items-center gap-1 text-accent-ink">
+          <NewDot f="daily-bars" label="The month day by day: what ran, what was slowed" className="mr-1" />
           {open ? "Hide daily bars" : "Show daily bars"}
           <ChevronDown size={14} className={open ? "rotate-180 transition-transform" : "transition-transform"} />
         </span>
       </button>
+      </div>
       {open && (
         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-muted">
           <span className="font-medium text-ink">This month</span>

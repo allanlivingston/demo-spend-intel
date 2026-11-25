@@ -81,7 +81,7 @@ export function chipsFor(i: ChipInput): ChipSpec[] {
     const art = draft.artifact!;
     // The draft's own buttons may be scrolled away; only then do the chips repeat its approval and Decline.
     const repeat = !i.draftActionsVisible;
-    if (repeat && REVIEW_KINDS.includes(art.kind)) main.push({ text: "Open the review", primary: true, action: { type: "review", artifactId: art.id } });
+    if (repeat && REVIEW_KINDS.includes(art.kind)) main.push({ text: art.kind === "cfo_brief" ? "Go to the brief" : "Go to the approval", primary: true, action: { type: "review", artifactId: art.id } });
     else if (repeat && art.kind === "policy_diff") main.push({ text: art.rows.some((r) => !ownerOf(r.driverId)) ? "Apply the changes" : "Send to the owner", primary: true, action: { type: "approve", artifactId: art.id } });
     else if (repeat && art.kind === "rebalance_plan" && art.allowed) main.push({ text: "Move the budget", primary: true, action: { type: "approve", artifactId: art.id } });
     // The question is about the draft on screen, so it travels with it.

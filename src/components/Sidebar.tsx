@@ -1,12 +1,14 @@
 "use client";
 // Left navigation, Claude-style: app name and menu, New chat, Reset demo, past chats, and the admin at the bottom.
 import { useEffect, useRef, useState } from "react";
-import { CircleHelp, Compass, History, MoreHorizontal, PanelLeft, Plus, RotateCcw } from "lucide-react";
+import { CircleHelp, Compass, History, MoreHorizontal, PanelLeft, Plus, RotateCcw, Shuffle, X } from "lucide-react";
+import { useUi } from "@/state/ui";
+import { markUsed, NewDot } from "./NewDot";
 import type { ScenarioId } from "@/engine";
 import { chatTitle, useStore } from "@/state/store";
 import { cx } from "./ui";
 
-const SCENARIOS: { id: ScenarioId; label: string; hint: string }[] = [
+export const SCENARIOS: { id: ScenarioId; label: string; hint: string }[] = [
   { id: "C", label: "Waste and new work", hint: "Fix the waste, then fund the new engineers" },
   { id: "baseline", label: "Normal month", hint: "Every team on budget" },
   { id: "A", label: "Agents wasting spend", hint: "Waste a per-person limit would miss: fix it" },
@@ -67,17 +69,54 @@ function DemoMenu() {
   );
 }
 
-function NavItem({ icon, label, onClick, collapsed, title }: { icon: React.ReactNode; label: string; onClick: () => void; collapsed: boolean; title?: string }) {
+function NavItem({ icon, label, onClick, collapsed, title, badge, ariaLabel, dot }: { icon: React.ReactNode; label: string; onClick: () => void; collapsed: boolean; title?: string; badge?: number; ariaLabel?: string; dot?: React.ReactNode }) {
   return (
     <button
       type="button"
       onClick={onClick}
       title={collapsed ? label : title}
-      className={cx("flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-[15px] font-[450] text-ink hover:bg-black/5", collapsed && "justify-center px-0")}
+      aria-label={ariaLabel}
+      className={cx("relative flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-[15px] font-[450] text-ink hover:bg-black/5", collapsed && "justify-center px-0")}
     >
       {icon}
       {!collapsed && <span className="truncate">{label}</span>}
+      {!collapsed && dot}
+      {!!badge && (
+        <span className={cx("rounded-full bg-accent px-1.5 text-[11px] font-semibold leading-4 text-white", collapsed ? "absolute right-1.5 top-0.5 px-1 text-[9px]" : "ml-auto")}>{badge}</span>
+      )}
     </button>
+  );
+}
+
+/** Pick another situation to play: the same list as the ··· menu, but in plain view. */
+export function Situations() {
+  const { demo, setScenario } = useStore();
+  const close = () => useUi.getState().set({ situations: false });
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => e.key === "Escape" && close();
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, []);
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/25 p-6" onClick={close}>
+      <div role="dialog" aria-label="Try another situation" className="w-full max-w-[440px] rounded-2xl bg-canvas p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2">
+          <h2 className="font-serif text-lg">Try another situation</h2>
+          <button type="button" onClick={close} aria-label="Close" className="ml-auto rounded-md p-1 text-muted hover:bg-black/5 hover:text-ink"><X size={16} /></button>
+        </div>
+        <p className="mt-1 text-[14px] text-muted">Each one starts the month again with different spend. Approved changes are cleared.</p>
+        <div className="mt-3 space-y-1">
+          {SCENARIOS.map((s) => (
+            <button key={s.id} type="button"
+              onClick={() => { setScenario(s.id); close(); }}
+              className={cx("flex w-full flex-col rounded-lg border px-3 py-2 text-left hover:bg-white", s.id === demo.scenarioId ? "border-accent/40 bg-orange-50" : "border-black/10")}>
+              <span className="text-[15px] font-medium">{s.label}{s.id === demo.scenarioId && <span className="ml-2 text-[12px] font-normal text-muted">Playing now</span>}</span>
+              <span className="text-[13px] text-muted">{s.hint}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -139,7 +178,9 @@ export function Sidebar({ onTour, onActivity, onGuide }: { onTour: () => void; o
       <nav className="space-y-0.5 px-2">
         <NavItem icon={<Plus size={16} className="text-ink" />} label="New chat" onClick={then(newChat)} collapsed={collapsed} title="Start a new conversation. Approved changes stay." />
         <NavItem icon={<RotateCcw size={16} className="text-ink" />} label="Reset demo" onClick={then(reset)} collapsed={collapsed} title="Restart this scenario from its starting numbers" />
-        <NavItem icon={<Compass size={16} className="text-ink" />} label="Run the welcome wizard" onClick={then(onTour)} collapsed={collapsed} title="A short walkthrough of the screen" />
+        <NavItem icon={<Shuffle size={16} className="text-ink" />} label="Try another situation" dot={<NewDot f="situations" label="Play a different month" className="ml-auto" />} onClick={then(() => { markUsed("situations"); useUi.getState().set({ situations: true }); })} collapsed={collapsed} title="Play a different month: waste only, new work only, or a normal month" />
+        <NavItem icon={<History size={16} className="text-ink" />} label="Activity" badge={unseen} ariaLabel={unseen ? `Activity, ${unseen} new` : "Activity"} onClick={then(() => { markAuditSeen(); onActivity(); })} collapsed={collapsed} title="Everything approved or sent, with undo" />
+        <NavItem icon={<Compass size={16} className="text-ink" />} label="Take the tour" onClick={then(onTour)} collapsed={collapsed} title="A short walkthrough of the screen" />
         <NavItem icon={<CircleHelp size={16} className="text-ink" />} label="Ask about this demo" onClick={then(onGuide)} collapsed={collapsed} title="Why it's built this way: the problem, workflows, layout and nav choices" />
       </nav>
 
@@ -171,10 +212,6 @@ export function Sidebar({ onTour, onActivity, onGuide }: { onTour: () => void; o
           </span>
         )}
         <ConnectionDot collapsed={collapsed} />
-        <button type="button" onClick={then(() => { markAuditSeen(); onActivity(); })} title="Activity: everything approved or sent" aria-label={unseen ? `Activity, ${unseen} new` : "Activity"} className="relative rounded-md p-1.5 text-muted hover:bg-black/5 hover:text-ink">
-          <History size={17} />
-          {unseen > 0 && <span className="absolute -right-0.5 -top-0.5 rounded-full bg-accent px-1 text-[9px] font-semibold text-white">{unseen}</span>}
-        </button>
       </div>
      </div>
     </aside>

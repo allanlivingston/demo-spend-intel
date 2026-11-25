@@ -3,9 +3,9 @@
 // Everything after appends below. Views (forecast, recommendations) can be posted again at the bottom; only the
 // newest copy of each is live, older copies render from the state they were posted with, so they match their text.
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, FileText, LineChart, ListChecks, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, LineChart, ListChecks, Sparkles, X } from "lucide-react";
 import {
-  breakdown, confidenceOf, forecast, GROUP_IDS, GROUPS, headline, kpis, ownerOf, TODAY,
+  breakdown, confidenceOf, driverById, forecast, GROUP_IDS, GROUPS, headline, kpis, ownerOf, TODAY,
   type Artifact, type BreakdownRow, type GroupSelection,
 } from "@/engine";
 import { startAgentRun } from "@/state/agentClient";
@@ -17,10 +17,11 @@ import { ArtifactCard } from "./Artifacts";
 import { Activity, Agents, Users, Workstreams } from "./Details";
 import { HealthPanel } from "./HealthPanel";
 import { PacingChart } from "./PacingChart";
-import { cx, StatusPill, usd } from "./ui";
+import { cx, StatusPill, Term, TERMS, usd } from "./ui";
+import { markUsed, NewDot } from "./NewDot";
+import { track } from "@/lib/track";
 
 /** Money decisions an auditor or budget owner will ask about open in a full-page review. */
-export const NEEDS_REVIEW: Artifact["kind"][] = ["cfo_brief", "governed_override"];
 
 const ask = (q: string, context?: string[]) => startAgentRun({ agent: "chat", prompt: q, echo: true, context });
 const busyOf = (messages: ChatMessage[]) => messages.some((m) => m.run?.status === "running");
@@ -155,7 +156,7 @@ function LearnMore({ learn }: { learn: Learn }) {
   );
 }
 
-function Stat({ label, value, tone, learn, hint }: { label: string; value: string; tone?: string; learn?: Learn; hint?: string }) {
+function Stat({ label, value, tone, learn, hint }: { label: React.ReactNode; value: string; tone?: string; learn?: Learn; hint?: string }) {
   return (
     <div>
       <div className="text-[12px] uppercase tracking-wide text-muted">{label}</div>
@@ -207,19 +208,20 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
           </>
         ) : (
           // An earlier copy: one line with its numbers at that point; the whole line opens it.
-          <button type="button" onClick={() => setOpen(!open)} aria-expanded={open}
+          <button type="button" onClick={() => { setOpen(!open); markUsed("earlier-copy"); }} aria-expanded={open}
             className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md px-2 py-1 text-left text-[13px] text-muted hover:bg-neutral-100">
             <span>{open ? "" : "Earlier copy · "}{s.group === "all" ? "All teams" : GROUPS[s.group].name} lands at <span className="font-medium tabular-nums text-ink">{usd(f.p50)}</span> of {usd(f.pool)}</span>
             <StatusPill status={f.status} funded={f.fundedVariance} />
+            <NewDot f="earlier-copy" label="Open this copy to see the numbers as they were then" />
             <span className="inline-flex items-center gap-0.5 hover:text-ink">{open ? "Collapse" : "Expand"}<ChevronDown size={13} className={cx("transition-transform", open && "rotate-180")} /></span>
           </button>
         )
       }
     >
       {(live || open) && <div className="flex flex-wrap gap-x-10 gap-y-2 px-4 py-3">
-        <Stat label="Lands at" value={usd(f.p50)} tone={f.p50 > f.pool ? "text-bad" : undefined} hint="if nothing changes" />
+        <Stat label={<Term def={TERMS.landsAt}>Lands at</Term>} value={usd(f.p50)} tone={f.p50 > f.pool ? "text-bad" : undefined} hint="if nothing changes" />
         <Stat label="Budget" value={usd(f.pool)} />
-        <Stat label={third.label} value={third.value} tone={third.tone} learn={live ? third.learn : undefined} />
+        <Stat label={third.label === "Fixable waste" ? <Term def={TERMS.fixable}>{third.label}</Term> : third.label === "Waiting on owner" ? <Term def={TERMS.waiting}>{third.label}</Term> : third.label} value={third.value} tone={third.tone} learn={live ? third.learn : undefined} />
         <div className="ml-auto self-end whitespace-nowrap text-[13px] text-muted">Day {TODAY} of 30</div>
       </div>}
       {/* An earlier copy shows its chart as it was then; the tabs read today's numbers, so only the live copy has them. */}
@@ -228,8 +230,10 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
         <>
           <div role="tablist" aria-label="Forecast views" className="flex gap-4 overflow-x-auto border-y border-neutral-100 px-4 text-[15px] [scrollbar-width:none]">
             {tabs.map((t) => (
-              <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={cx("-mb-px whitespace-nowrap border-b-2 py-2", tab === t ? "border-accent font-medium" : "border-transparent text-muted hover:text-ink")}>
+              <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => { setTab(t); if (t === "users") markUsed("tab-users"); if (t === "agents") markUsed("tab-agents"); }} className={cx("-mb-px inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 py-2", tab === t ? "border-accent font-medium" : "border-transparent text-muted hover:text-ink")}>
                 {TAB_LABEL[t]}{t === "activity" && auditCount > 0 ? ` (${auditCount})` : ""}
+                {t === "users" && <NewDot f="tab-users" label="Who is affected, and what each person sees" />}
+                {t === "agents" && <NewDot f="tab-agents" label="Subagents, connectors and scheduled runs" />}
               </button>
             ))}
           </div>
@@ -394,20 +398,37 @@ function View({ snap, live, id }: { kind?: ViewKind; snap: Snapshot; live: boole
 
 // ---------- Conversation ----------
 
-function ReviewLink({ m }: { m: ChatMessage }) {
-  const setReview = useStore((s) => s.setReview);
-  const kind = m.artifact!.kind;
-  const Icon = kind === "cfo_brief" ? FileText : ShieldCheck;
-  const done = m.artifactStatus === "approved" || m.artifactStatus === "confirmed";
+/** What an approved card did, in one line. */
+function settledLine(a: Artifact): string {
+  if (a.kind === "policy_diff") {
+    const mine = a.rows.filter((r) => !ownerOf(r.driverId));
+    const theirs = a.rows.filter((r) => ownerOf(r.driverId));
+    const saves = usd(a.rows.reduce((t, r) => t + r.savings, 0));
+    const applied = mine.length ? `Applied ${mine.length === 1 ? "1 fix" : `${mine.length} fixes`}` : "";
+    const sent = theirs.length ? `sent ${theirs.length === 1 ? "1" : theirs.length} to ${ownerOf(theirs[0].driverId)!.short}` : "";
+    const done = [applied, sent].filter(Boolean).join(" and ");
+    return `${done.charAt(0).toUpperCase()}${done.slice(1)} · saves ${saves}`;
+  }
+  if (a.kind === "cfo_brief") return `Budget owner approved · budget now ${usd(a.newBudget)}`;
+  if (a.kind === "governed_override") return `Approved as planned spend · ${driverById(a.driverId)?.label ?? a.driverId}`;
+  if (a.kind === "rebalance_plan") return `Moved ${usd(a.moved)} of unused budget to ${a.recipientName}`;
+  if (a.kind === "handoff") return `Sent to ${a.recipient}`;
+  return "Done";
+}
+
+/** Once approved, a card folds to one line saying what it did; it opens again on click (Undo lives inside). */
+function Settled({ a, children }: { a: Artifact; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
   return (
-    <button type="button" onClick={() => setReview(m.artifact!.id)} className="flex w-full items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-left shadow-sm hover:border-accent">
-      <Icon size={16} className="text-accent-ink" />
-      <span className="flex-1 text-[15px]">
-        <span className="font-medium">{kind === "cfo_brief" ? "Budget owner brief" : "Planned spend approval"}</span>
-        <span className="block text-[13px] text-muted">{done ? "Approved. Open to view the record." : "Drafted. Review it before approving."}</span>
-      </span>
-      <span className="flex items-center gap-1 text-[15px] font-medium text-accent-ink">{done ? "View" : "Review"} <ArrowRight size={14} /></span>
-    </button>
+    <div className="overflow-hidden rounded-xl border border-black/10 bg-white">
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open}
+        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-[14px] hover:bg-neutral-50">
+        <Check size={15} className="shrink-0 text-ok-ink" />
+        <span className="flex-1 text-ink">{settledLine(a)}</span>
+        <span className="inline-flex shrink-0 items-center gap-0.5 text-[13px] text-muted">{open ? "Hide" : "Show"}<ChevronDown size={13} className={cx("transition-transform", open && "rotate-180")} /></span>
+      </button>
+      {open && <div className="border-t border-neutral-100 p-2">{children}</div>}
+    </div>
   );
 }
 
@@ -415,7 +436,8 @@ function Draft({ x, all }: { x: ChatMessage; all: ChatMessage[] }) {
   const superseded = isSuperseded(x, all);
   const declineDraft = useStore((s) => s.declineDraft);
   const busy = busyOf(all);
-  const body = NEEDS_REVIEW.includes(x.artifact!.kind) ? <ReviewLink m={x} /> : <ArtifactCard a={x.artifact!} status={x.artifactStatus} runOf={x.runOf} />;
+  // Every draft is reviewed and approved where it is, in the conversation; nothing opens a separate page.
+  const body = <ArtifactCard a={x.artifact!} status={x.artifactStatus} runOf={x.runOf} />;
   if (x.artifactStatus === "declined")
     return (
       <div>
@@ -425,7 +447,7 @@ function Draft({ x, all }: { x: ChatMessage; all: ChatMessage[] }) {
     );
   if (!superseded && x.artifactStatus === "proposed")
     return (
-      <div>
+      <div id={`draft-${x.artifact!.id}`}>
         {body}
         <div data-draft-actions="" className="mt-1.5 flex justify-end">
           <button type="button" disabled={busy} onClick={() => declineDraft(x.artifact!.id)} title="Nothing changes. Logged in Activity."
@@ -435,6 +457,8 @@ function Draft({ x, all }: { x: ChatMessage; all: ChatMessage[] }) {
         </div>
       </div>
     );
+  if (!superseded && (x.artifactStatus === "applied" || x.artifactStatus === "approved" || x.artifactStatus === "confirmed"))
+    return <Settled a={x.artifact!}>{body}</Settled>;
   if (!superseded) return body;
   return (
     <div>
@@ -614,7 +638,7 @@ function ActivitySheet({ onClose }: { onClose: () => void }) {
 // ---------- Page ----------
 
 export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boolean; setActivityOpen: (v: boolean) => void }) {
-  const { messages, chatStart, demo, group, audit, postView, setReview, epoch } = useStore();
+  const { messages, chatStart, demo, group, audit, postView, epoch } = useStore();
   const shown = messages.filter((m) => !m.runOf);
   const scroller = useRef<HTMLDivElement>(null);
 
@@ -661,7 +685,7 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
     if (a.type === "run") startAgentRun(a.run);
     else if (a.type === "ask") ask(a.q, a.context);
     else if (a.type === "view") postView(a.kind);
-    else if (a.type === "review") setReview(a.artifactId);
+    else if (a.type === "review") document.getElementById(`draft-${a.artifactId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
     else if (a.type === "decline") useStore.getState().declineDraft(a.artifactId);
     else if (a.type === "shipped") useStore.getState().ownerShipped(a.driverId);
     else if (a.type === "approve") {
@@ -723,7 +747,7 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
             <h1 id="headline" className="font-serif text-[34px] font-light leading-[41px]">{headline(briefingSnap.demo, briefingSnap.group)}</h1>
             {!messages.length && chips.find((c) => c.primary) && (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                <button type="button" onClick={() => onChip(chips.find((c) => c.primary)!)}
+                <button type="button" onClick={() => { track("Next step pressed", { step: chips.find((c) => c.primary)!.text }); onChip(chips.find((c) => c.primary)!); }}
                   className="shrink-0 whitespace-nowrap rounded-lg bg-ink px-4 py-2 text-[15px] font-medium text-white hover:bg-neutral-800">
                   {chips.find((c) => c.primary)!.text}
                 </button>

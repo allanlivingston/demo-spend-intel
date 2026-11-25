@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, X } from "lucide-react";
 import { cx } from "./ui";
+import { track } from "@/lib/track";
 import { useStore } from "@/state/store";
 
 /** fallback: what to highlight when the target isn't on screen (nobody is slowed, so there is no summary line). */
@@ -10,37 +11,41 @@ interface Step { target?: string; fallback?: string; title: string; body: string
 
 const STEPS: Step[] = [
   {
-    title: "Welcome to Spend Intelligence",
-    body: "Claude spend now comes from agents as well as people, so it can jump without warning. Monthly limits per person cut off your busiest engineers while a stuck agent keeps spending. This app shows where each team will land, finds the waste to fix and the new work to fund, and spreads any slowdown evenly over the month, so hard stops are a last resort. Claude drafts every change. Nothing changes until you approve it.",
+    title: "Stay on budget without cutting anyone off",
+    body: "Spending limits per person stop your busiest engineers, while an AI agent stuck in a loop keeps spending. This app finds that waste, helps you fund the work that's paying off, and slows spending a little instead of locking anyone out.",
   },
-  { target: "headline", title: "Start here", body: "The headline says the one thing to know today. The button under it is your next step. Press it and Claude drafts the change for you to review." },
+  {
+    target: "headline",
+    title: "Start here",
+    body: "The headline says what needs doing. Press the button under it and Claude drafts the change. Nothing changes until you approve it.",
+  },
   {
     target: "forecast",
-    title: "Where each team will land",
-    body: "Spend so far and where the month will likely end against the budget. Switch teams at the top. Click any day to ask what happened.",
-  },
-  {
-    target: "slowed",
-    fallback: "forecast",
-    title: "What gets slowed",
-    body: "The line under the chart says how much pacing slows from today: runs moved to a cheaper model, paused, or held for a few hours. Show daily bars opens the month day by day. Users shows who is affected, and Agents shows scheduled runs, subagents and connectors.",
-    advancedBody: "The line under the chart says how much pacing slows from today: runs moved to a cheaper model, paused, or held for a few hours. Show daily bars opens it day by day. Users and Workstreams show who is affected. Health shows how forecasts and pacing did over the last six months.",
+    title: "Where spending is headed",
+    body: "Spend so far, and where it will likely end the month compared with the budget. Switch teams at the top. Click any day to ask what happened.",
   },
   {
     target: "actions",
     title: "Fix it or fund it",
-    body: "Fix is spend that produced nothing, like a connector stuck retrying. Fund is new work that is producing results, like new engineers merging PRs. Fix the waste first, then fund what is left.",
+    body: "Fix spending that produced nothing, like a Jira connection retrying a broken call over and over. Fund new work that's paying off, like new engineers shipping code.",
+  },
+  {
+    target: "slowed",
+    fallback: "forecast",
+    title: "If a team still goes over",
+    body: "Some of its work moves to a cheaper Claude model or waits a few hours. Nobody is locked out. The Users and Agents tabs show who and what is affected.",
+    advancedBody: "Some of its work moves to a cheaper Claude model or waits a few hours. Nobody is locked out. Workstreams and Users show who is affected, and Health shows the last six months.",
   },
   {
     target: "composer",
-    title: "Work in the conversation",
-    body: "Ask anything about spend in plain words. The first suggestion under the box is always the next step.",
+    title: "Ask anything",
+    body: "Type a question about spending in your own words. The first suggestion under the box is always your next step.",
   },
   {
     target: "sidebar",
-    title: "Start over any time",
-    body: "Reset demo starts the scenario again. Ask about this demo explains what the app does and why. The ··· menu switches scenarios and turns on the advanced view.",
-    narrowBody: "Reset demo starts the scenario again. Ask about this demo explains what the app does and why. Open the sidebar for the ··· menu, which switches scenarios and turns on the advanced view.",
+    title: "Try another month",
+    body: "Try another situation plays out a different month. Activity lists everything you approved. Orange dots mark features you haven't tried yet.",
+    narrowBody: "Open the sidebar to try another situation or see Activity. Orange dots mark features you haven't tried yet.",
   },
 ];
 
@@ -67,6 +72,7 @@ export function Tour({ onClose }: { onClose: () => void }) {
   const last = i === STEPS.length - 1;
 
   const close = () => {
+    track(last ? "Tour finished" : "Tour skipped", { step: i + 1 });
     try {
       localStorage.setItem(KEY, "1");
     } catch {}

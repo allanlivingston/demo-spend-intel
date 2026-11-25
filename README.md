@@ -104,7 +104,11 @@ At any point, the chips under the message box suggest the next step first, then 
 
 **Advanced view** adds Workstreams (budget split by piece of work, with confidence), Health (forecast and pacing results for the last six months), Activity, the comparison lines on the chart, a planned SOC 2 documentation sprint on one workstream (approved as planned spend), and a step that moves unused budget between workstreams before asking the budget owner.
 
-**Ask about this demo** (sidebar) answers what the app does and why, including the outside research behind it (see below). **Run the welcome wizard** replays the short tour.
+**Ask about this demo** (sidebar) answers what the app does and why, including the outside research behind it (see below). **Take the tour** replays the short tour.
+
+**First visit:** a short tour opens (Take the tour in the sidebar replays it). Small pulsing orange dots mark features worth finding (clicking a chart day, Show daily bars, the Users and Agents tabs, Try another situation, opening an earlier forecast copy) until each is first used. **Try another situation** and **Activity** are in the sidebar. Dotted-underlined terms (Lands at, Fixable waste, Likely to high case, slowed) show a one-line definition on hover or tap. To see the first visit again, open the app with `?first` (for example `localhost:3123/?first`): it clears the tour flag and the dots, starts Waste and new work fresh with no past chats, then removes `?first` from the address bar. Offline replay is left as it is.
+
+**Measuring it:** on Vercel, Web Analytics records page views and the steps visitors reach (next step pressed, change applied, sent to owner, budget approved, situation switched, tour skipped or finished). No cookies or personal data. Turn on Web Analytics in the Vercel project; custom events need a Pro plan.
 
 ## How it works
 
