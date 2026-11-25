@@ -3,7 +3,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, X } from "lucide-react";
 import { cx } from "./ui";
-import { track } from "@/lib/track";
 import { useStore } from "@/state/store";
 
 /** fallback: what to highlight when the target isn't on screen (nobody is slowed, so there is no summary line). */
@@ -72,7 +71,6 @@ export function Tour({ onClose }: { onClose: () => void }) {
   const last = i === STEPS.length - 1;
 
   const close = () => {
-    track(last ? "Tour finished" : "Tour skipped", { step: i + 1 });
     try {
       localStorage.setItem(KEY, "1");
     } catch {}

@@ -2,7 +2,6 @@
 // Client store. Engine inputs (DemoState) plus UI state. Persisted per browser; Reset demo clears it.
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { track } from "@/lib/track";
 import { ownerOf, headline,
   setAdvancedView, storySummary, draftCfoBrief, draftOverride, draftPolicyDiff, draftRebalance, forecast, initialState,
   type Artifact, type DayPoint, type DemoState, type GroupId, type GroupSelection, type ScenarioId, type SharingLevel, isDeclined, driverById,
@@ -292,7 +291,6 @@ export const useStore = create<Store>()(
         addUsage: (costUsd) => set({ usage: { calls: get().usage.calls + 1, costUsd: get().usage.costUsd + costUsd } }),
 
         setScenario: (id) => {
-          track("Situation switched", { scenario: id });
           set({ ...fresh(id), group: focusGroup(id), review: null, audit: [], auditSeen: 0, epoch: get().epoch + 1, seq: 0, threads: [], chatStart: { demo: initialState(id), group: focusGroup(id) } });
         },
         setGroup: (group) => set({ group, ghost: null }),
@@ -307,7 +305,6 @@ export const useStore = create<Store>()(
 
         // The admin applies only their own changes. Fixes owned by someone else are sent to that owner.
         applyPolicy: (driverIds, artifactId) => {
-          track("Change applied", { fixes: driverIds.join(" ") });
           // A ticket drafted with the fix (same run) goes out with it: one approval, nothing left behind to send.
           const runOf = artifactId ? get().messages.find((m) => m.artifact?.id === artifactId)?.runOf : undefined;
           const tickets = runOf
@@ -330,7 +327,6 @@ export const useStore = create<Store>()(
           update(tickets.length ? `${done.replace(/\.$/, "")}, and sent the ticket to ${handoffTo(tickets[0])}.` : done);
         },
         sendHandoff: (driverId) => {
-          track("Sent to owner", { fix: driverId });
           const d = get().demo;
           if ((d.handedOff ?? []).includes(driverId)) return;
           mutate({ ...d, handedOff: [...(d.handedOff ?? []), driverId] });
@@ -391,7 +387,6 @@ export const useStore = create<Store>()(
           update("Approved as planned spend.");
         },
         approveRevision: (g, newBudget, artifactId) => {
-          track("Budget approved", { team: g });
           const d = get().demo;
           mutate({ ...d, budgetRevisions: { ...d.budgetRevisions, [g]: newBudget } });
           if (artifactId) get().setArtifactStatus(artifactId, "approved");

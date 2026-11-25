@@ -108,8 +108,6 @@ At any point, the chips under the message box suggest the next step first, then 
 
 **First visit:** a short tour opens (Take the tour in the sidebar replays it). Small pulsing orange dots mark features worth finding (clicking a chart day, Show daily bars, the Users and Agents tabs, Try another situation, opening an earlier forecast copy) until each is first used. **Try another situation** and **Activity** are in the sidebar. Dotted-underlined terms (Lands at, Fixable waste, Likely to high case, slowed) show a one-line definition on hover or tap. To see the first visit again, open the app with `?first` (for example `localhost:3123/?first`): it clears the tour flag and the dots, starts Waste and new work fresh with no past chats, then removes `?first` from the address bar. Offline replay is left as it is.
 
-**Measuring it:** on Vercel, Web Analytics records page views and the steps visitors reach (next step pressed, change applied, sent to owner, budget approved, situation switched, tour skipped or finished). No cookies or personal data. Turn on Web Analytics in the Vercel project; custom events need a Pro plan.
-
 ## How it works
 
 **The engine computes every number; Claude never does arithmetic.** `src/engine/` is a deterministic, seeded TypeScript model:

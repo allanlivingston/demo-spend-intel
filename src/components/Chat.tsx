@@ -19,7 +19,6 @@ import { HealthPanel } from "./HealthPanel";
 import { PacingChart } from "./PacingChart";
 import { cx, StatusPill, Term, TERMS, usd } from "./ui";
 import { markUsed, NewDot } from "./NewDot";
-import { track } from "@/lib/track";
 
 /** Money decisions an auditor or budget owner will ask about open in a full-page review. */
 
@@ -747,7 +746,7 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
             <h1 id="headline" className="font-serif text-[34px] font-light leading-[41px]">{headline(briefingSnap.demo, briefingSnap.group)}</h1>
             {!messages.length && chips.find((c) => c.primary) && (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                <button type="button" onClick={() => { track("Next step pressed", { step: chips.find((c) => c.primary)!.text }); onChip(chips.find((c) => c.primary)!); }}
+                <button type="button" onClick={() => onChip(chips.find((c) => c.primary)!)}
                   className="shrink-0 whitespace-nowrap rounded-lg bg-ink px-4 py-2 text-[15px] font-medium text-white hover:bg-neutral-800">
                   {chips.find((c) => c.primary)!.text}
                 </button>
