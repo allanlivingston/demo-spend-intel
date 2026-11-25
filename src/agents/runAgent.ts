@@ -48,6 +48,12 @@ export interface RunOutcome {
   text: string;
   model: string;
   backend: Backend;
+  /** The answer as shown to the user (after plain-word and dash clean-up). */
+  shown?: string;
+  /** The model the response says served it (evals check it matches). */
+  servedModel?: string;
+  /** True when the first answer failed a check and the retry's answer was used. */
+  retried?: boolean;
 }
 
 export async function* runAgent(req: AgentRequest, opts: { backend?: Backend; onDone?: (o: RunOutcome, e: Extract<AgentEvent, { type: "done" }>) => void } = {}): AsyncGenerator<AgentEvent> {
@@ -56,7 +62,7 @@ export async function* runAgent(req: AgentRequest, opts: { backend?: Backend; on
   if (req.agent === "funding" && req.advanced === false && req.driverId) req = { ...req, driverId: undefined, prompt: "Draft the budget owner brief." };
   const backend: Backend = req.offline ? "replay" : opts.backend ?? defaultBackend();
   const model = pickModel(req.agent, req.prompt, req.escalate, req.model);
-  const system = systemPrompt(req.agent, req.demo);
+  const system = systemPrompt(req.agent, req.demo, req.group);
   const user = userPrompt(req.prompt, req.pinned);
 
   if (backend !== "replay") {
@@ -76,6 +82,7 @@ async function* liveRun(
   const channel = new Channel<AgentEvent>();
   const calls: ToolCallRecord[] = [];
   let quietSteps = false;
+  let retried = false;
 
   const attempt = async (u: string): Promise<{ result: BackendResult; ctx: ToolContext }> => {
     const ctx: ToolContext = { demo: req.demo, group: req.group, artifacts: [] };
@@ -113,7 +120,10 @@ async function* liveRun(
   if (!outcome) return { ok: false, reason: `Live run failed (${failure}), showing recorded replay` };
 
   let { result, ctx } = outcome as { result: BackendResult; ctx: ToolContext };
-  let g = req.agent === "guide" ? { ok: true as const, unmatched: [] as string[] } : ground(result.text, calls.map((c) => c.result));
+  // Figures the admin typed or the UI pinned may be quoted back ("$56,900, not $45,000"); the judge and the
+  // forbidden checks guard against stating them as fact.
+  const asked = [req.prompt, ...req.pinned];
+  let g = req.agent === "guide" ? { ok: true as const, unmatched: [] as string[] } : ground(result.text, [...calls.map((c) => c.result), ...asked]);
   if (!g.ok || jargonIn(result.text).length > 0 || (req.agent !== "guide" && isTooLong(result.text))) {
     // One retry with a correction. Steps already shown are not repeated.
     const problems = [
@@ -124,15 +134,17 @@ async function* liveRun(
     quietSteps = true;
     const firstCalls = calls.splice(0);
     const first = { result, ctx, g };
+    retried = true;
     try {
       const again = await attempt(`${user}\n\nCorrection: your previous answer had problems: ${problems.join("; ")}. Call the tools again and answer correctly.`);
       result = { ...again.result, costUsd: result.costUsd + again.result.costUsd, inputTokens: result.inputTokens + again.result.inputTokens, outputTokens: result.outputTokens + again.result.outputTokens, cacheReadTokens: result.cacheReadTokens + again.result.cacheReadTokens };
       ctx = again.ctx;
-      g = ground(result.text, calls.map((c) => c.result));
+      g = ground(result.text, [...calls.map((c) => c.result), ...asked]);
     } catch {
       /* keep the first answer if it was grounded */
     }
     if (!g.ok && first.g.ok) {
+      retried = false;
       // The retry broke grounding; the first answer was only long. Use it, trimmed.
       result = { ...result, text: first.result.text };
       ctx = first.ctx;
@@ -149,7 +161,7 @@ async function* liveRun(
     type: "done" as const, costUsd: result.costUsd, inputTokens: result.inputTokens, outputTokens: result.outputTokens,
     cacheReadTokens: result.cacheReadTokens, latencyMs: Date.now() - started, grounded: true, steps: calls.length,
   };
-  onDone?.({ calls, text: result.text, model, backend }, done);
+  onDone?.({ calls, text: result.text, shown: polish(plainWords(result.text.trim())), model, backend, servedModel: result.servedModel, retried }, done);
   yield done;
   return { ok: true };
 }

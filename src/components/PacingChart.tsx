@@ -43,7 +43,7 @@ export function PacingChart({ onDay }: { onDay?: (question: string, context: str
   const throttleLabels = Object.entries(blockDays)
     .filter(([day], i, all) => !(i > 0 && +day - +all[i - 1][0] < 4))
     .map(([day]) => ({ key: `b${day}`, day: +day, text: `${Object.entries(blockDays).filter(([d]) => +d >= +day && +d - +day < 4).reduce((a, [, c]) => a + c, 0)} people: some runs held`, color: "#C4452F" }));
-  const labels = [...markers.map((d) => ({ key: d.id, day: d.startDay, text: `${d.marker!.replace(/^Day \d+:\s*/, "")}${fixedState(d.id) ? ` (${fixedState(d.id)})` : ""}`, color: "#555" })), ...throttleLabels].sort((a, b) => a.day - b.day);
+  const labels = [...markers.map((d) => ({ key: d.id, day: d.startDay, text: d.marker!.replace(/^Day \d+:\s*/, ""), color: "#555" })), ...throttleLabels].sort((a, b) => a.day - b.day);
   const rowOf = new Map<string, number>();
   const rowEnds: number[] = [];
   for (const l of labels) {
@@ -110,7 +110,7 @@ export function PacingChart({ onDay }: { onDay?: (question: string, context: str
                 stroke="#fff"
                 strokeWidth={2}
                 style={{ cursor: "pointer" }}
-                label={labelFor(d.id, `${d.marker!.replace(/^Day \d+:\s*/, "")}${fixedState(d.id) ? ` (${fixedState(d.id)})` : ""}`, fixedState(d.id) ? "#999" : "#555")}
+                label={labelFor(d.id, d.marker!.replace(/^Day \d+:\s*/, ""), fixedState(d.id) ? "#999" : "#555")}
               />
             ))}
             {Object.entries(blockDays).map(([day]) => (
@@ -138,6 +138,7 @@ export function PacingChart({ onDay }: { onDay?: (question: string, context: str
         {advanced && <span><span className="mr-1 inline-block h-px w-4 bg-accent align-middle" />Pacing plan</span>}
         <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-warn align-middle" />Waste starts</span>
         <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-ok align-middle" />Growth starts</span>
+        {markers.some((d) => fixedState(d.id)) && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ background: "#B8B8B8" }} />Fixed or sent to owner</span>}
         {Object.keys(blockDays).length > 0 && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-bad align-middle" />People with runs first held</span>}
         <span className="ml-auto cursor-help underline decoration-dotted" title={FORMULA}>How is this calculated?</span>
       </div>
@@ -174,7 +175,8 @@ function StripTip({ active, payload, label }: { active?: boolean; payload?: { pa
 /** One stacked bar a day along the ladder: ran, then cheaper model, paused, hard throttled, stopped. */
 function DailyStrip({ data }: { data: StripDay[] }) {
   const t = (k: StepKey) => data.reduce((a, d) => a + d[k], 0);
-  const steps = STEPS.filter((st) => st.key !== "stopped" || t("stopped") > 0);
+  // Hide steps that round to $0 for the month (for example, no cheaper-model runs left once the waste is fixed).
+  const steps = STEPS.filter((st) => Math.round(t(st.key) / 100) > 0);
   return (
     <div className="px-4 pt-2">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">

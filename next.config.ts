@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   distDir: process.env.VERCEL ? ".next" : process.env.NEXT_DIST_DIR ?? ".next",
   // The version shown in the demo menu.
   env: { NEXT_PUBLIC_APP_VERSION: pkg.version },
+  // No Next.js dev badge: it covers the account row in local demos.
+  devIndicators: false,
   // The FAQ and demo guide are read from disk at request time, so ship them with the agent route on Vercel.
   outputFileTracingIncludes: { "/api/agent": ["./src/knowledge/**/*.md"] },
 };

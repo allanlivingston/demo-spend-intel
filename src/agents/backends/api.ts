@@ -35,6 +35,7 @@ export async function runApi(run: BackendRun): Promise<BackendResult> {
       },
       { signal: run.signal },
     );
+    res.servedModel = msg.model;
     const u = msg.usage;
     res.inputTokens += u.input_tokens + (u.cache_creation_input_tokens ?? 0);
     res.outputTokens += u.output_tokens;

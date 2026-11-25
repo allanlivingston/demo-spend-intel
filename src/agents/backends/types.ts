@@ -25,4 +25,6 @@ export interface BackendResult {
   inputTokens: number;
   outputTokens: number;
   cacheReadTokens: number;
+  /** The model that actually served the last call (from the response), when the backend reports it. */
+  servedModel?: string;
 }

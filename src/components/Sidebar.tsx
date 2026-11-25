@@ -173,7 +173,17 @@ export function Sidebar({ onTour, onActivity, onGuide }: { onTour: () => void; o
 
 const PIN_KEY = "si-sidebar-pinned";
 
-/** Subtle live/offline marker: live only when Offline replay is off, the server can reach Claude, and the last run didn't fall back. */
+/** Why the last answer was replayed, in plain words. */
+const why = (reason?: string) => {
+  if (!reason) return "";
+  const fig = reason.match(/Grounding check failed \((.*)\)/);
+  if (fig) return `: it stated a figure the app couldn't check (${fig[1]})`;
+  if (/Timed out/i.test(reason)) return ": Claude took too long";
+  return ": Claude couldn't be reached";
+};
+
+/** Subtle live/offline marker: live only when Offline replay is off, the server can reach Claude, and the last run didn't fall back
+ *  (then "Replayed": still live, only that answer was replayed). */
 function ConnectionDot({ collapsed }: { collapsed: boolean }) {
   const { offline, lastBackend } = useStore();
   const [server, setServer] = useState<string | null>(null);
@@ -185,12 +195,12 @@ function ConnectionDot({ collapsed }: { collapsed: boolean }) {
   const live = !offline && server !== "replay" && !fellBack;
   const title = live ? "Live: agents run on Claude"
     : offline ? "Offline: Offline replay is on in the ··· menu. Recorded runs replay; every number is still computed live."
-    : fellBack ? `Offline: the last run fell back to a recorded run${lastBackend?.replayReason ? ` (${lastBackend.replayReason})` : ""}. Every number is still computed live.`
+    : fellBack ? `Live, but the last answer was replayed${why(lastBackend?.replayReason)}. The next question runs live again; every number is still computed live.`
     : "Offline: no Claude connection on this server. Recorded runs replay; every number is still computed live.";
   return (
     <span title={title} className="flex shrink-0 items-center gap-1 text-[12px] text-muted">
-      <span className={cx("h-1.5 w-1.5 rounded-full", live ? "bg-emerald-500" : "bg-neutral-400")} />
-      {!collapsed && (live ? "Live" : "Offline")}
+      <span className={cx("h-1.5 w-1.5 rounded-full", live ? "bg-emerald-500" : fellBack ? "bg-amber-400" : "bg-neutral-400")} />
+      {!collapsed && (live ? "Live" : fellBack ? "Replayed" : "Offline")}
     </span>
   );
 }

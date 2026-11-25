@@ -1,6 +1,6 @@
 {
   "name": "claude-spend-intelligence",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "record": "tsx --tsconfig tsconfig.json scripts/record.ts",
-    "walk": "tsx scripts/walk.ts"
+    "walk": "tsx scripts/walk.ts",
+    "eval": "tsx --tsconfig tsconfig.json scripts/eval.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.330",

@@ -32,7 +32,7 @@ export interface ToolDef {
 const r = (n: number) => Math.round(n);
 const r100 = (n: number) => Math.round(n / 100) * 100;
 const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
-const GroupArg = z.enum(["pe", "fpa", "mkt", "all"]).describe("SCIM group: pe = Platform Engineering, fpa = FP&A, mkt = Marketing, all = All Enterprise");
+const GroupArg = z.enum(["pe", "fpa", "mkt", "all"]).describe("SCIM group: pe = Platform Engineering, fpa = FP&A, mkt = Marketing, all = All Enterprise. Leave out to use the team the admin is viewing.");
 const focus = (ctx: ToolContext, g?: unknown): GroupSelection => (typeof g === "string" ? (g as GroupSelection) : ctx.group);
 const single = (g: GroupSelection): GroupId => (g === "all" ? "pe" : g);
 const WORKSTREAM_ID = (u: { groupId: GroupId; workstream: string }) => WORKSTREAMS.find((w) => w.groupId === u.groupId && w.name === u.workstream)?.id;
@@ -45,13 +45,16 @@ function landing(demo: DemoState, g: GroupSelection) {
 export const TOOLS: ToolDef[] = [
   {
     name: "get_forecast",
-    description: "Where the month lands (likely and high case), the budget, status and nudge level for a group. Call first.",
+    description: "Where the month lands (likely and high case), the budget, status and nudge level for a group; for all teams, also each team's landing (by_team). Call first.",
     shape: { group: GroupArg.optional() },
     phase: "Looked into it",
     run: (ctx, a) => {
       const g = focus(ctx, a.group);
       const f = forecast(ctx.demo, g);
       const k = kpis(ctx.demo, g);
+      // Split the fixable total by who applies each fix, so answers don't credit an owner's fix to the admin.
+      const openWaste = breakdown(ctx.demo, g).rows.filter((x) => x.driver.kind === "waste" && x.state === "open");
+      const byOwner = r(openWaste.filter((x) => ownerOf(x.driver.id)).reduce((s, x) => s + x.recoverable, 0));
       const data = {
         group: g === "all" ? "All Enterprise" : GROUPS[g].name,
         day: 18, days_in_month: 30,
@@ -61,15 +64,19 @@ export const TOOLS: ToolDef[] = [
         sd_off_pace: Math.round(k.nudge.d * 10) / 10,
         nudge: k.nudge.admin,
         fixable_waste_recoverable: r(k.fixableWaste),
+        of_which_admin_applies: r(k.fixableWaste) - byOwner,
+        of_which_owner_applies: byOwner,
         waste_running_to_month_end: r(k.wasteRunning),
         work_at_risk: r(k.throttledValue),
+        // All teams: each team's own landing, so a summary can say which team is over.
+        ...(g === "all" ? { by_team: (["pe", "fpa", "mkt"] as const).map((t) => { const x = landing(ctx.demo, t); return { team: GROUPS[t].name, budget: x.pool, lands_at: x.p50, status: x.status }; }) } : {}),
       };
       return { data, summary: `Lands at ${usd(f.p50)} on a ${usd(f.pool)} budget: ${f.status.toLowerCase()}` };
     },
   },
   {
     name: "list_drivers",
-    description: "Drivers off forecast for a group: projected cost to month end, sunk cost, recoverable dollars, confidence (High, Medium, Low) with its reason, evidence, Fund or Fix side, and state.",
+    description: "Drivers off forecast for a group: projected cost to month end, sunk cost, recoverable dollars, who applies each fix (applied_by), confidence (High, Medium, Low) with its reason, evidence, Fund or Fix side, and state.",
     shape: { group: GroupArg.optional() },
     phase: "Looked into it",
     run: (ctx, a) => {
@@ -78,6 +85,7 @@ export const TOOLS: ToolDef[] = [
       const drivers = b.rows.map((x) => ({
         id: x.driver.id, label: x.driver.label, kind: x.driver.kind, confidence: confidenceOf(x.driver).level, confidence_reason: confidenceOf(x.driver).reason, side: x.side, state: x.state,
         projected_to_month_end: x.projected, sunk_so_far: x.sunk, recoverable: x.recoverable,
+        ...(x.driver.kind === "waste" ? { applied_by: ownerOf(x.driver.id)?.name ?? "admin, on approval" } : {}),
         confidence_weighted_roi: Math.round(x.roiWeighted * 100) / 100, evidence: x.driver.evidence, start_day: x.driver.startDay,
       }));
       return {

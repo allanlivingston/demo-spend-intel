@@ -4,7 +4,9 @@
 //   1. Cheaper model: routine work is routed to a cheaper model. The work still gets done now.
 //   2. Paused: scheduled agent runs wait. The work gets done later.
 //   3. Hard throttled: runs are refused for a few hours, then allowed again.
-// Burst days (a big agent run, a long session) that go over the daily limit are paused or hard throttled too.
+// Burst days (a big agent run, a long session) that go over the daily limit go down the same ladder: most of the
+// excess moves to a lighter default model (people can switch back for a task that needs it), and only what that
+// doesn't cover waits or is held for a few hours.
 // Every number about pacing in the app (chart, Users, Workstreams, headline, chat) comes from monthStrip() below.
 import { DAYS, TODAY, weights } from "./calendar";
 import { GROUP_IDS } from "./data";
@@ -21,7 +23,9 @@ export const BURST_SHARE = 0.12;
 export const BURST_SIZE = 3.5;
 /** Daily limit per person, as a multiple of an even daily share of their monthly limit. */
 export const CAPS_DAILY_X = 2;
-/** Share of a burst's excess that can wait (scheduled runs); the rest is held for a few hours. Most can wait, so the harsher step stays smaller. */
+/** Share of a burst's excess a lighter default model covers. Below 1 because people can switch back to the bigger model. */
+export const BURST_CHEAPER = 0.6;
+/** Of the burst excess the lighter default doesn't cover: the share that can wait (scheduled runs); the rest is held for a few hours. */
 export const BURST_DEFERRABLE = 0.7;
 
 /** Highest step someone reaches: cheaper model, paused, hard throttled. ("blocked" is kept for stopped-for-the-month.) */
@@ -119,7 +123,7 @@ export function monthStrip(s: DemoState, sel: GroupSelection): MonthStrip {
     // Work with evidence that it is producing results is slowed last: here the rest of the team absorbs the overrun, and its overrun is the case for funding it.
     const prot = team.map((m) => isProtected(s, g, m));
     // 1. The month's totals for each step: each over-limit person's overrun goes down the ladder; burst-day excess
-    //    over the daily limit is mostly paused (70%), the rest held for a few hours.
+    //    over the daily limit first moves to a lighter default model (60%); of the rest, 70% waits and 30% is held for a few hours.
     let R = 0;
     let P = 0;
     let H = 0;
@@ -133,8 +137,9 @@ export function monthStrip(s: DemoState, sel: GroupSelection): MonthStrip {
       }
       const cap = CAPS_DAILY_X * (m.limit / DAYS);
       const excess = sum(dem[k].map((v) => Math.max(0, v - cap)));
-      P += excess * BURST_DEFERRABLE;
-      H += excess * (1 - BURST_DEFERRABLE);
+      R += excess * BURST_CHEAPER;
+      P += excess * (1 - BURST_CHEAPER) * BURST_DEFERRABLE;
+      H += excess * (1 - BURST_CHEAPER) * (1 - BURST_DEFERRABLE);
     });
     if (R + P + H < 1) continue;
     // 2. Each total is spread evenly over the month (the same every weekday, half at weekends) and shared across the

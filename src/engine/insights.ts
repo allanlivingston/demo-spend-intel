@@ -236,11 +236,12 @@ export function usersAndAgents(s: DemoState, g: GroupId): { people: PeopleSummar
     }),
   };
   const agents: AgentRow[] = [
-    { id: "service", label: "Scheduled runs and service accounts", landing: Math.round((1 - GROUPS[g].memberShare) * baseLanding(g)), state: "running" },
+    { id: "service", label: "Scheduled runs and service accounts", landing: Math.round((1 - GROUPS[g].memberShare) * baseLanding(g) / 100) * 100, state: "running" },
     ...driverEffects(s, g).filter((e) => e.driver.agentShare > 0).map((e) => ({
       id: e.driver.id,
-      label: e.driver.label,
-      landing: Math.round(e.driver.agentShare * (e.sunk + e.forward)),
+      // Growth drivers are people; this row is only the agent runs they start.
+      label: e.driver.kind === "growth" ? `Agent runs: ${e.driver.label.charAt(0).toLowerCase()}${e.driver.label.slice(1)}` : e.driver.label,
+      landing: Math.round(e.driver.agentShare * (e.sunk + e.forward) / 100) * 100,
       state: (e.fixed ? "fixed" : waitingOnOwner(s, e.driver.id) ? "waiting" : "running") as AgentRow["state"],
     })),
   ];

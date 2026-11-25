@@ -47,6 +47,7 @@ export async function runClaudeCode(run: BackendRun): Promise<BackendResult> {
   const res: BackendResult = { text: "", costUsd: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 };
   for await (const msg of q) {
     if (msg.type === "assistant") {
+      if (msg.message.model) res.servedModel = msg.message.model;
       const blocks = msg.message.content ?? [];
       const t = blocks.filter((b) => b.type === "text").map((b) => ("text" in b ? b.text : "")).join("");
       if (t.trim()) text = t; // keep the latest text turn: the final answer

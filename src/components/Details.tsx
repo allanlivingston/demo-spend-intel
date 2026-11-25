@@ -80,6 +80,9 @@ export function Users({ onFollowUp, busy }: { onFollowUp: FollowUp; busy: boolea
     return { text: `${Math.round(p.trim * 100)}% slowed or held`, tone: p.capsBlockDay ? "text-bad" : "text-warn", rank: p.capsBlockDay ? 0 : 1, title };
   };
   const users = users0.map((u) => ({ ...u, st: statusOf(u.id, u.blockDay, u.isNew), note: userNote(u, pace.get(u.id) ?? null) })).sort((a, b) => a.st.rank - b.st.rank || (a.blockDay ?? 99) - (b.blockDay ?? 99) || b.landing - a.landing);
+  // In the default view with one team selected, every row would show the same team, so the column is dropped.
+  const showTeam = !simple || group === "all";
+  const cols = showTeam ? "grid-cols-[1.2fr_1.3fr_80px_80px_70px_150px_80px]" : "grid-cols-[2fr_80px_80px_70px_150px_80px]";
   const blocked = users.filter((u) => u.st.rank === 0).length;
   const slowed = users.filter((u) => u.st.rank === 1).length;
   return (
@@ -89,18 +92,18 @@ export function Users({ onFollowUp, busy }: { onFollowUp: FollowUp; busy: boolea
         <span className="ml-auto">Over limit first</span>
       </div>
       <div className="max-h-[340px] overflow-y-auto">
-        <div className="sticky top-0 grid grid-cols-[1.2fr_1.3fr_80px_80px_70px_150px_80px] gap-2 bg-white px-4 py-1.5 text-[12px] uppercase tracking-wide text-muted">
-          <span>Name</span><span>{simple ? "Team" : "Workstream"}</span><span className="text-right">So far</span><span className="text-right">Lands at</span><span className="text-right">Limit</span><span>Status</span><span />
+        <div className={cx("sticky top-0 grid gap-2", cols, " bg-white px-4 py-1.5 text-[12px] uppercase tracking-wide text-muted")}>
+          <span>Name</span>{showTeam && <span>{simple ? "Team" : "Workstream"}</span>}<span className="text-right">So far</span><span className="text-right">Lands at</span><span className="text-right">Limit</span><span>Status</span><span />
         </div>
         {users.map((u) => {
           const status = u.st.text;
           return (
-            <div key={u.id} className="grid grid-cols-[1.2fr_1.3fr_80px_80px_70px_150px_80px] items-center gap-2 border-t border-neutral-50 px-4 py-1.5 text-[15px]">
+            <div key={u.id} className={cx("grid items-center gap-2", cols, " border-t border-neutral-50 px-4 py-1.5 text-[15px]")}>
               <span className="truncate">
                 {u.name}
                 {u.isNew && <span className="ml-1.5 rounded bg-sky-50 px-1 text-[11px] text-sky-700">New</span>}
               </span>
-              <span className="truncate text-[13px] text-muted">{simple ? u.team : `${group === "all" ? `${u.team} · ` : ""}${u.workstream}`}</span>
+              {showTeam && <span className="truncate text-[13px] text-muted">{simple ? u.team : `${group === "all" ? `${u.team} · ` : ""}${u.workstream}`}</span>}
               <span className="text-right tabular-nums">{usd(u.spent)}</span>
               <span className={cx("text-right tabular-nums", u.landing > u.limit && "text-bad")}>{usd(u.landing)}</span>
               <span className="text-right tabular-nums text-muted">{usd(u.limit)}</span>

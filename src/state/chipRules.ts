@@ -24,9 +24,11 @@ export interface ChipInput {
   auditCount: number;
   /** Whether the newest forecast (with its recommendations) is on screen. */
   forecastVisible: boolean;
+  /** Whether the waiting draft's own approve and Decline buttons are on screen (then the chips don't repeat them). */
+  draftActionsVisible?: boolean;
 }
 
-export const MAX_CHIPS = 5;
+export const MAX_CHIPS = 4;
 const REVIEW_KINDS = ["cfo_brief", "governed_override"];
 
 /** The newest draft still waiting for the admin (older drafts of the same kind are superseded). */
@@ -53,13 +55,15 @@ export function chipsFor(i: ChipInput): ChipSpec[] {
 
   if (draft) {
     const art = draft.artifact!;
-    // The draft's own button may be scrolled away, so its approval is always the first chip.
-    if (REVIEW_KINDS.includes(art.kind)) main.push({ text: "Open the review", primary: true, action: { type: "review", artifactId: art.id } });
-    else if (art.kind === "policy_diff") main.push({ text: art.rows.some((r) => !ownerOf(r.driverId)) ? "Apply the changes" : "Send to the owner", primary: true, action: { type: "approve", artifactId: art.id } });
-    else if (art.kind === "rebalance_plan" && art.allowed) main.push({ text: "Move the budget", primary: true, action: { type: "approve", artifactId: art.id } });
+    // The draft's own buttons may be scrolled away; only then do the chips repeat its approval and Decline.
+    const repeat = !i.draftActionsVisible;
+    if (repeat && REVIEW_KINDS.includes(art.kind)) main.push({ text: "Open the review", primary: true, action: { type: "review", artifactId: art.id } });
+    else if (repeat && art.kind === "policy_diff") main.push({ text: art.rows.some((r) => !ownerOf(r.driverId)) ? "Apply the changes" : "Send to the owner", primary: true, action: { type: "approve", artifactId: art.id } });
+    else if (repeat && art.kind === "rebalance_plan" && art.allowed) main.push({ text: "Move the budget", primary: true, action: { type: "approve", artifactId: art.id } });
     // The question is about the draft on screen, so it travels with it.
     const c = [`Draft waiting: ${draft.artifact!.kind}`, JSON.stringify(draft.artifact).slice(0, 1_000)];
-    main.push(ask("Why these changes?", c), ask("What's the risk if I approve it?", c), { text: "Decline it", action: { type: "decline", artifactId: draft.artifact!.id } });
+    main.push(ask("Why these changes?", c), ask("What's the risk if I approve it?", c));
+    if (repeat) main.push({ text: "Decline it", action: { type: "decline", artifactId: draft.artifact!.id } });
     if (draft.artifact!.kind === "policy_diff" && draft.artifact!.rows.length > 1) main.push(ask("What if I only approve part of it?", c));
   } else {
     if (next.cta) {

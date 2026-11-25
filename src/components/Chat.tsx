@@ -369,7 +369,7 @@ function Draft({ x, all }: { x: ChatMessage; all: ChatMessage[] }) {
     return (
       <div>
         {body}
-        <div className="mt-1.5 flex justify-end">
+        <div data-draft-actions="" className="mt-1.5 flex justify-end">
           <button type="button" disabled={busy} onClick={() => declineDraft(x.artifact!.id)} title="Nothing changes. Logged in Activity."
             className="rounded-md px-2 py-1 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink disabled:opacity-40">
             Decline
@@ -572,7 +572,20 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
     return () => io.disconnect();
   }, [liveKey]);
 
-  const chips = chipsFor({ demo, group, messages, auditCount: audit.length, forecastVisible: vis.forecast });
+  // Whether the waiting draft's own Apply/Review and Decline buttons are on screen; if so, the chips don't repeat them.
+  const [draftVisible, setDraftVisible] = useState(false);
+  const draftKey = messages.filter((m) => m.artifactStatus === "proposed").map((m) => m.id).join(",");
+  useEffect(() => {
+    const root = scroller.current;
+    setDraftVisible(false);
+    if (!root || !draftKey) return;
+    const io = new IntersectionObserver((entries) => setDraftVisible(entries.some((e) => e.isIntersecting)), { root, threshold: 0, rootMargin: "0px 0px -200px 0px" });
+    const els = document.querySelectorAll<HTMLElement>("[data-draft-actions]");
+    if (els.length) io.observe(els[els.length - 1]);
+    return () => io.disconnect();
+  }, [draftKey]);
+
+  const chips = chipsFor({ demo, group, messages, auditCount: audit.length, forecastVisible: vis.forecast, draftActionsVisible: draftVisible });
   const onChip = (c: ChipSpec) => {
     const a = c.action;
     if (a.type === "run") startAgentRun(a.run);

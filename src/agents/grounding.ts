@@ -72,6 +72,7 @@ export const JARGON: [RegExp, string][] = [
   [/\bcohort\b/gi, "group"], [/\bthrottl(e|ed|ing)\b/gi, "slowed"], [/\bhurdle\b/gi, "minimum return"],
   [/\bfan-?out\b/gi, "parallel runs"], [/\bdown-?rout(e|ed|ing)\b/gi, "moved to a cheaper model"],
   [/\bgoverned override\b/gi, "planned spend approval"], [/\bvariance\b/gi, "difference"],
+  [/\bengines?\b/gi, "app"],
 ];
 export const jargonIn = (s: string) => [...new Set(JARGON.flatMap(([re]) => s.match(re) ?? []).map((w) => w.toLowerCase()))];
 /** Last resort when a retry still uses jargon: swap in the plain word. */
