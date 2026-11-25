@@ -6,6 +6,8 @@ import {
 import { useStore, type ArtifactStatus } from "@/state/store";
 import { Button, StatusPill, usd, pct, cx } from "./ui";
 
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
 function Shell({ icon, title, tag, status, children }: { icon: React.ReactNode; title: string; tag?: string; status?: ArtifactStatus; children: React.ReactNode }) {
   return (
     <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm">
@@ -116,8 +118,8 @@ function PolicyDiffCard({ a, status, runOf }: { a: PolicyDiff; status?: Artifact
               const t = ticketOf(r.driverId);
               const what = t ? ` as ${handoffWhat(t)}` : "";
               const line = shipped ? <span className="text-ok-ink">Fixed by {ownerOf(r.driverId)!.short}.</span>
-                : sent ? <span>Sent to {ownerOf(r.driverId)!.name}{what}. Not counted until they ship it.</span>
-                : <span>Owned by {ownerOf(r.driverId)!.name}. Applying sends it to them{what}.</span>;
+                : sent ? <span>Sent to {ownerOf(r.driverId)!.short}{what}. Not counted until they ship it.</span>
+                : <span>{cap(ownerOf(r.driverId)!.short)} owns {ownerOf(r.driverId)!.owns}. Applying sends it to them{what}.</span>;
               return (
                 <div key={r.driverId}>
                   <DiffRow r={r} />
@@ -252,13 +254,13 @@ function CfoBriefCard({ a, status }: { a: CfoBrief; status?: ArtifactStatus }) {
         <tbody className="tabular-nums">
           <tr><td className="text-muted">Budget</td><td>{usd(a.currentBudget)}</td><td className="font-semibold">{usd(a.newBudget)}</td></tr>
           <tr><td className="text-muted">Lands at</td><td>{usd(a.p50)}</td><td>{usd(a.p50)}</td></tr>
-          <tr><td className="text-muted">High case</td><td>{usd(Math.round(a.p90 / 100) * 100)}</td><td>{usd(Math.round(a.p90 / 100) * 100)}</td></tr>
+          <tr><td className="text-muted">High case</td><td>{usd(Math.round(a.p90 / 100) * 100)}</td><td>{usd(Math.round(a.p90 / 100) * 100)}{Math.round(a.p90 / 100) * 100 > a.newBudget && <span className="text-warn-ink"> ({usd(Math.round(a.p90 / 100) * 100 - a.newBudget)} over)</span>}</td></tr>
           <tr><td className="text-muted">Status</td><td><StatusPill status={a.statusBefore} /></td><td><StatusPill status={a.statusAfter} /></td></tr>
         </tbody>
       </table>
       {a.covers && <div className="text-[13px] text-muted">{a.covers}</div>}
       <ul className="space-y-0.5 text-[13px]">
-        {a.evidence.map((e) => (
+        {a.evidence.filter((e) => e.detail !== "None").map((e) => (
           <li key={e.tier}><span className="font-semibold">{e.tier}</span><span className="block text-muted">{e.detail}</span></li>
         ))}
       </ul>

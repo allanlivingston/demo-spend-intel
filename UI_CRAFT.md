@@ -74,7 +74,7 @@ specific correction, the example is in brackets.
 - **A dismissable step-by-step tour** that opens on the first visit and can be replayed from the sidebar. It focuses on the core value, not every feature.
 - **Each step highlights the real element.** Add a still example picture only when the subject may not be on screen yet (rules, slowed spend, asking). Never animate.
 - **The tour's buttons look different from the app's buttons,** so nobody mistakes Next for a real action.
-- **The whole card is always on screen.** It never covers the element it describes, and never pushes off the edge at any window size.
+- **The whole card is always on screen.** It sits below, above or beside the element it describes (narrowing to fit beside it if needed), never covers it unless the element is taller than the screen, and never pushes off the edge at any window size.
 - **No persistent overlays that can drift out of step** with what the user did. [The story strip and pop-up hints were removed as janky.]
 - **`?first` replays the first visit** for testing.
 
@@ -82,7 +82,7 @@ specific correction, the example is in brackets.
 
 - **Check every UI change in the browser before reporting it done:**
   - every button and chip, at each step of the main flows;
-  - narrow windows too (set a CSS max-width with JS; don't resize the user's window);
+  - phone (390px) and tablet (768px) widths too, in a same-page iframe (don't resize the user's window): no sideways scroll, Send on screen;
   - with Offline replay, in a new tab.
 - **Work locally until "push it".** Don't bloat the version count or the README.
 - **When feedback is about one string or one screen, fix the same pattern everywhere.**

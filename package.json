@@ -1,6 +1,6 @@
 {
   "name": "claude-spend-intelligence",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "private": true,
   "scripts": {
     "dev": "next dev",

@@ -55,7 +55,7 @@ export function policyRow(d: Driver): PolicyRow | null {
         before: "a hook puts the date first, so every session starts differently (hit rate 31%)",
         after: "date moved to the end, so the cache works (hit rate about 74%)",
         savings: Math.round(d.forward * share),
-        method: "Recovery scales with cache hit rate restored: 31% to about 74% of the 78% peak.",
+        method: "Gets back most of the loss: the hit rate returns to about 74%, against 78% before the drop.",
       };
     }
     default:
@@ -64,8 +64,8 @@ export function policyRow(d: Driver): PolicyRow | null {
 }
 
 /** Fixes the admin can't apply: they go to the owner, and only count once the owner ships them. */
-export const OWNER: Record<string, { name: string; short: string }> = {
-  "a-cache": { name: "Dev tools team, shared Claude Code setup", short: "the dev tools team" },
+export const OWNER: Record<string, { name: string; short: string; owns: string }> = {
+  "a-cache": { name: "Dev tools team", short: "the dev tools team", owns: "the shared Claude Code setup" },
 };
 export const ownerOf = (driverId: string) => OWNER[driverId];
 

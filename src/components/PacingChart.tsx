@@ -16,6 +16,12 @@ const FORMULA =
  * The month's spend curve. Clicking any day asks Claude what happened (or is forecast) that day.
  * With snap, it draws an earlier copy as it was at that point in the conversation.
  */
+/** Axis labels at an even step (5k, 10k, 20k, 25k, 50k or 100k), at most six steps, never above the top. */
+function evenTicks(top: number) {
+  const step = [5_000, 10_000, 20_000, 25_000, 50_000, 100_000].find((x) => top / x <= 6) ?? Math.ceil(top / 6 / 100_000) * 100_000;
+  return Array.from({ length: Math.floor(top / step) + 1 }, (_, k) => k * step);
+}
+
 export function PacingChart({ onDay, snap }: { onDay?: (question: string, context: string) => void; snap?: Snapshot }) {
   const store = useStore();
   const daySeen = useNew((s) => s.seen.includes("chart-day"));
@@ -81,7 +87,7 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
           >
             <CartesianGrid stroke="#eef0f3" vertical={false} />
             <XAxis dataKey="day" tick={{ fontSize: 12 }} tickLine={false} axisLine={{ stroke: "#e2e8f0" }} interval={1} />
-            <YAxis domain={[0, Math.ceil(yMax / 5000) * 5000]} tickFormatter={usdK} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={52} />
+            <YAxis domain={[0, Math.ceil(yMax / 5000) * 5000]} ticks={evenTicks(Math.ceil(yMax / 5000) * 5000)} tickFormatter={usdK} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={52} />
             <Tooltip
               formatter={(v, name) => (Array.isArray(v) ? [`${usd(r100(Number(v[0])))} to ${usd(r100(Number(v[1])))}`, "Likely to high case"] : [usd(r100(Number(v))), String(name)])}
               labelFormatter={(d) => `Day ${d}${Number(d) === TODAY ? " (today)" : ""}`}

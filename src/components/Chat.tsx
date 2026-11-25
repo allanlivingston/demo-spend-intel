@@ -264,7 +264,7 @@ export const askAboutRow = (r: BreakdownRow) => {
 const CONF_TONE = { High: "bg-emerald-50 text-ok-ink", Medium: "bg-amber-50 text-warn-ink", Low: "bg-neutral-100 text-muted" };
 const CARD = "flex h-[192px] w-[280px] shrink-0 snap-start flex-col rounded-xl border border-neutral-200 bg-white p-3.5";
 
-function RecCard({ r, live, draftWaiting }: { r: BreakdownRow; live: boolean; draftWaiting: boolean }) {
+function RecCard({ r, live, draftWaiting, id }: { r: BreakdownRow; live: boolean; draftWaiting: boolean; id?: string }) {
   const busy = busyOf(useStore((s) => s.messages));
   const { declineRec, restoreRec } = useStore();
   // Not suggested because of a saved rule (rather than declined by hand): changed under Activity, not restored here.
@@ -274,7 +274,7 @@ function RecCard({ r, live, draftWaiting }: { r: BreakdownRow; live: boolean; dr
   const done = { applied: "Fixed", funded: "Funded", overridden: "Approved as planned", sent: "Sent to owner", declined: byRule ? "Skipped by your rule" : "Declined" }[r.state as string];
   const notWorth = fix && r.driver.kind === "growth";
   return (
-    <div className={cx(CARD, done && "bg-neutral-50", r.state === "declined" && "opacity-75")}>
+    <div id={id} className={cx(CARD, done && "bg-neutral-50", r.state === "declined" && "opacity-75")}>
       <div className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide">
         <span className={fix ? "text-warn-ink" : "text-ok-ink"}>{fix ? "Fix" : "Fund"}</span>
         <span title={c.reason} className={cx("cursor-help rounded px-1.5 py-px text-[11px] normal-case tracking-normal", CONF_TONE[c.level])}>{c.level} confidence</span>
@@ -368,7 +368,7 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
       </div>
       <div ref={track} className={cx("flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 py-3 [scrollbar-width:none]", fade)}>
         {briefOpen && (
-          <div className={CARD}>
+          <div className={CARD} id={id ? "first-rec" : undefined}>
             <div className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-accent-ink">Budget<span className="ml-auto font-semibold normal-case tracking-normal tabular-nums text-bad">+{usd(Math.ceil((fc.p50 - fc.pool) / 500) * 500)}</span></div>
             <div className="mt-1.5 text-[15px] font-medium leading-snug">Ask the budget owner for more</div>
             <div className="mt-1 line-clamp-2 text-[13px] text-muted">Fixes, budget moves and approvals are done. Still lands at {usd(fc.p50)} of {usd(fc.pool)}.</div>
@@ -381,7 +381,7 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
           </div>
         )}
         {rows.length ? (
-          rows.map((r) => <RecCard key={r.driver.id} r={r} live={live} draftWaiting={draftFor(r)} />)
+          rows.map((r, i) => <RecCard key={r.driver.id} r={r} live={live} draftWaiting={draftFor(r)} id={id && i === 0 && !briefOpen ? "first-rec" : undefined} />)
         ) : (
           <div className={cx(CARD, "w-full items-start justify-center bg-emerald-50/40")}>
             <div className="text-[12px] font-semibold uppercase tracking-wide text-ok-ink">Nothing to do</div>
@@ -537,7 +537,7 @@ function ModelSelect() {
       <button type="button" onClick={() => setOpen(!open)} aria-haspopup="listbox" aria-expanded={open}
         className="flex h-7 items-center gap-1 rounded-lg px-2.5 text-[14px] font-[450] leading-[19px] text-ink hover:bg-black/5">
         {current.name}
-        {model === "auto" && <span className="ml-1 text-muted">Haiku + Sonnet</span>}
+        {model === "auto" && <span className="ml-1 hidden text-muted sm:inline">Haiku + Sonnet</span>}
         <ChevronDown size={13} className="ml-0.5 text-muted" />
       </button>
       {open && (
@@ -579,7 +579,7 @@ function Composer({ chips, onChip, onJump }: { chips: ChipSpec[]; onChip: (c: Ch
               onKeyDown={(e) => e.key === "Enter" && send()}
               disabled={busy}
               placeholder={busy ? "Claude is working…" : "Ask about spend, or tell Claude what to fix"}
-              className="h-7 flex-1 bg-transparent text-[16px] leading-[23px] text-ink outline-none placeholder:text-faint"
+              className="h-7 min-w-0 flex-1 bg-transparent text-[16px] leading-[23px] text-ink outline-none placeholder:text-faint"
             />
             {/* In the box, not in the chip row, so it never covers a card's buttons or pushes a chip onto a second line. */}
             {onJump && (
@@ -595,14 +595,14 @@ function Composer({ chips, onChip, onJump }: { chips: ChipSpec[]; onChip: (c: Ch
           </div>
         </div>
         {chips.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="mt-2 flex gap-1.5 overflow-x-auto [scrollbar-width:none] sm:flex-wrap sm:overflow-visible">
             {chips.map((c) => (
               <button
                 key={c.text}
                 type="button"
                 onClick={() => onChip(c)}
                 className={cx(
-                  "h-7 rounded-lg border px-2.5 text-[14px] leading-[19px]",
+                  "h-7 shrink-0 whitespace-nowrap rounded-lg border px-2.5 text-[14px] leading-[19px]",
                   c.primary ? "border-accent/40 bg-orange-50 font-[450] text-accent-ink hover:bg-orange-100" : "border-black/10 bg-white text-ink hover:bg-black/[0.03]",
                 )}
               >

@@ -200,6 +200,8 @@ export function draftCfoBrief(s: DemoState, g: GroupId): CfoBrief {
   const outputPer1k = Math.round(((counts[2] ?? 0) / (f.actualToDate / 1000)) * 10) / 10;
   const covers = requested > 0 ? `It covers ${usd(fund)} of new work${waiting > 0 ? ` and ${usd(waiting)} until the owner's fix ships` : ""}${fix > 0 ? ` and ${usd(fix)} of waste not yet fixed` : ""}, rounded up.` : "";
   const statusAfter = forecast({ ...s, budgetRevisions: { ...s.budgetRevisions, [g]: newBudget } }, g).status;
+  // The request covers where spend is expected to land; the high case can still run over the new budget.
+  const highOver = Math.round(f.p90 / 100) * 100 - newBudget;
   const markdown = [
     `# Budget owner brief: ${name}`,
     ``,
@@ -208,13 +210,13 @@ export function draftCfoBrief(s: DemoState, g: GroupId): CfoBrief {
     `| | Now | If approved |`,
     `|---|---|---|`,
     `| Lands at | ${usd(f.p50)} | ${usd(f.p50)} |`,
-    `| High case | ${usd(Math.round(f.p90 / 100) * 100)} | ${usd(Math.round(f.p90 / 100) * 100)} |`,
+    `| High case | ${usd(Math.round(f.p90 / 100) * 100)} | ${usd(Math.round(f.p90 / 100) * 100)}${highOver > 0 ? ` (${usd(highOver)} over)` : ""} |`,
     `| Status | ${f.status} | ${statusAfter} |`,
     ``,
     covers,
     ``,
     `**Evidence:**`,
-    ...evidence.map((e) => `- ${e.tier}: ${e.detail}`),
+    ...evidence.filter((e) => e.detail !== "None").map((e) => `- ${e.tier}: ${e.detail}`),
     ``,
     ...(isAdvanced() ? [`**Planned spend approval rate this month:** ${Math.round(rate * 100)}%`] : []),
     `**Work slowed without it:** ${usd(throttledBase)}`,

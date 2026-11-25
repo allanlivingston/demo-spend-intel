@@ -26,12 +26,14 @@ const STEPS: Step[] = [
     body: "Spend so far, and where it will likely end the month compared with the budget. Switch teams at the top. Click any day to ask what happened.",
   },
   {
-    target: "actions",
+    target: "first-rec",
+    fallback: "actions",
     title: "Fix it or fund it",
     body: "Fix spending that produced nothing, like a Jira connection retrying a broken call over and over. Fund new work that's paying off, like new engineers shipping code.",
   },
   {
-    target: "actions",
+    target: "first-rec",
+    fallback: "actions",
     mock: "rules",
     title: "It learns what you prefer",
     body: "Decline a suggestion and say why. If the reason will still hold next month, Claude suggests a rule. A rule only starts once you save it, and you can change it in Activity.",
@@ -79,10 +81,17 @@ export function Tour({ onClose }: { onClose: () => void }) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const card = useRef<HTMLDivElement>(null);
   const [h, setH] = useState(280);
+  const hNow = useRef(h);
+  hNow.current = h;
   // Measure the real card so placement never pushes it off screen.
   useLayoutEffect(() => {
     if (card.current) setH(card.current.offsetHeight);
   }, [i, rect]);
+  const W = Math.min(400, (typeof window !== "undefined" ? window.innerWidth : 1200) - 32);
+  const M = 16;
+  // Beside a target the card may narrow to this, so it doesn't have to cover the target on mid-size windows.
+  const MIN_BESIDE = 320;
+  let cardW = W;
   const step = STEPS[i];
   const advanced = useStore((st) => st.advanced);
   const last = i === STEPS.length - 1;
@@ -102,9 +111,11 @@ export function Tour({ onClose }: { onClose: () => void }) {
     if (!el) return setRect(null);
     if (step.target !== "sidebar" && step.target !== "composer") {
       el.scrollIntoView({ block: "center" });
-      // Short targets sit just above the message box, so the card, with its example, fits above them.
-      if (el.offsetHeight < 120) {
-        const floor = (document.getElementById("composer")?.getBoundingClientRect().top ?? window.innerHeight) - 16;
+      // When the card can't sit beside the target, the target moves down to just above the message box so the card,
+      // with its example, fits above it instead of covering it.
+      const floor = (document.getElementById("composer")?.getBoundingClientRect().top ?? window.innerHeight) - 16;
+      const beside = window.innerWidth - M - (el.getBoundingClientRect().right + 14) >= MIN_BESIDE;
+      if (el.offsetHeight < 120 || (!beside && el.offsetHeight + 14 + hNow.current + M <= floor)) {
         scrollerOf(el)?.scrollBy({ top: -(floor - el.getBoundingClientRect().bottom) });
       }
     }
@@ -116,7 +127,7 @@ export function Tour({ onClose }: { onClose: () => void }) {
       window.removeEventListener("resize", update);
       clearTimeout(t);
     };
-  }, [step.target, step.fallback]);
+  }, [step.target, step.fallback, W]);
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
@@ -128,12 +139,12 @@ export function Tour({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener("keydown", k);
   });
 
-  // Place the card beside the highlighted element, always fully inside the window: right of the sidebar; below or
-  // above other targets when it fits; otherwise over the target's lower right (tall targets like the forecast).
-  const W = Math.min(400, (typeof window !== "undefined" ? window.innerWidth : 1200) - 32);
-  const M = 16;
+  // Place the card next to the highlighted element, always fully inside the window: right of the sidebar; below,
+  // above or to the right of other targets when it fits; otherwise over the target's lower right (tall targets like
+  // the forecast).
   let pos: React.CSSProperties = { left: "50%", top: "50%", transform: "translate(-50%, -50%)" };
   let arrow: "left" | "up" | "down" | null = null;
+  let arrowTop: number | undefined;
   if (rect) {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
@@ -148,6 +159,13 @@ export function Tour({ onClose }: { onClose: () => void }) {
     } else if (rect.top - 14 - h >= M) {
       pos = { left, top: rect.top - 14 - h };
       arrow = "down";
+    } else if (vw - M - (rect.right + 14) >= MIN_BESIDE) {
+      cardW = Math.min(W, vw - M - (rect.right + 14));
+      const top = clampTop(rect.top);
+      pos = { left: rect.right + 14, top };
+      arrow = "left";
+      // Point at the target's top, even when the card had to move up to fit.
+      arrowTop = Math.max(16, Math.min(rect.top + 32 - top, h - 28));
     } else {
       pos = { left: Math.min(Math.max(rect.right - W - 24, M), vw - W - M), top: clampTop(Math.min(rect.bottom, vh) - h - 24) };
     }
@@ -163,9 +181,10 @@ export function Tour({ onClose }: { onClose: () => void }) {
       ) : (
         <div className="absolute inset-0 bg-[rgba(20,20,19,0.45)]" />
       )}
-      <div ref={card} className="absolute" style={{ ...pos, width: W }} onClick={(e) => e.stopPropagation()}>
+      <div ref={card} className="absolute" style={{ ...pos, width: cardW }} onClick={(e) => e.stopPropagation()}>
         {arrow && (
           <span
+            style={arrowTop !== undefined ? { top: arrowTop } : undefined}
             className={cx(
               "absolute h-3 w-3 rotate-45 bg-white",
               arrow === "up" && "-top-1.5 left-8",

@@ -67,7 +67,7 @@ export function freshSummary(s: DemoState, kind: string, art?: { kind: string; g
     const owner = theirs.length ? ownerOf(theirs[0].driverId)! : null;
     const after = forecast({ ...s, appliedFixes: [...s.appliedFixes, ...mine.map((r) => r.driverId)] }, g).p50;
     if (mine.length)
-      return `It stops spend that produced nothing: ${mine.map((r) => label(r.driverId)).join(" and ")}. With ${mine.length > 1 ? "those" : "that"} applied, ${GROUPS[g].name} lands at ${usd100(after)}.${owner ? ` The cache fix is a code change, so it goes to ${owner.short}.` : ""}`;
+      return `It ${mine.map((r) => doesOf(r.driverId, label(r.driverId))).join(" and ")}. With ${mine.length > 1 ? "those" : "that"} applied, ${GROUPS[g].name} lands at ${usd100(after)}.${owner ? ` The cache fix is a code change, so it goes to ${owner.short}.` : ""}`;
     if (owner) {
       const what = label(theirs[0].driverId);
       return `${what.charAt(0).toUpperCase()}${what.slice(1)}. The fix is a code change, so it goes to ${owner.short}. It saves ${usd(theirs[0].savings)} once they ship it.`;
@@ -75,6 +75,13 @@ export function freshSummary(s: DemoState, kind: string, art?: { kind: string; g
   }
   return draftAnswer(s, "", kind);
 }
+
+/** What applying a fix does, in plain words. */
+const DOES: Record<string, string> = {
+  "a-connector": "turns off the Jira MCP connector's retry loop",
+  "a-subagents": "moves Claude Code subagents from Opus to Sonnet",
+};
+const doesOf = (id: string, label: string) => DOES[id] ?? `fixes ${label}`;
 
 function draftAnswer(s: DemoState, p: string, kind: string): string {
   const g: GroupId = "pe";
@@ -85,7 +92,7 @@ function draftAnswer(s: DemoState, p: string, kind: string): string {
     const after = forecast({ ...s, appliedFixes: [...s.appliedFixes, ...mine.map((d) => d.id)] }, g).p50;
     if (/risk/.test(p)) return "Low. Nobody is capped or blocked, Opus stays one click away for anyone who needs it, and Sonnet's occasional retries are already counted in the savings. You can undo it from the card.";
     if (/part/.test(p)) return `Each row stands on its own: ${open.map((d) => `${lc(d.label)} saves ${usd(recoveryOf(d))}`).join(", ")}. Tell me which to leave out and I will redraft it.`;
-    return `It stops spend that produced nothing: ${mine.map((d) => lc(d.label)).join(" and ")}. With those applied, ${GROUPS[g].name} lands at ${usd100(after)}.${theirs.length ? ` The cache fix is a code change, so it goes to ${ownerOf(theirs[0].id)!.short}.` : ""}`;
+    return `It ${mine.map((d) => doesOf(d.id, lc(d.label))).join(" and ")}. With those applied, ${GROUPS[g].name} lands at ${usd100(after)}.${theirs.length ? ` The cache fix is a code change, so it goes to ${ownerOf(theirs[0].id)!.short}.` : ""}`;
   }
   if (kind === "rebalance_plan") {
     const r = draftRebalance(s, g);
