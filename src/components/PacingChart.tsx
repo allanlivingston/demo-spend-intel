@@ -3,7 +3,7 @@ import { ChevronDown, CircleHelp } from "lucide-react";
 import { Area, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, usePlotArea, useXAxisScale, useYAxisScale, XAxis, YAxis } from "recharts";
 import { dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, pacing, TODAY, type GroupId } from "@/engine";
 import { useStore, type Snapshot } from "@/state/store";
-import { Term, TERMS, usd, usdK } from "./ui";
+import { PHONE, Term, TERMS, usd, usdK, useMedia } from "./ui";
 import { markUsed, NewDot, useNew } from "./NewDot";
 
 /** Chart readouts round to $100, like the rest of the app. */
@@ -16,6 +16,9 @@ const FORMULA =
  * The month's spend curve. Clicking any day asks Claude what happened (or is forecast) that day.
  * With snap, it draws an earlier copy as it was at that point in the conversation.
  */
+/** Every other day on a wide chart; every five days on a phone, where they would run together. */
+const dayTicks = (phone: boolean) => (phone ? { ticks: [1, 5, 10, 15, 20, 25, 30], interval: 0 as const } : { interval: 1 as const });
+
 /** Axis labels at an even step (5k, 10k, 20k, 25k, 50k or 100k), at most six steps, never above the top. */
 function evenTicks(top: number) {
   const step = [5_000, 10_000, 20_000, 25_000, 50_000, 100_000].find((x) => top / x <= 6) ?? Math.ceil(top / 6 / 100_000) * 100_000;
@@ -24,6 +27,7 @@ function evenTicks(top: number) {
 
 export function PacingChart({ onDay, snap }: { onDay?: (question: string, context: string) => void; snap?: Snapshot }) {
   const store = useStore();
+  const phone = useMedia(PHONE);
   const daySeen = useNew((s) => s.seen.includes("chart-day"));
   const { advanced, dailyOpen, setDailyOpen } = store;
   const demo = snap?.demo ?? store.demo;
@@ -70,7 +74,7 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
 
   return (
     <div>
-      <div className="h-[260px] px-1 pt-2">
+      <div id={onDay ? "forecast-chart" : undefined} className="h-[260px] px-1 pt-2">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={data}
@@ -86,14 +90,14 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
             }}
           >
             <CartesianGrid stroke="#eef0f3" vertical={false} />
-            <XAxis dataKey="day" tick={{ fontSize: 12 }} tickLine={false} axisLine={{ stroke: "#e2e8f0" }} interval={1} />
+            <XAxis dataKey="day" tick={{ fontSize: 12 }} tickLine={false} axisLine={{ stroke: "#e2e8f0" }} {...dayTicks(phone)} />
             <YAxis domain={[0, Math.ceil(yMax / 5000) * 5000]} ticks={evenTicks(Math.ceil(yMax / 5000) * 5000)} tickFormatter={usdK} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={52} />
             <Tooltip
-              formatter={(v, name) => (Array.isArray(v) ? [`${usd(r100(Number(v[0])))} to ${usd(r100(Number(v[1])))}`, "Likely to high case"] : [usd(r100(Number(v))), String(name)])}
+              formatter={(v, name) => (Array.isArray(v) ? [`${usd(r100(Number(v[0])))} to ${usd(r100(Number(v[1])))}`, "Likely range"] : [usd(r100(Number(v))), String(name)])}
               labelFormatter={(d) => `Day ${d}${Number(d) === TODAY ? " (today)" : ""}`}
               contentStyle={{ fontSize: 12, borderRadius: 6 }}
             />
-            <Area dataKey="band" name="Likely to high case" fill="#D97757" fillOpacity={0.12} stroke="none" isAnimationActive />
+            <Area dataKey="band" name="Likely range" fill="#D97757" fillOpacity={0.12} stroke="none" isAnimationActive />
             {advanced && <Line dataKey="plan" name="Pacing plan" stroke="#D97757" strokeWidth={1} dot={false} isAnimationActive={false} />}
             {ghost && <Line dataKey="ghost" name="Previous forecast" stroke="#94a3b8" strokeOpacity={0.5} strokeDasharray="4 4" dot={false} isAnimationActive={false} />}
             <Line dataKey="actual" name="Actual" stroke="#191919" strokeWidth={2} dot={false} isAnimationActive={false} />
@@ -138,7 +142,7 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
         <span><span className="mr-1 inline-block h-0.5 w-4 bg-ink align-middle" />Actual</span>
         <span><span className="mr-1 inline-block w-4 border-t-2 border-dashed border-ink align-middle" />{advanced ? "No limits, from day 1" : "Forecast"}</span>
         {advanced && anyHeld && <span><span className="mr-1 inline-block w-4 border-t-2 border-dotted align-middle" style={{ borderColor: "#D97757" }} />Spend with pacing and caps</span>}
-        <span><span className="mr-1 inline-block h-2.5 w-4 bg-accent/20 align-middle" /><Term def={TERMS.likely}>Likely to high case</Term></span>
+        <span><span className="mr-1 inline-block h-2.5 w-4 bg-accent/20 align-middle" /><Term def={TERMS.likely}>Likely range</Term></span>
         {advanced && <span><span className="mr-1 inline-block h-px w-4 bg-accent align-middle" />Pacing plan</span>}
         {/* Only the markers this chart shows. */}
         {markers.some((d) => d.kind === "waste" && !fixedState(d.id)) && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-warn align-middle" />Waste starts</span>}
@@ -304,7 +308,7 @@ function DailySummary({ data, share, open, onToggle }: { data: StripDay[]; share
   const sentence = <>{pct ? `From today, about ${pct}% of runs are ` : "From today, under 1% of runs are "}<Term def={TERMS.slowed}>slowed</Term>{pct && top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}</>;
   return (
     <div id="slowed" className={`border-t border-neutral-100 px-4 py-2.5 text-[13px]${open ? " pb-1" : ""}`}>
-      <div className="flex w-full items-center gap-3">
+      <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1">
         <span className="text-ink">{sentence}</span>
       <button type="button" onClick={() => { onToggle(); markUsed("daily-bars"); }} aria-expanded={open} className="ml-auto flex shrink-0 items-center text-left text-muted hover:text-ink">
         <span className="inline-flex shrink-0 items-center gap-1 text-accent-ink">
@@ -327,6 +331,7 @@ function DailySummary({ data, share, open, onToggle }: { data: StripDay[]; share
 
 /** One stacked bar a day along the ladder: ran, then cheaper model, paused, hard throttled, stopped. The summary above is its legend. */
 function DailyStrip({ data }: { data: StripDay[] }) {
+  const phone = useMedia(PHONE);
   const t = (k: StepKey) => data.reduce((a, d) => a + d[k], 0);
   // Hide steps that round to $0 for the month (for example, no cheaper-model runs left once the waste is fixed).
   const steps = STEPS.filter((st) => Math.round(t(st.key) / 100) > 0);
@@ -335,7 +340,7 @@ function DailyStrip({ data }: { data: StripDay[] }) {
       <div className="h-[120px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 6, right: 24, bottom: 0, left: 8 }} barCategoryGap="15%">
-            <XAxis dataKey="day" tick={{ fontSize: 11 }} tickLine={false} axisLine={{ stroke: "#e2e8f0" }} interval={1} height={16} />
+            <XAxis dataKey="day" tick={{ fontSize: 11 }} tickLine={false} axisLine={{ stroke: "#e2e8f0" }} {...dayTicks(phone)} height={16} />
             <YAxis tickFormatter={usdK} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={52} tickCount={3} />
             <Tooltip content={<StripTip />} position={{ y: -90 }} wrapperStyle={{ zIndex: 40, pointerEvents: "none" }} allowEscapeViewBox={{ x: false, y: true }} cursor={{ fill: "rgba(0,0,0,0.04)" }} />
             <ReferenceLine x={TODAY} stroke="#94a3b8" strokeDasharray="3 3" />

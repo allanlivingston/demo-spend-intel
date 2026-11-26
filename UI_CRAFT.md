@@ -10,7 +10,7 @@ specific correction, the example is in brackets.
   - type sizes, spacing and colors;
   - the model selector inside the message box, with suggestion chips in one row under it;
   - the left nav layout;
-  - the collapsible sidebar: open by default, collapse on the icon, peek on hover, pin on the logo.
+  - the collapsible sidebar: open by default, collapse on the icon, peek on hover, pin on the logo. On a phone, no rail: a top bar with a menu button that slides the full sidebar over the page.
 - **Check against the real thing.** When unsure, open Claude.ai and compare side by side. [Fonts were smaller and padding wider than Claude's.]
 - **Older copies of a view fold to one line,** like Claude artifacts. Clicking expands them. The newest copy is the live one.
 
@@ -65,6 +65,7 @@ specific correction, the example is in brackets.
 
 - **The first call to action is obvious on arrival.** The headline says what needs doing and the button under it does it.
 - **The next step is always clear.** The first suggestion chip is the next step, and every chip fits the current state.
+- **Close the loop.** When nothing is left open, say what the work came to (a recap with a copy to share), say what is still true ("over budget until the owner ships the fix"), and point forward. Never say "done" while something the user should know about is still pending.
 - **Every recommendation can be declined,** every change is logged in Activity, and applied changes can be undone.
 - **A failed run offers Retry.** Live vs offline is shown subtly.
 - **Teach in place:** dotted-underline terms with one-line definitions, and an orange dot on a feature until it's first used.
@@ -74,7 +75,7 @@ specific correction, the example is in brackets.
 - **A dismissable step-by-step tour** that opens on the first visit and can be replayed from the sidebar. It focuses on the core value, not every feature.
 - **Each step highlights the real element.** Add a still example picture only when the subject may not be on screen yet (rules, slowed spend, asking). Never animate.
 - **The tour's buttons look different from the app's buttons,** so nobody mistakes Next for a real action.
-- **The whole card is always on screen.** It sits below, above or beside the element it describes (narrowing to fit beside it if needed), never covers it unless the element is taller than the screen, and never pushes off the edge at any window size.
+- **The whole card is always on screen.** It sits below, above or beside the element it describes (narrowing to fit beside it if needed) and never covers it. When nothing fits, a step with an example drops the highlight and centers the card; any other step puts the card at the top and the element's top just under it. It never pushes off the edge at any window size, short windows included.
 - **No persistent overlays that can drift out of step** with what the user did. [The story strip and pop-up hints were removed as janky.]
 - **`?first` replays the first visit** for testing.
 

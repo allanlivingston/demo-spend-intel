@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "src/app/api/agent/route.ts": { "supportsCancellation": true }
+  }
+}

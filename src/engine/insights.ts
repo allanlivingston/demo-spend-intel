@@ -4,7 +4,7 @@ import { pacing } from "./pacing";
 import { TODAY } from "./calendar";
 import { baseLanding, GROUP_IDS, GROUPS, newHires, tenuredMembers, workstreamsOf } from "./data";
 import {
-  driverEffects, driversOf, evidenceTier, forecast, hurdleOf, initialState, isDeclined, memberProjections, poolOf, rebalanceRecipient, scenarioOf, throttle,
+  driverEffects, driversOf, evidenceTier, forecast, hurdleOf, isDeclined, memberProjections, poolOf, rebalanceRecipient, scenarioOf, throttle,
 } from "./model";
 import { distanceOffPace, nudge, type Nudge } from "./nudge";
 import { ownerOf, recoveryOf } from "./routing";
@@ -321,19 +321,4 @@ function fundLine(s: DemoState, over: number): string {
   if (waiting > 0 && over > waiting)
     return `${usd100(over)} over budget: ${usd100(over - waiting)} from ${who} and ${usd(waiting)} until the owner's fix ships. Ask the budget owner for the rest.`;
   return `${usd100(over)} over budget from ${who}. Ask the budget owner for the rest.`;
-}
-
-/** What changed this month, for the last step of the story: start vs now, in plain words. */
-export function storySummary(s: DemoState, g: GroupId): string {
-  const start = forecast(initialState(s.scenarioId), g).p50;
-  const f = forecast(s, g);
-  const fixed = sum(driversOf(s, g).filter((d) => s.appliedFixes.includes(d.id)).map((d) => recoveryOf(d)));
-  const planned = sum(driversOf(s, g).filter((d) => s.overrides.includes(d.id)).map((d) => d.forward));
-  const sent = sum(driversOf(s, g).filter((d) => s.handedOff.includes(d.id) && !s.appliedFixes.includes(d.id)).map((d) => recoveryOf(d)));
-  const waste = fixed + sent;
-  const wasteLine = waste > 0 && (sent > 0 ? `handled ${usd(waste)} of waste (${usd(fixed)} fixed, ${usd(sent)} with its owner)` : `fixed ${usd(waste)} of waste`);
-  const done = [wasteLine, s.rebalanceApplied && "moved unused budget to the payments refactor", planned > 0 && `approved ${usd(planned)} of planned work`, `raised the budget to ${usd(f.pool)}`].filter(Boolean) as string[];
-  const list = done.length > 1 ? `${done.slice(0, -1).join(", ")} and ${done[done.length - 1]}` : done[0];
-  const newcomers = scenarioOf(s).newMembers.filter((m) => m.groupId === g).length;
-  return `This month started heading for ${usd100(start)} on a ${usd(poolOf(initialState(s.scenarioId), g))} budget. You ${list}, so ${GROUPS[g].name} now lands at ${usd100(f.p50)}${f.p50 <= f.pool ? ", within budget" : ""}. Nobody was cut off this month${newcomers ? `, and the ${newcomers} new engineers were not slowed` : ""}.`;
 }

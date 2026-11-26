@@ -38,7 +38,7 @@ export default function Home() {
   if (!ready)
     return (
       <div className="flex h-screen bg-canvas" aria-busy="true">
-        <div className="w-[60px] shrink-0 border-r-[0.5px] border-black/10 bg-sidebar px-4 pt-4 lg:w-[288px]">
+        <div className="hidden w-[60px] shrink-0 border-r-[0.5px] border-black/10 bg-sidebar px-4 pt-4 sm:block lg:w-[288px]">
           <div className="hidden font-serif text-[19px] text-ink lg:block">Spend Intelligence</div>
         </div>
         <div className="mx-auto w-full max-w-[816px] animate-pulse space-y-4 px-6 pt-8">
@@ -49,7 +49,7 @@ export default function Home() {
       </div>
     );
   return (
-    <div className="flex h-screen bg-canvas">
+    <div className="flex h-screen flex-col bg-canvas sm:flex-row">
       <Sidebar onTour={() => setTour(true)} onActivity={() => setActivity(true)} onGuide={() => setGuide(true)} />
       <ChatApp activityOpen={activity} setActivityOpen={setActivity} />
       {tour && <Tour onClose={() => setTour(false)} />}

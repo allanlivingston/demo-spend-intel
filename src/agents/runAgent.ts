@@ -56,7 +56,10 @@ export interface RunOutcome {
   retried?: boolean;
 }
 
-export async function* runAgent(req: AgentRequest, opts: { backend?: Backend; onDone?: (o: RunOutcome, e: Extract<AgentEvent, { type: "done" }>) => void } = {}): AsyncGenerator<AgentEvent> {
+export async function* runAgent(
+  req: AgentRequest,
+  opts: { backend?: Backend; onDone?: (o: RunOutcome, e: Extract<AgentEvent, { type: "done" }>) => void; signal?: AbortSignal } = {},
+): AsyncGenerator<AgentEvent> {
   const started = Date.now();
   // The default view has no workstreams: funding growth means the budget owner brief, never a budget move or a planned-work approval.
   if (req.agent === "funding" && req.advanced === false && req.driverId) req = { ...req, driverId: undefined, prompt: "Draft the budget owner brief." };
@@ -66,8 +69,9 @@ export async function* runAgent(req: AgentRequest, opts: { backend?: Backend; on
   const user = userPrompt(req.prompt, req.pinned);
 
   if (backend !== "replay") {
-    const live = yield* liveRun(req, backend, model, system, user, started, opts.onDone);
-    if (live.ok) return;
+    const live = yield* liveRun(req, backend, model, system, user, started, opts.onDone, opts.signal);
+    // Nobody is listening any more (the browser dropped an early run): stop rather than replay.
+    if (live.ok || opts.signal?.aborted) return;
     yield* replay(req, live.reason, started);
     return;
   }
@@ -77,6 +81,7 @@ export async function* runAgent(req: AgentRequest, opts: { backend?: Backend; on
 async function* liveRun(
   req: AgentRequest, backend: Backend, model: string, system: string, user: string, started: number,
   onDone?: (o: RunOutcome, e: Extract<AgentEvent, { type: "done" }>) => void,
+  cancel?: AbortSignal,
 ): AsyncGenerator<AgentEvent, { ok: true } | { ok: false; reason: string }> {
   yield { type: "start", backend, model, agent: req.agent };
   const channel = new Channel<AgentEvent>();
@@ -88,6 +93,9 @@ async function* liveRun(
     const ctx: ToolContext = { demo: req.demo, group: req.group, artifacts: [] };
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS[backend]);
+    const stop = () => controller.abort();
+    if (cancel?.aborted) stop();
+    cancel?.addEventListener("abort", stop);
     let steps = 0;
     const run: BackendRun = {
       agent: req.agent, model, system, user: u, ctx, signal: controller.signal, maxToolSteps: MAX_TOOL_STEPS,
@@ -105,6 +113,7 @@ async function* liveRun(
       return { result, ctx };
     } finally {
       clearTimeout(timer);
+      cancel?.removeEventListener("abort", stop);
     }
   };
 

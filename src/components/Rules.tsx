@@ -101,9 +101,12 @@ export function RuleSuggestion({ m }: { m: ChatMessage }) {
   );
 }
 
+// One shared empty list: a selector that returns a new [] each time makes React re-render forever.
+const NO_RULES: PrefRule[] = [];
+
 /** Saved rules, at the top of Activity. */
 export function YourRules() {
-  const rules = useStore((s) => s.demo.rules ?? []);
+  const rules = useStore((s) => s.demo.rules ?? NO_RULES);
   const { setRuleLevel, removeRule } = useStore();
   return (
     <section data-your-rules="" className="border-b border-neutral-100 px-4 py-3">

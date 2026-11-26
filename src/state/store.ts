@@ -1,9 +1,10 @@
 "use client";
 // Client store. Engine inputs (DemoState) plus UI state. Persisted per browser; Reset demo clears it.
 import { create } from "zustand";
+import type { Recap } from "./recap";
 import { persist } from "zustand/middleware";
 import { ownerOf, headline,
-  setAdvancedView, storySummary, draftCfoBrief, draftOverride, draftPolicyDiff, draftRebalance, forecast, initialState,
+  setAdvancedView, draftCfoBrief, draftOverride, draftPolicyDiff, draftRebalance, forecast, initialState,
   type Artifact, type DayPoint, type DemoState, type GroupId, type GroupSelection, type ScenarioId, type SharingLevel, isDeclined, driverById,
   handoffTo, type Handoff, applyRulesAtStart, DECLINE_REASONS, ruleFromDecline, rulesFromApply, ruleSentence, topicOf, withRules,
   type PrefRule, type RuleLevel, type DeclineReasonId,
@@ -57,6 +58,8 @@ export interface AgentRunView {
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
+  /** A name for the chat when no question has been asked yet. */
+  title?: string;
   text?: string;
   model?: string;
   artifact?: Artifact;
@@ -79,6 +82,8 @@ export interface ChatMessage {
   rulesStatus?: "proposed" | "saved" | "dismissed";
   /** Who wrote the rule's sentence: Claude, or the app's template (offline, or Claude's answer failed a check). */
   rulesWording?: "pending" | "claude" | "template";
+  /** The month so far, posted once everything open is handled. */
+  recap?: Recap;
 }
 
 export type ViewKind = "forecast" | "actions";
@@ -197,7 +202,7 @@ export function chatTitle(messages: ChatMessage[]): string {
     policy_diff: "Applied waste fixes", rebalance_plan: "Rebalanced budget", governed_override: "Approved planned spend", cfo_brief: "Budget owner brief",
   };
   if (done?.artifact) return TITLE[done.artifact.kind] ?? "Approved a change";
-  return messages.find((m) => m.role === "user")?.text ?? "Conversation";
+  return messages.find((m) => m.role === "user")?.text ?? messages.find((m) => m.title)?.title ?? "Conversation";
 }
 
 const fresh = (scenario: ScenarioId = "C") => ({
@@ -342,7 +347,7 @@ export const useStore = create<Store>()(
           approved.forEach((x) => log({ actor: "Your rule", action: "Approved by your rule", detail: x }));
           const done = [...applied, ...approved].map((x) => driverById(x)?.label).filter(Boolean);
           if (done.length)
-            get().say({ role: "assistant", text: `Your rules already handled ${done.length === 1 ? "one thing" : `${done.length} things`} this month: ${done.join("; ")}. ${done.length === 1 ? "It is" : "They are"} listed in Activity, under your rules.` });
+            get().say({ role: "assistant", title: "Handled by your rules", text: `Your rules already handled ${done.length === 1 ? "one thing" : `${done.length} things`} this month: ${done.join("; ")}. ${done.length === 1 ? "It is" : "They are"} listed in Activity, under your rules.` });
         },
         setGroup: (group) => set({ group, ghost: null }),
         pin: (c) => set({ pinned: get().pinned.some((p) => p.id === c.id) ? get().pinned : [...get().pinned, c] }),
@@ -493,7 +498,8 @@ export const useStore = create<Store>()(
           mutate({ ...d, budgetRevisions: { ...d.budgetRevisions, [g]: newBudget } });
           if (artifactId) get().setArtifactStatus(artifactId, "approved");
           log({ actor: "Budget owner", action: "Approved budget increase", detail: `${g} budget to $${newBudget.toLocaleString("en-US")}`, fundingPath: "Budget owner brief" });
-          get().postView("forecast", storySummary(get().demo, g));
+          // What the month came to follows as the recap (Chat posts it once nothing is left open).
+          get().postView("forecast", `Budget raised to $${newBudget.toLocaleString("en-US")}.`);
         },
         setSharing: (level) => {
           set({ demo: { ...get().demo, sharingLevel: level } });

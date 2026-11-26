@@ -56,6 +56,9 @@ Approving a specific overspend as planned work, like the SOC 2 documentation spr
 ## What is a budget owner brief?
 A short note asking the budget owner (usually Finance) for more budget when fixing waste and approving planned work aren't enough. It shows the results so far, how much is needed, and where spend ends with it.
 
+## What happens next?
+Once nothing is open, nothing else needs you this month. If something new comes up, such as another source of waste, it shows up here as a recommendation, and you'll see when an owner ships a fix you sent them. Your saved rules carry over to next month.
+
 ## What happens if we do nothing?
 The waste keeps running to the end of the month, the team goes over budget, and when monthly limits kick in, the engineers getting the most done are cut off first.
 

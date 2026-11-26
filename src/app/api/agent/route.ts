@@ -29,33 +29,48 @@ export async function POST(request: Request) {
   // Tools see the same view as the admin: the default view leaves out workstream-only items.
   setAdvancedView(req.advanced ?? true);
   const session = request.headers.get("x-demo-session") ?? "anon";
+  // An early run starts the likely next step before the click (see agentClient). It only runs live, within the caps;
+  // otherwise there is nothing to gain, and the click runs as usual.
+  const early = request.headers.get("x-early-run") === "1";
 
   let backend = defaultBackend();
   let capReason: string | null = null;
+  if (early && (req.offline || backend === "replay" || (backend === "api" && checkCaps(session, true)))) return new Response(null, { status: 204 });
   if (backend === "api") {
     capReason = checkCaps(session);
     if (capReason) backend = "replay";
   }
+  // Stop the run when the browser lets go of it (an early run nobody clicked), so it stops spending.
+  const stop = new AbortController();
+  request.signal?.addEventListener("abort", () => stop.abort());
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      const send = (e: AgentEvent) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(e)}\n\n`));
+      const send = (e: AgentEvent) => {
+        if (!stop.signal.aborted) controller.enqueue(encoder.encode(`data: ${JSON.stringify(e)}\n\n`));
+      };
       try {
         for await (const e of runAgent(capReason ? { ...req, offline: false } : req, {
           backend,
+          signal: stop.signal,
           onDone: (o, d) => {
             if (o.backend === "api") record(session, d.costUsd);
-            console.log(JSON.stringify({ evt: "agent_run", agent: req.agent, backend: o.backend, model: o.model, ...d }));
+            console.log(JSON.stringify({ evt: "agent_run", agent: req.agent, backend: o.backend, model: o.model, early, ...d }));
           },
         })) {
+          if (stop.signal.aborted) break;
           send(e.type === "start" && capReason ? { ...e, replayReason: capReason } : e);
         }
       } catch (err) {
         send({ type: "error", message: err instanceof Error ? err.message : String(err) });
       } finally {
-        controller.close();
+        if (stop.signal.aborted) console.log(JSON.stringify({ evt: "agent_run_stopped", agent: req.agent, early }));
+        try { controller.close(); } catch { /* the browser already let go */ }
       }
+    },
+    cancel() {
+      stop.abort();
     },
   });
   return new Response(stream, { headers: { "content-type": "text/event-stream", "cache-control": "no-cache, no-transform", connection: "keep-alive" } });

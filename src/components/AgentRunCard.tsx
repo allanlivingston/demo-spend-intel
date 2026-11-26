@@ -26,7 +26,7 @@ export function AgentRunCard({ m }: { m: ChatMessage }) {
         {running && <><Loader2 size={12} className="animate-spin" /> {run.steps.at(-1)?.phase ?? "Thinking"}…</>}
         {!running && run.steps.length > 0 && (
           <button type="button" onClick={() => setShowSteps(!showSteps)} className="flex items-center gap-0.5 hover:text-ink">
-            · {run.steps.length} steps <ChevronRight size={12} className={cx("transition", showSteps && "rotate-90")} />
+            · {run.steps.length} {run.steps.length === 1 ? "step" : "steps"} <ChevronRight size={12} className={cx("transition", showSteps && "rotate-90")} />
           </button>
         )}
       </div>

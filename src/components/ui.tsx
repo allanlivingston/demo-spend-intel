@@ -1,6 +1,6 @@
 "use client";
 import { levelOfTier } from "@/engine";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { Status } from "@/engine";
 
 export const cx = (...xs: (string | false | null | undefined)[]) => xs.filter(Boolean).join(" ");
@@ -18,6 +18,22 @@ export function mergeSteps<T extends { phase: string; summary: string }>(steps: 
   return out;
 }
 export const pct = (n: number) => `${Math.round(n * 100)}%`;
+
+/** A phone-width window (under Tailwind's sm, 640px). */
+export const PHONE = "(max-width: 639.98px)";
+
+/** Whether a media query matches, kept up to date. Read on first render (the app renders in the browser) so nothing flashes. */
+export function useMedia(query: string) {
+  const [on, setOn] = useState(() => typeof window !== "undefined" && window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const update = () => setOn(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, [query]);
+  return on;
+}
 
 export function Card({ children, className, title, right }: { children: ReactNode; className?: string; title?: ReactNode; right?: ReactNode }) {
   return (

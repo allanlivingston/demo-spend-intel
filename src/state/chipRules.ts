@@ -1,6 +1,6 @@
 // Which suggestion chips show under the message box. Pure: state in, chips out, so every state is testable.
 // Order: the next step first, then questions that fit now, then "show again" chips for views that scrolled away.
-import { breakdown, forecast, isAdvanced, ownerOf, pacing, type BreakdownRow, type DemoState, type GroupSelection } from "@/engine";
+import { breakdown, forecast, GROUP_IDS, GROUPS, isAdvanced, ownerOf, pacing, type BreakdownRow, type DemoState, type GroupId, type GroupSelection } from "@/engine";
 import type { StartRun } from "./agentClient";
 import { nextAction, wasteSources } from "./nextAction";
 import type { ChatMessage, ViewKind } from "./store";
@@ -13,6 +13,8 @@ export type ChipAction =
   | { type: "decline"; artifactId: string }
   | { type: "approve"; artifactId: string }
   | { type: "shipped"; driverId: string }
+  | { type: "group"; group: GroupId }
+  | { type: "situations" }
   | { type: "activity" };
 
 export interface ChipSpec { text: string; primary?: boolean; action: ChipAction }
@@ -89,16 +91,21 @@ export function chipsFor(i: ChipInput): ChipSpec[] {
     main.push(ask("Why these changes?", c), ask("What's the risk if I approve it?", c));
     if (repeat) main.push({ text: "Decline it", action: { type: "decline", artifactId: draft.artifact!.id } });
     if (draft.artifact!.kind === "policy_diff" && draft.artifact!.rows.length > 1) main.push(ask("What if I only approve part of it?", c));
+  } else if (!next.cta) {
+    // Nothing open for this team: point forward. Another team with work comes first, then the owner's side of a fix
+    // being waited on (a demo control), then other situations and what happens from here.
+    if (i.group !== "all")
+      for (const g of GROUP_IDS) if (g !== i.group && nextAction(i.demo, g).cta) main.push({ text: `Check ${GROUPS[g].name}`, primary: !main.length, action: { type: "group", group: g } });
+    for (const id of i.demo.handedOff.filter((x) => !i.demo.appliedFixes.includes(x))) main.push({ text: "Owner shipped the fix (demo)", action: { type: "shipped", driverId: id } });
+    main.push({ text: "Try another situation", action: { type: "situations" } });
+    main.push(ask("What happens next?"));
+    main.push(ask(f.p50 > f.pool ? "Why are we over budget?" : "Summarize spend"));
+    if (isAdvanced()) main.push(ask("How do we know this pacing is any good?"));
   } else {
     if (next.cta) {
       const sources = wasteSources(i.demo, i.group);
       const text = next.verdict === "fix" ? (sources.length > 1 ? "Fix all the waste" : `Fix the ${sources[0].name.toLowerCase()}`) : next.cta.label;
       main.push({ text, primary: true, action: { type: "run", run: { ...next.cta.run, say: text } } });
-    }
-    if (next.verdict === "waiting") {
-      main.push(ask("What waits on the dev tools team?"));
-      // Demo control: play the owner's side so the story can finish.
-      for (const id of i.demo.handedOff.filter((x) => !i.demo.appliedFixes.includes(x))) main.push({ text: "Owner shipped the fix (demo)", action: { type: "shipped", driverId: id } });
     }
     // Just asked about one fix from its card: fixing that one is the next step (the answer says "Fix it drafts the change").
     const one = askedFix(i);
@@ -119,7 +126,8 @@ export function chipsFor(i: ChipInput): ChipSpec[] {
   const fresh = main.filter((c) => !asked.has(c.text));
   const extra: ChipSpec[] = [];
   if (!i.forecastVisible) extra.push({ text: "Show forecast", action: { type: "view", kind: "forecast" } });
-  if (i.auditCount > 0) extra.push({ text: "View activity", action: { type: "activity" } });
+  // Once everything is handled the recap says what changed, so Activity gives way to the next steps.
+  if (i.auditCount > 0 && next.cta) extra.push({ text: "View activity", action: { type: "activity" } });
   // "Show again" chips always fit: questions give way first.
   return [...fresh.slice(0, Math.max(1, MAX_CHIPS - extra.length)), ...extra].slice(0, MAX_CHIPS);
 }

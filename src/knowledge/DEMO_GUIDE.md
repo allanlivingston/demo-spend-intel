@@ -15,7 +15,7 @@ A hard monthly limit stops someone completely, usually late in the month and usu
 Start with the headline and the button under it. First fix the waste: Claude finds spend that produced nothing, like a connector retrying a failing call, and drafts a policy change. Then fund the new work: send the budget owner a short brief asking for more. (In the advanced view, which splits budget by workstream, you can also approve planned work like a SOC 2 sprint and move unused budget first.) Fixes that need someone else, like a code change in another team's repo, are sent to that owner.
 
 ## How does Claude fit in?
-An engine computes every number: forecasts, savings and who is slowed. Claude agents look into each problem and draft the change. Every figure Claude writes is checked against the engine before it is shown. The admin approves or declines every change.
+An engine computes every number: forecasts, savings and who is slowed. Claude agents look into each problem and draft the change. Every figure Claude writes is checked against the engine before it is shown. The admin approves or declines every change. To save waiting, the likely next step, which is only a draft, starts while you read; if you do something else first, it is stopped and thrown away.
 
 ## How do we know it works?
 In the advanced view, the Health tab shows the last six months: how often month-end spend landed inside the forecast range, how close it came to budget, how much budget moved between workstreams, and merged PRs and passing tests per $1,000.

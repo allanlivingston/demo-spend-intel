@@ -6,7 +6,7 @@ import { useUi } from "@/state/ui";
 import { markUsed, NewDot } from "./NewDot";
 import type { ScenarioId } from "@/engine";
 import { chatTitle, useStore } from "@/state/store";
-import { cx } from "./ui";
+import { cx, PHONE, useMedia } from "./ui";
 
 export const SCENARIOS: { id: ScenarioId; label: string; hint: string }[] = [
   { id: "C", label: "Waste and new work", hint: "Fix the waste, then fund the new engineers" },
@@ -133,6 +133,8 @@ export function Sidebar({ onTour, onActivity, onGuide }: { onTour: () => void; o
   const [pinnedPref, setPinnedState] = useState(true);
   const [peek, setPeek] = useState(false);
   const narrow = useNarrow();
+  // On a phone, like claude.ai: no rail; a top bar with a menu button that slides the full sidebar over the page.
+  const phone = useMedia(PHONE);
   useEffect(() => {
     try { if (localStorage.getItem(PIN_KEY) === "0") setPinnedState(false); } catch {}
   }, []);
@@ -146,16 +148,8 @@ export function Sidebar({ onTour, onActivity, onGuide }: { onTour: () => void; o
   const collapsed = !pinned && !peek;
   /** Over the page in a narrow window: close once something is picked. */
   const then = (fn: () => void) => () => { fn(); if (narrow) setPeek(false); };
-  return (
-    <aside id="sidebar" className={cx("relative h-full shrink-0 transition-[width] duration-200", pinned ? "w-[288px]" : "w-[60px]")}>
-     {narrow && peek && <div className="fixed inset-0 z-20" onClick={() => setPeek(false)} aria-hidden />}
-     <div
-      // Hover opens it only in a wide window; in a narrow one it opens and closes on click, like a menu.
-      onMouseEnter={() => !pinned && !narrow && setPeek(true)}
-      onMouseLeave={() => !narrow && setPeek(false)}
-      className={cx("absolute inset-y-0 left-0 z-30 flex flex-col border-r-[0.5px] border-black/10 bg-sidebar transition-[width,box-shadow] duration-200",
-        collapsed ? "w-[60px]" : "w-[288px]", peek && !pinned && "shadow-xl")}
-    >
+  const panel = (collapsed: boolean) => (
+    <>
       <div className={cx("flex items-center gap-2 px-3 pb-4 pt-3", collapsed && "flex-col")}>
         {collapsed ? (
           <button type="button" onClick={() => setPinned(true)} aria-label="Expand sidebar" title="Expand sidebar" className="rounded-md p-1.5 hover:bg-black/5">
@@ -213,6 +207,36 @@ export function Sidebar({ onTour, onActivity, onGuide }: { onTour: () => void; o
         )}
         <ConnectionDot collapsed={collapsed} />
       </div>
+    </>
+  );
+  if (phone)
+    return (
+      <header id="sidebar" className="relative z-30 flex h-12 shrink-0 items-center gap-1.5 border-b-[0.5px] border-black/10 bg-canvas px-2">
+        <button type="button" onClick={() => setPeek(true)} aria-label={unseen ? `Open menu, ${unseen} new in Activity` : "Open menu"} className="relative rounded-md p-2 text-ink hover:bg-black/5">
+          <PanelLeft size={18} />
+          {unseen > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-accent" />}
+        </button>
+        <span className="truncate font-serif text-[17px]">Spend Intelligence</span>
+        <span className="ml-auto pr-2"><ConnectionDot collapsed={false} /></span>
+        {peek && (
+          <>
+            <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setPeek(false)} aria-hidden />
+            <div className="fixed inset-y-0 left-0 z-50 flex w-[288px] max-w-[85vw] flex-col bg-sidebar shadow-xl">{panel(false)}</div>
+          </>
+        )}
+      </header>
+    );
+  return (
+    <aside id="sidebar" className={cx("relative h-full shrink-0 transition-[width] duration-200", pinned ? "w-[288px]" : "w-[60px]")}>
+     {narrow && peek && <div className="fixed inset-0 z-20" onClick={() => setPeek(false)} aria-hidden />}
+     <div
+      // Hover opens it only in a wide window; in a narrow one it opens and closes on click, like a menu.
+      onMouseEnter={() => !pinned && !narrow && setPeek(true)}
+      onMouseLeave={() => !narrow && setPeek(false)}
+      className={cx("absolute inset-y-0 left-0 z-30 flex flex-col border-r-[0.5px] border-black/10 bg-sidebar transition-[width,box-shadow] duration-200",
+        collapsed ? "w-[60px]" : "w-[288px]", peek && !pinned && "shadow-xl")}
+    >
+      {panel(collapsed)}
      </div>
     </aside>
   );

@@ -3,15 +3,17 @@
 // Everything after appends below. Views (forecast, recommendations) can be posted again at the bottom; only the
 // newest copy of each is live, older copies render from the state they were posted with, so they match their text.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, LineChart, ListChecks, Sparkles, X } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Copy, LineChart, ListChecks, Sparkles, X } from "lucide-react";
 import {
-  breakdown, confidenceOf, driverById, forecast, GROUP_IDS, GROUPS, headline, kpis, ownerOf, ruleFor, TODAY,
+  breakdown, confidenceOf, driverById, forecast, GROUP_IDS, GROUPS, headline, kpis, ownerOf, ruleFor, TODAY, usd100,
   type Artifact, type BreakdownRow, type GroupSelection,
 } from "@/engine";
-import { startAgentRun } from "@/state/agentClient";
+import { dropEarlyRun, keepEarlyRun, runKey, startEarlyRun, startAgentRun } from "@/state/agentClient";
 import { chipsFor, isSuperseded, pendingDraft, runFor, type ChipSpec } from "@/state/chipRules";
 import { nextAction, verdictFor, type Verdict } from "@/state/nextAction";
 import { useStore, type ChatMessage, type Snapshot, type ViewKind } from "@/state/store";
+import { useUi } from "@/state/ui";
+import { anythingDone, doneLine, peopleLine, questionOpen, recapOf, recapText, shouldRecap, stillTrue, type Recap } from "@/state/recap";
 import { AgentRunCard } from "./AgentRunCard";
 import { ArtifactCard } from "./Artifacts";
 import { Activity, Agents, Users, Workstreams } from "./Details";
@@ -26,6 +28,8 @@ import { glide, glideTo } from "./glide";
 
 const ask = (q: string, context?: string[]) => startAgentRun({ agent: "chat", prompt: q, echo: true, context });
 const busyOf = (messages: ChatMessage[]) => messages.some((m) => m.run?.status === "running");
+/** How long the page has to sit still before the likely next step starts early. */
+const EARLY_RUN_DELAY_MS = 2_000;
 /**
  * "deny it", "decline", "reject this"... declines the draft waiting for an answer, or else the recommendation the
  * admin last asked about. Returns false when there is nothing clear to decline, so the message goes to Claude.
@@ -69,7 +73,7 @@ function Frame({ icon, title, right, children, id, stale }: {
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-neutral-100 px-4 py-2.5">
         <span className="text-muted">{icon}</span>
         <h2 className="whitespace-nowrap text-[15px] font-semibold">{title}</h2>
-        <div className="ml-auto flex flex-wrap items-center gap-2">{right}</div>
+        <div className="ml-auto flex min-w-0 max-w-full items-center gap-2">{right}</div>
       </header>
       {stale?.open && (
         <div className="flex items-center gap-2 border-b border-neutral-100 bg-neutral-50 px-4 py-1.5 text-[13px] text-muted">
@@ -102,7 +106,7 @@ function TeamSwitch({ s }: { s: Snapshot }) {
     ...GROUP_IDS.map((g) => ({ id: g as GroupSelection, label: GROUPS[g].name, dot: DOT[verdictFor(s.demo, g)] })),
   ];
   return (
-    <div role="group" aria-label="Team" className="flex flex-wrap gap-0.5 rounded-lg bg-neutral-100 p-0.5">
+    <div role="group" aria-label="Team" className="flex min-w-0 gap-0.5 overflow-x-auto rounded-lg bg-neutral-100 p-0.5 [scrollbar-width:none]">
       {items.map((t) => (
         <button
           key={t.id}
@@ -203,7 +207,7 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
         live ? (
           <>
             <TeamSwitch s={s} />
-            <button type="button" onClick={() => setOpen(!open)} className="rounded-md px-2 py-1 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">
+            <button type="button" onClick={() => setOpen(!open)} className="shrink-0 rounded-md px-2 py-1 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">
               {open ? "Collapse" : "Expand"}
             </button>
           </>
@@ -262,7 +266,7 @@ export const askAboutRow = (r: BreakdownRow) => {
 };
 
 const CONF_TONE = { High: "bg-emerald-50 text-ok-ink", Medium: "bg-amber-50 text-warn-ink", Low: "bg-neutral-100 text-muted" };
-const CARD = "flex h-[192px] w-[280px] shrink-0 snap-start flex-col rounded-xl border border-neutral-200 bg-white p-3.5";
+const CARD = "flex h-[192px] w-[280px] max-w-[88%] shrink-0 snap-start flex-col rounded-xl border border-neutral-200 bg-white p-3.5";
 
 function RecCard({ r, live, draftWaiting, id }: { r: BreakdownRow; live: boolean; draftWaiting: boolean; id?: string }) {
   const busy = busyOf(useStore((s) => s.messages));
@@ -338,6 +342,9 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
   const fc = forecast(s.demo, s.group);
   const busy = busyOf(messages);
   const open = rows.filter((r) => r.state === "open").length + (briefOpen ? 1 : 0);
+  // Everything handled: one card says so; the finished cards (with Restore on declined ones) open on request.
+  const [showDone, setShowDone] = useState(false);
+  const allDone = rows.length > 0 && open === 0 && !next.cta && !showDone;
   const page = (dir: number) => track.current?.scrollBy({ left: dir * 280, behavior: "smooth" });
   const [edge, setEdge] = useState({ left: false, right: false });
   useEffect(() => {
@@ -358,8 +365,8 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
       <div className="flex items-center gap-2 px-4 pt-3">
         <ListChecks size={14} className="text-muted" />
         <h3 className="text-[15px] font-semibold">Recommendations</h3>
-        <span className="ml-auto text-[13px] text-muted">{open ? `${open} open` : "Nothing open"}</span>
-        {rows.length > 2 && (
+        <span className="ml-auto whitespace-nowrap text-[13px] text-muted">{open ? `${open} open` : "Nothing open"}</span>
+        {rows.length > 2 && !allDone && (
           <>
             <button type="button" onClick={() => page(-1)} aria-label="Previous" className="rounded-md p-1 text-muted hover:bg-neutral-100 hover:text-ink"><ChevronLeft size={15} /></button>
             <button type="button" onClick={() => page(1)} aria-label="Next" className="rounded-md p-1 text-muted hover:bg-neutral-100 hover:text-ink"><ChevronRight size={15} /></button>
@@ -380,7 +387,15 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
             )}
           </div>
         )}
-        {rows.length ? (
+        {allDone ? (
+          <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1 rounded-xl border border-emerald-100 bg-emerald-50/40 px-3.5 py-2.5 text-[14px]">
+            <Check size={14} className="shrink-0 self-center text-ok-ink" />
+            <span className="min-w-0 flex-1"><span className="font-medium">All done for you.</span> <span className="text-muted">{doneLine(recapOf(s.demo, s.group))}</span></span>
+            <button type="button" onClick={() => setShowDone(true)} className="whitespace-nowrap text-[13px] font-medium text-accent-ink hover:underline">
+              Show the {rows.length} finished
+            </button>
+          </div>
+        ) : rows.length ? (
           rows.map((r, i) => <RecCard key={r.driver.id} r={r} live={live} draftWaiting={draftFor(r)} id={id && i === 0 && !briefOpen ? "first-rec" : undefined} />)
         ) : (
           <div className={cx(CARD, "w-full items-start justify-center bg-emerald-50/40")}>
@@ -471,6 +486,52 @@ function Draft({ x, all }: { x: ChatMessage; all: ChatMessage[] }) {
   );
 }
 
+/** What the month came to, posted once everything open is handled. Facts only, with a copy for the team or budget owner. */
+function RecapCard({ r }: { r: Recap }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard?.writeText(recapText(r));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  const lines: [string, React.ReactNode][] = [
+    ["Lands at", <>{usd100(r.after.lands)} <span className="text-muted">(was heading for {usd100(r.before.lands)})</span></>],
+    ["Budget", r.budgetAdded > 0 ? <>{usd(r.after.budget)} <span className="text-muted">(was {usd(r.before.budget)})</span></> : usd(r.after.budget)],
+  ];
+  if (r.fixed > 0) lines.push(["Waste fixed", usd(r.fixed)]);
+  for (const a of r.approved) lines.push(["Approved as planned", a]);
+  for (const w of r.waiting) lines.push(["Waiting on", <>{w.fix.charAt(4).toUpperCase() + w.fix.slice(5)}, with {w.owner} <span className="text-muted">({usd(w.amount)})</span></>]);
+  if (r.declined > 0) lines.push(["Declined", `${r.declined} ${r.declined === 1 ? "recommendation" : "recommendations"}`]);
+  if (r.rules > 0) lines.push(["Rules saved", String(r.rules)]);
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <Sparkles size={14} className="mt-1.5 shrink-0 text-accent-ink" />
+        <p className="font-serif text-[17px] leading-[26px]">That&rsquo;s everything open for {r.team === "All teams" ? "every team" : r.team}. {stillTrue(r, "It")} {peopleLine(r)}</p>
+      </div>
+      <Frame
+        icon={<ClipboardCheck size={15} />}
+        title={`${r.team}, this month`}
+        right={<>
+          <StatusPill status={r.after.status} />
+          <button type="button" onClick={copy} className="flex items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-1 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">
+            {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copied" : "Copy summary"}
+          </button>
+        </>}
+      >
+        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 px-4 py-3 text-[15px]">
+          {lines.map(([k, v]) => (
+            <div key={k + String(v)} className="contents">
+              <dt className="whitespace-nowrap text-muted">{k}</dt>
+              <dd className="min-w-0 tabular-nums">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      </Frame>
+    </div>
+  );
+}
+
 function Message({ m, all, liveIds }: { m: ChatMessage; all: ChatMessage[]; liveIds: Set<string> }) {
   if (m.role === "user")
     return <div className="ml-auto w-fit max-w-[75%] rounded-xl bg-black/5 px-4 py-3 text-[16px] leading-[23px]">{m.text}</div>;
@@ -488,6 +549,7 @@ function Message({ m, all, liveIds }: { m: ChatMessage; all: ChatMessage[]; live
       </div>
     );
   }
+  if (m.recap) return <RecapCard r={m.recap} />;
   if (m.why) return <WhyAsk m={m} />;
   if (m.rules) return <RuleSuggestion m={m} />;
   if (!m.run) {
@@ -570,7 +632,7 @@ function Composer({ chips, onChip, onJump }: { chips: ChipSpec[]; onChip: (c: Ch
   };
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-canvas via-canvas to-transparent pb-4 pt-10">
-      <div id="composer" className="pointer-events-auto mx-auto w-full max-w-[816px] px-6 2xl:max-w-[1008px]">
+      <div id="composer" className="pointer-events-auto mx-auto w-full max-w-[816px] px-4 sm:px-6 2xl:max-w-[1008px]">
         <div className="rounded-[14px] bg-white py-2 pl-3.5 pr-2 shadow-[0_4px_20px_rgba(0,0,0,0.075),0_0_0_1px_rgba(0,0,0,0.12)] focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.075),0_0_0_1px_rgba(0,0,0,0.2)]">
           <div className="flex items-center gap-2">
             <input
@@ -643,7 +705,7 @@ function ActivitySheet({ onClose }: { onClose: () => void }) {
 // ---------- Page ----------
 
 export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boolean; setActivityOpen: (v: boolean) => void }) {
-  const { messages, chatStart, demo, group, audit, postView, epoch } = useStore();
+  const { messages, chatStart, demo, group, audit, postView, epoch, currentChatId } = useStore();
   const shown = messages.filter((m) => !m.runOf);
   const scroller = useRef<HTMLDivElement>(null);
 
@@ -685,6 +747,37 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
   }, [draftKey]);
 
   const chips = chipsFor({ demo, group, messages, auditCount: audit.length, forecastVisible: vis.forecast, draftActionsVisible: draftVisible });
+
+  // Start the likely next step early, while the admin reads (see agentClient): only when it is a draft, the tour is
+  // closed, nothing else is running and nothing has changed for a moment. Anything else stops it.
+  const tourOpen = useUi((u) => u.tour);
+  const primary = chips.find((c) => c.primary);
+  const nextRun = primary?.action.type === "run" ? primary.action.run : null;
+  const nextKey = nextRun ? runKey(nextRun) : "";
+  const runningNow = busyOf(messages);
+  const nextRunRef = useRef(nextRun);
+  nextRunRef.current = nextRun;
+  useEffect(() => {
+    const run = nextKey ? nextRunRef.current : null;
+    keepEarlyRun(run);
+    if (!run || tourOpen || runningNow) return;
+    const t = setTimeout(() => { if (document.visibilityState === "visible") startEarlyRun(run); }, EARLY_RUN_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [nextKey, tourOpen, runningNow]);
+  useEffect(() => () => dropEarlyRun(), []);
+
+  // When the last open step for the team on screen closes, say what the month came to (see recap.ts).
+  const stepNow = nextAction(demo, group);
+  const doneKey = `${epoch}|${currentChatId}|${demo.scenarioId}|${group}`;
+  const hasStep = !!stepNow.cta || !!pendingDraft(messages) || questionOpen(messages);
+  const prevDone = useRef<{ key: string; hasStep: boolean; verdict: typeof stepNow.verdict } | null>(null);
+  useEffect(() => {
+    const now = { key: doneKey, hasStep, verdict: stepNow.verdict };
+    const prev = prevDone.current;
+    prevDone.current = now;
+    const st = useStore.getState();
+    if (shouldRecap(prev, now, anythingDone(st.demo))) st.say({ role: "assistant", recap: recapOf(st.demo, st.group) });
+  }, [doneKey, hasStep, stepNow.verdict]);
   const onChip = (c: ChipSpec) => {
     const a = c.action;
     if (a.type === "run") startAgentRun(a.run);
@@ -699,6 +792,8 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
       if (art?.kind === "policy_diff") st.applyPolicy(art.driverIds, art.id);
       else if (art?.kind === "rebalance_plan") st.applyRebalance(art.id);
     }
+    else if (a.type === "group") useStore.getState().setGroup(a.group);
+    else if (a.type === "situations") useUi.getState().set({ situations: true });
     else setActivityOpen(true);
   };
 
@@ -757,13 +852,13 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-[816px] 2xl:max-w-[1008px] space-y-7 px-6 pb-56 pt-8">
+        <div className="mx-auto w-full max-w-[816px] 2xl:max-w-[1008px] space-y-7 px-4 pb-56 pt-6 sm:px-6 sm:pt-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-[13px] text-muted">
               <Sparkles size={13} className="text-accent-ink" /> Today, day {TODAY} of the month
             </div>
-            <h1 id="headline" className="font-serif text-[34px] font-light leading-[41px]">{headline(briefingSnap.demo, briefingSnap.group)}</h1>
-            {!messages.length && chips.find((c) => c.primary) && (
+            <h1 id="headline" className="font-serif text-[28px] font-light leading-[34px] sm:text-[34px] sm:leading-[41px]">{headline(briefingSnap.demo, briefingSnap.group)}</h1>
+            {!messages.length && chips.find((c) => c.primary)?.action.type === "run" && (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <button type="button" onClick={() => onChip(chips.find((c) => c.primary)!)}
                   className="shrink-0 whitespace-nowrap rounded-lg bg-ink px-4 py-2 text-[15px] font-medium text-white hover:bg-neutral-800">

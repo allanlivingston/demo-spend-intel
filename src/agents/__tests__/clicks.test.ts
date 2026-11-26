@@ -122,8 +122,10 @@ describe("state moves the chips forward", () => {
   test("waste fixed by the admin leaves only what waits on the repo owner", () => {
     const demo: DemoState = { ...initialState("A"), appliedFixes: ["a-connector", "a-subagents"], handedOff: ["a-cache"] };
     const texts = chips(demo, "pe").map((c) => c.text);
-    expect(texts).toContain("What waits on the dev tools team?");
+    // The recap says what waits on the owner; the chips offer the owner's side (demo) and point forward.
+    expect(texts).toContain("Owner shipped the fix (demo)");
     expect(texts).not.toContain("Fix all the waste");
+    // Still asked from Learn more under Waiting on owner.
     expectGoodAnswer(demo, "pe", "What waits on the dev tools team?");
   });
 
