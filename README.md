@@ -97,7 +97,7 @@ The data is a constructed month: three teams, about 70 people plus 14 new engine
 
 ## Answer quality evals
 
-`evals/answers/` measures one flow: Claude answering the admin's questions in the chat. 44 cases run through the app's real entry point, with the same prompts, tools, model routing and number check. They cover the chip questions, what-ifs and the ways chat assistants commonly fail: invented figures, half answers, false premises, giving in to pushback and claiming actions not taken. Rule checks are free; live runs add a Claude Sonnet judge for whether each answer answers the question, in plain words, faithful to the tool results. Runs so far went from 43% of answers passing every check to 75 to 84% after the fixes the eval found. Details and commands: [`evals/answers/README.md`](evals/answers/README.md).
+`evals/answers/` measures one flow: Claude answering the admin's questions in the chat. 44 cases run through the app's real entry point, with the same prompts, tools, model routing and number check. They cover the chip questions, what-ifs and the ways chat assistants commonly fail: invented figures, half answers, false premises, giving in to pushback and claiming actions not taken. Rule checks are free; live runs add a Claude Sonnet judge for whether each answer answers the question, in plain words, faithful to the tool results. Answers went from 43% passing every check on the first run to 83% over three runs of every case, after the fixes the eval found. A second setup where the tools carry the answering rules (off by default) reached 89%, with faster answers. Results, details and commands: [`evals/answers/README.md`](evals/answers/README.md).
 
 ## What I'd build next
 

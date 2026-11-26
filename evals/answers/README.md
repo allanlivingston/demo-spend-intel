@@ -82,6 +82,23 @@ On live runs, an AI judge (Claude Sonnet 5.5, not the Haiku model that answers m
 
 ## Reading the numbers
 
-43 cases × 1 rep gives a noise floor of about ±15 points on the pass rate; 3 reps bring it to about ±9. Treat smaller differences between runs as noise.
+44 cases × 1 rep gives a noise floor of about ±15 points on the pass rate; 3 reps bring it to about ±9. Treat smaller differences between runs as noise.
+
+## Results so far
+
+Runs on all cases; live runs go through the Claude Code login. Folders in `runs/` are kept only for the runs behind the numbers in the README; the rows for the others are in git history (up to commit `dadea69`).
+
+| Run | Setup | Answers | Passed every check | Folder |
+|---|---|---|---|---|
+| First run | base | 42 cases × 1 | 18 (43%) | `claude-code/first-run` |
+| Fixes from the first runs | base | 42 cases × 1, four runs | 69%, 79%, 74%, 74% | history |
+| After those fixes | base | 42 cases × 3 | 94 of 126 (75%) | history |
+| More cases and fixes | base | 43 cases × 1 | 36 (84%) | history |
+| Final base setup | base | 44 cases × 3 | 109 of 132 (83%), median 6.5s | `claude-code/base-3-runs` |
+| Tools carry the answering rules, first version | shaped | 44 cases × 3 | 118 of 132 (89%), median 4.8s | not kept |
+| Tools carry the answering rules, final | shaped | 44 cases × 3 | 117 of 132 (89%), median 5.7s | `claude-code/shaped-3-runs` |
+| Offline fallback answers | offline | 44 cases × 1 | 21 (48%) | `offline/latest` |
+
+"shaped" is `--arch shaped` (`ANSWER_ARCH=shaped`, off by default in the app): `explain_overage`, `compare_choices` and `people_summary` return the figures to quote and how to answer, and a question the app recognizes gets a hint naming the tool to start with. Against the final base setup, case by case it was better on 12 cases, worse on 6 and the same on 26: likely better, but not yet proven at this sample size.
 
 The offline run measures the app's fallback answers, which are written by rules and cover fewer questions; expect it to score lower than live.
