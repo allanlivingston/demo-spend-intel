@@ -108,6 +108,7 @@ Must not:
 - claims nobody is cut off for the month
 - still lists fixed waste as open
 - gives fixed waste as the cause
+- gives what the cache costs left alone ($2,300), not what its fix saves ($2,100)
 
 Drafts: nothing
 
@@ -160,6 +161,9 @@ What waits on the dev tools team?
 Must say:
 - the cache fix
 - worth $2,100
+
+Must not:
+- gives what the cache costs left alone ($2,300), not what its fix saves ($2,100)
 
 Drafts: nothing
 
@@ -231,6 +235,7 @@ Must not:
 - invents new engineers (none in this scenario)
 - still lists fixed waste as open
 - gives fixed waste as the cause
+- gives what the cache costs left alone ($2,300), not what its fix saves ($2,100)
 
 Drafts: nothing
 
