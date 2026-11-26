@@ -5,8 +5,9 @@ import { z } from "zod";
 import { ownerOf,
   breakdown, draftCfoBrief, draftHandoff, draftOverride, draftPolicyDiff, draftRebalance, evidenceTier, forecast,
   GROUPS, kpis, MAX_TARGET_CHANGE, overrideRate, rebalancePlan, throttle, windowsCounterfactual, confidenceOf,
-  type Artifact, type DemoState, type GroupId, type GroupSelection, dayInfo, pacing, userNote, evidenceAge, pacingHealth, TODAY, findUser, agentsOf, levelOfTier, WORKSTREAMS, driverEffects, workstreamPaces } from "@/engine";
+  type Artifact, type DemoState, type GroupId, type GroupSelection, dayInfo, pacing, userNote, evidenceAge, pacingHealth, TODAY, findUser, agentsOf, levelOfTier, WORKSTREAMS, driverEffects, workstreamPaces, unfundedOver } from "@/engine";
 import type { AgentId, StepPhase } from "./types";
+import { answerArch } from "./arch";
 import { bestSection, sections } from "@/knowledge/knowledge";
 
 export interface ToolContext {
@@ -305,6 +306,175 @@ TOOLS.push({
   },
 });
 
+// ---------- Answer-shaped tools (ANSWER_ARCH=shaped only) ----------
+// Each returns what one kind of question needs, with the figure to quote and how to say it, so the rule lives with the
+// data instead of in the prompt. The engine computes every number, as with the other tools.
+
+type Row = ReturnType<typeof breakdown>["rows"][number];
+const TEAMS = ["pe", "fpa", "mkt"] as const;
+
+/** A row as a cause: waste gives what its fix saves; new work gives its cost to month end. */
+function causeOf(x: Row, demo: DemoState, g: GroupSelection) {
+  if (x.driver.kind === "waste") {
+    const owner = ownerOf(x.driver.id)?.name;
+    // A fix with its owner: what shipping it does, so the answer never has to guess (it may still leave the team over).
+    const shipped = x.state === "sent" ? forecast({ ...demo, appliedFixes: [...demo.appliedFixes, x.driver.id], handedOff: demo.handedOff.filter((id) => id !== x.driver.id) }, g) : null;
+    return {
+      what: x.driver.label, kind: "waste", fix_saves_by_month_end: r(x.recoverable),
+      who_acts: x.state === "sent" ? `${owner ?? "its owner"}: the fix is with them` : x.state === "declined" ? "nobody: you declined this fix" : owner ? `${owner}, once you send them the fix` : "you, on approval",
+      ...(shipped ? { lands_at_once_shipped: r(shipped.p50), ...(shipped.p50 > shipped.pool ? { still_over_by_then: r(shipped.p50 - shipped.pool) } : { under_budget_by_then: r(shipped.pool - shipped.p50) }) } : {}),
+    };
+  }
+  return {
+    what: x.driver.label, kind: "new work", costs_to_month_end: r(x.projected), not_waste: "This is new work, not waste: none of it is recoverable.",
+    who_acts: isAdvanced() ? "you: move unused budget to it, or ask the budget owner for more" : "you: ask the budget owner to fund it (the budget owner brief)",
+    confidence: confidenceOf(x.driver).level, evidence: x.driver.evidence,
+  };
+}
+
+/** Who is over their limit, and how that overlaps with who pacing slows (new engineers whose work is producing results
+ *  are slowed last, so in scenario C none of them is slowed although 9 are over their limit). */
+function overlapOf(demo: DemoState, g: GroupId) {
+  const over = unfundedOver(demo, g).still;
+  const p = pacing(demo, g);
+  const slowed = new Set(p.members.map((m) => m.id));
+  const n = { over: over.length, newOver: over.filter((m) => m.cohort === "new").length, overSlowed: over.filter((m) => slowed.has(m.id)).length, slowed: p.members.length, newSlowed: p.members.filter((m) => m.cohort === "new").length };
+  const growth = breakdown(demo, g).rows.find((x) => x.driver.kind === "growth");
+  return {
+    of_them_new_engineers: n.newOver,
+    of_them_new_engineers_already_over_today: over.filter((m) => m.cohort === "new" && m.blockDay! <= TODAY).length,
+    // One sentence, so the results stay with the whole group they belong to, not the ones over their limit.
+    // Results, caveats and the confidence rating as separate sentences, so a caveat isn't read as the confidence.
+    ...(growth && n.newOver ? { about_the_new_engineers: (() => {
+      const results = growth.driver.evidence.filter((e) => /\d/.test(e));
+      const caveats = growth.driver.evidence.filter((e) => !/\d/.test(e)).map((e) => e[0].toUpperCase() + e.slice(1) + ".");
+      return [`${n.newOver} of the ${n.over} over their limit are new engineers.`, `The results so far belong to all ${growth.driver.label} together, not only those over their limit: ${results.join(", ")}.`, ...caveats, `Confidence that this spend is paying off: ${confidenceOf(growth.driver).level}.`].join(" ");
+    })() } : {}),
+    under_pacing: {
+      people_slowed_or_held: n.slowed, of_them_over_their_limit: n.overSlowed, new_engineers_slowed: n.newSlowed, people_cut_off: p.blocked,
+      how_the_groups_overlap: `The ${n.slowed} slowed include ${n.overSlowed} of the ${n.over} over their limit${n.newOver && !n.newSlowed ? `; the ${n.newOver} new engineers over their limit are not slowed, because the workstream they are on is producing results` : ""}.`,
+    },
+  };
+}
+
+
+const SHAPED_TOOLS: ToolDef[] = [
+  {
+    name: "explain_overage",
+    description: "Why a team is over or under budget, ready to answer from: where it lands against its budget, each cause still open with the figure to quote and who acts on it, and what is already fixed. For all teams, also each team. Use it for why are we over, how much are we over, and what is left to do.",
+    shape: { group: GroupArg.optional() },
+    phase: "Looked into it",
+    run: (ctx, a) => {
+      const g = focus(ctx, a.group);
+      const f = forecast(ctx.demo, g);
+      const rows = breakdown(ctx.demo, g).rows;
+      const open = rows.filter((x) => x.state === "open" || x.state === "sent" || x.state === "declined");
+      const data = {
+        team: g === "all" ? "All Enterprise" : GROUPS[g].name,
+        lands_at: r(f.p50), budget: r(f.pool), high_case: r100(f.p90), status: f.status,
+        ...(f.p50 > f.pool ? { over_by: r(f.p50 - f.pool) } : { under_by: r(f.pool - f.p50) }),
+        open_causes: open.map((x) => causeOf(x, ctx.demo, g)),
+        open_waste_total: r(open.filter((x) => x.driver.kind === "waste").reduce((t, x) => t + x.recoverable, 0)),
+        ...(g !== "all" && f.p50 > f.pool ? { budget_owner_request: (() => {
+          const b = draftCfoBrief(ctx.demo, g);
+          return { short_by: r(f.p50 - f.pool), the_brief_asks_for: r(b.requested), new_budget: r(b.newBudget), what_it_covers: b.covers };
+        })() } : {}),
+        who_does_what: (() => {
+          const part = (xs: Row[], name = (x: Row) => x.driver.label) => ({ items: xs.map(name), total: r(xs.reduce((t, x) => t + (x.driver.kind === "waste" ? x.recoverable : x.projected), 0)) });
+          return {
+            you_apply_on_approval: part(open.filter((x) => x.driver.kind === "waste" && x.state === "open" && !ownerOf(x.driver.id))),
+            with_an_owner: part(open.filter((x) => x.driver.kind === "waste" && (x.state === "sent" || (x.state === "open" && !!ownerOf(x.driver.id)))), (x) => `${x.driver.label} (${ownerOf(x.driver.id)?.name ?? "its owner"})`),
+            to_fund: part(open.filter((x) => x.driver.kind === "growth")),
+          };
+        })(),
+        already_fixed: rows.filter((x) => x.state === "applied").map((x) => x.driver.label),
+        funded_or_approved: rows.filter((x) => x.state === "funded" || x.state === "overridden").map((x) => x.driver.label),
+        ...(g === "all" ? { by_team: TEAMS.map((t) => { const ft = forecast(ctx.demo, t); return { team: GROUPS[t].name, lands_at: r(ft.p50), budget: r(ft.pool), status: ft.status }; }) } : {}),
+        how_to_answer: "Lead with lands_at against budget (and over_by), unless the admin asks to block or cut off people: then lead with what that would stop (the new work's evidence). Then name every open cause by what is going wrong (its what, for example subagents inheriting Opus), keeping who it is about (for example the 14 new engineers), with its figure and who acts. Naming only the fix or who acts is not enough. Never say how many causes there are (no 'two causes') and don't rank them unless asked. Say who acts by naming the fixes (who_does_what), never by position ('the first and third'). With more than three causes, you may give the waste's figure once as open_waste_total, split by who_does_what's totals (what you apply, what is with an owner), but still name each waste cause briefly; never credit the whole total to one of them. Mention budget_owner_request only when the question asks how much to ask Finance or the budget owner for; then give short_by, the_brief_asks_for and what_it_covers as it is worded (its parts don't add up to the request: it is rounded up). It is never a breakdown of the overage. A waste figure is what its fix saves: say 'the fix saves $4,600', never '$4,600 to fix'. New work is never waste: if the question calls it waste, say it isn't, without 'main' or 'only'. The figures are part of lands_at, not on top of it. For a fix with its owner, say what lands_at_once_shipped and still_over_by_then (or under_budget_by_then) say; never imply shipping it ends the overage when it doesn't. Items in already_fixed are not causes: mention them only as fixed.",
+      };
+      return { data, summary: `${data.team} lands at ${usd(data.lands_at)} of ${usd(data.budget)}; ${open.length} open ${open.length === 1 ? "cause" : "causes"}` };
+    },
+  },
+  {
+    name: "compare_choices",
+    description: "What each choice leads to for a team, kept apart: doing nothing (each person's monthly limit stops them, which is also what hard monthly limits for everyone do), pacing instead of limits (this app's approach), and fixing the waste. Use it for what happens if we do nothing, what if we turn on limits, and what pacing changes.",
+    shape: { group: GroupArg.optional() },
+    phase: "Checked the result",
+    run: (ctx, a) => {
+      const g = single(focus(ctx, a.group));
+      const f = forecast(ctx.demo, g);
+      const k = kpis(ctx.demo, g);
+      const t = throttle(ctx.demo, g);
+      const p = pacing(ctx.demo, g);
+      const openWaste = breakdown(ctx.demo, g).rows.filter((x) => x.driver.kind === "waste" && x.state === "open");
+      const mine = openWaste.filter((x) => !ownerOf(x.driver.id)).map((x) => x.driver.id);
+      const owners = r(openWaste.filter((x) => ownerOf(x.driver.id)).reduce((s, x) => s + x.recoverable, 0));
+      const data = {
+        team: GROUPS[g].name, budget: r(f.pool), lands_at_if_nothing_changes: r(f.p50), status: f.status,
+        doing_nothing: {
+          means: "Nothing changes: the waste keeps running, and each person's monthly limit stops them when they reach it. Turning on hard monthly limits for everyone today leads to the same for people.",
+          lands_at: r(f.p50), waste_still_running: r(k.wasteRunning),
+          people_cut_off_this_month: t.blockedMonth, of_them_already_today: t.blockedToday, new_engineers_cut_off_by_day_22: t.newHiresBlockedByDay22,
+          work_at_risk: t.value, work_at_risk_is: "spend on work producing results that the limits stop",
+          about_the_new_engineers: overlapOf(ctx.demo, g).about_the_new_engineers ?? null,
+        },
+        pacing_instead: {
+          means: "This app's approach: instead of stopping people at their limit, the overrun is spread across the team: a cheaper model first, then paused runs, then runs held for a few hours. Work producing results is slowed last.",
+          ...overlapOf(ctx.demo, g).under_pacing, share_of_runs_slowed_or_held_pct: Math.round(p.teamShare * 100),
+        },
+        fixing_the_waste: openWaste.length
+          ? { fixable_waste: r(k.fixableWaste), lands_at_after_your_fixes: r(forecast({ ...ctx.demo, appliedFixes: [...ctx.demo.appliedFixes, ...mine] }, g).p50), of_it_waiting_on_an_owner: owners }
+          : { note: "No waste left to fix." },
+        how_to_answer: "Answer for the choice asked about, using only that choice's figures; never mix pacing figures into doing nothing or hard limits. Say what happens to people (who is cut off or slowed, and whether their work is producing results) as well as to spend.",
+      };
+      return { data, summary: `Doing nothing: ${t.blockedMonth} people cut off this month; pacing: ${p.blocked} cut off, about ${data.pacing_instead.share_of_runs_slowed_or_held_pct}% of runs slowed` };
+    },
+  },
+  {
+    name: "people_summary",
+    description: "How many people on a team are over their monthly limit (this month and already today), how many are new engineers, and how many pacing slows instead. Counts only: chat doesn't list or rank people. Use it for who is over their limit, who spends the most, and who is affected.",
+    shape: { group: GroupArg.optional() },
+    phase: "Looked into it",
+    run: (ctx, a) => {
+      const g = single(focus(ctx, a.group));
+      const t = throttle(ctx.demo, g);
+      const data = {
+        team: GROUPS[g].name,
+        over_monthly_limit_this_month: t.blockedMonth, already_over_today: t.blockedToday,
+        ...overlapOf(ctx.demo, g),
+        names_and_ranking: "Not shown in chat. The Users tab lists each person with what they've spent, their limit, and whether pacing slows them.",
+        how_to_answer: "Start with the count in digits ('15 people'). Say how many of them are new engineers; if you mention results, use about_the_new_engineers as it is worded. If you mention pacing, use how_the_groups_overlap; never call the slowed people 'others'. For the new engineers' results, use about_the_new_engineers as it is worded: never attach the results to only the ones over their limit. For names, or who spends the most, say chat doesn't rank people and point to the Users tab, then at most the count over their limit; leave out the new engineers unless asked. Never name or rank anyone.",
+      };
+      return { data, summary: `${t.blockedMonth} over their monthly limit this month, ${t.blockedToday} already today` };
+    },
+  },
+];
+TOOLS.push(...SHAPED_TOOLS);
+
+// Product questions: answer from the saved answer only (shaped only; the base output is unchanged).
+const faq = TOOLS.find((t) => t.name === "lookup_faq")!;
+const runFaq = faq.run;
+faq.run = (ctx, a) => {
+  const out = runFaq(ctx, a);
+  if (answerArch() !== "shaped" || !(out.data as { answer?: string }).answer) return out;
+  return { ...out, data: { ...(out.data as object), how_to_answer: "Answer from this answer only, in your own words; add no claim, example or figure it doesn't give." } };
+};
+
+// The person questions' rule, with the person's data (shaped only; the base output is unchanged).
+const getUser = TOOLS.find((t) => t.name === "get_user")!;
+const runUser = getUser.run;
+getUser.run = (ctx, a) => {
+  const out = runUser(ctx, a);
+  if (answerArch() !== "shaped" || (out.data as { error?: string }).error) return out;
+  const d = out.data as { workstream: string; with_pacing: string; workstream_growth: { evidence: string[] }[] };
+  const results = d.workstream_growth.flatMap((x) => x.evidence).filter((e) => /\d/.test(e));
+  const why = d.with_pacing === "not slowed or held"
+    ? results.length ? `Pacing doesn't slow them because their workstream, ${d.workstream}, is producing results (${results.join(", ")}), and work producing results is slowed last.` : "Pacing doesn't slow them: the overrun is spread across the rest of the team."
+    : "Pacing slows some of their runs, like the rest of the team, so nobody is cut off.";
+  return { ...out, data: { ...d, why_pacing_treats_them_this_way: why, how_to_answer: "Say what they've spent and where they land against their monthly limit, then why_pacing_treats_them_this_way in your own words, then the day a plain monthly limit would stop them, if any. The results belong to their workstream: say 'their workstream', not 'their work'." } };
+};
+export const SHAPED_ONLY = SHAPED_TOOLS.map((t) => t.name);
+
 const ALL = TOOLS.map((t) => t.name);
 const READ = ["get_forecast", "list_drivers", "get_evidence", "simulate_policy", "get_day", "get_user", "get_workstream", "get_pacing_health", "list_agents"];
 
@@ -320,7 +490,8 @@ export const AGENT_TOOLS: Record<AgentId, string[]> = {
 
 // Moving budget between workstreams and planned workstream work only exist in the advanced view.
 const ADVANCED_ONLY = ["draft_rebalance_plan", "draft_override"];
-export const toolsFor = (agent: AgentId) => TOOLS.filter((t) => AGENT_TOOLS[agent].includes(t.name) && (isAdvanced() || !ADVANCED_ONLY.includes(t.name)));
+export const toolsFor = (agent: AgentId) =>
+  TOOLS.filter((t) => AGENT_TOOLS[agent].includes(t.name) && (isAdvanced() || !ADVANCED_ONLY.includes(t.name)) && (answerArch() === "shaped" || !SHAPED_ONLY.includes(t.name)));
 
 /** Validate input with zod, run, and return JSON text for the model. */
 export function callTool(ctx: ToolContext, name: string, input: unknown): { output: ToolOutput; text: string; isError: boolean } {

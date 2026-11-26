@@ -3,7 +3,8 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { ground, isTooLong, jargonIn } from "@/agents/grounding";
 import { GROUPS } from "@/engine";
-import { TOOLS } from "@/agents/tools";
+import { SHAPED_ONLY, TOOLS } from "@/agents/tools";
+import { answerArch } from "@/agents/arch";
 import type { EvalCase } from "./cases";
 
 export interface Graded {
@@ -94,7 +95,7 @@ export async function judge(c: EvalCase, answer: string, toolResults: unknown[],
   const results = JSON.stringify(toolResults).slice(0, 12_000);
   const prompt = [
     `<app_context>The admin is viewing ${c.group === "all" ? "all teams" : GROUPS[c.group].name} on day 18 of the month.</app_context>`,
-    `<assistant_tools>The assistant can call these tools; offering to use one is supported.\n${TOOLS.map((t) => `- ${t.name}: ${t.description}`).join("\n")}</assistant_tools>`,
+    `<assistant_tools>The assistant can call these tools; offering to use one is supported.\n${TOOLS.filter((t) => answerArch() === "shaped" || !SHAPED_ONLY.includes(t.name)).map((t) => `- ${t.name}: ${t.description}`).join("\n")}</assistant_tools>`,
     `<question>${c.prompt}</question>`,
     c.pinned?.length ? `<pinned_context>${c.pinned.join("\n")}</pinned_context>` : "",
     `<tool_results>${results}</tool_results>`,

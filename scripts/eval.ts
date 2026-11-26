@@ -4,6 +4,7 @@
 //   npm run eval -- --backend claude-code          live, through this machine's Claude Code login (no API key)
 //   npm run eval -- --backend claude-code --only do-nothing,day-14 --reps 2
 //   npm run eval -- --selftest [--judge]           harness check: references must pass, empty answers must fail
+//   npm run eval -- --backend claude-code --arch shaped --variant v11   the answer-shaped tools (ANSWER_ARCH=shaped)
 //   npm run eval -- --backend claude-code --variant v1 --regrade   re-apply the rule checks to saved answers (no model calls; judge grades kept)
 //
 // Output (per backend): evals/answers/runs/<backend>/<variant>/results.jsonl, traces/, errors.jsonl.
@@ -29,6 +30,10 @@ const variant = opt("variant", "baseline")!;
 const concurrency = Number(opt("concurrency", backend === "offline" ? "8" : "2"));
 const timeoutS = Number(opt("timeout-s", "180"));
 const only = opt("only")?.split(",");
+// The answer architecture under test; the app reads the same flag (ANSWER_ARCH), default "base".
+const arch = opt("arch", process.env.ANSWER_ARCH ?? "base")!;
+if (arch !== "base" && arch !== "shaped") throw new Error("--arch must be base or shaped");
+process.env.ANSWER_ARCH = arch;
 const useJudge = flag("judge") || (backend === "claude-code" && !flag("no-judge"));
 const MAX_ATTEMPTS = 3;
 
@@ -155,7 +160,7 @@ async function runCase(c: EvalCase, rep: number) {
         grade: g.grade, explanation: g.explanation,
         model: a.model, usage: a.usage, latency_s: Math.round(a.latencyS * 10) / 10, tool_calls: a.calls.length,
         in_tokens: a.usage.input_tokens, out_tokens: a.usage.output_tokens, ...judgeInfo,
-        meta: { backend, requested_model: a.requestedModel, attempt, retried_inside_app: a.retried, fallback: a.fallback ?? null, drafted: a.drafted, answer: a.shown, sdk_cost_usd: a.sdkCostUsd },
+        meta: { backend, arch, requested_model: a.requestedModel, attempt, retried_inside_app: a.retried, fallback: a.fallback ?? null, drafted: a.drafted, answer: a.shown, sdk_cost_usd: a.sdkCostUsd },
       });
       process.stdout.write(`${g.grade.pass ? "PASS" : "fail"}  ${c.id}#${rep}${a.fallback ? " (no live answer)" : ""}\n`);
       return;
@@ -204,7 +209,7 @@ function summarize() {
   // Wilson 95% interval for the headline pass rate.
   const z = 1.96, den = 1 + z * z / n, mid = (p + z * z / (2 * n)) / den, half = (z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))) / den;
   const errs = fs.existsSync(errorsPath) ? fs.readFileSync(errorsPath, "utf8").trim().split("\n").filter(Boolean).length : 0;
-  console.log(`\n${backend}/${variant}: all checks passed on ${Math.round(p * n)}/${n} (${Math.round(p * 100)}%, 95% CI ${Math.round((mid - half) * 100)}–${Math.round((mid + half) * 100)}%), ${errs} failed attempts in errors.jsonl`);
+  console.log(`\n${backend}/${variant} (${arch}): all checks passed on ${Math.round(p * n)}/${n} (${Math.round(p * 100)}%, 95% CI ${Math.round((mid - half) * 100)}–${Math.round((mid + half) * 100)}%), ${errs} failed attempts in errors.jsonl`);
   console.log(metrics.map((m) => `${m.label}: ${Math.round(mean(m.id) * 100)}%`).join(" · "));
   const lat = rows.map((r) => r.latency_s).sort((a, b) => a - b);
   if (backend !== "offline") console.log(`Latency median ${lat[Math.floor(n / 2)]}s · SDK cost estimate $${rows.reduce((s, r) => s + (r.meta.sdk_cost_usd ?? 0) + (r.judge_sdk_cost_usd ?? 0), 0).toFixed(2)} (Claude Code login; not billed per token on a subscription)`);
