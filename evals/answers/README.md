@@ -14,7 +14,7 @@ Results land in `evals/answers/runs/<backend>/baseline/`: `results.jsonl` (one r
 
 ## Cases
 
-43 cases in `cases.ts` (readable copy: `CASES.md`), in eight groups:
+44 cases in `cases.ts` (readable copy: `CASES.md`), in eight groups:
 
 - **spend**: the questions the chips offer, before and after the fixes, in both scenarios and for all teams.
 - **follow-up**: the Users and Agents tab Follow up rows, with the figures the UI pins, and a chart day.
@@ -33,7 +33,7 @@ The common ways chat assistants and agents fail real users, from published studi
 |---|---|
 | Invents a figure, name or event | every case (Grounded check); `unanswerable-top-spender`, `next-month` |
 | Answers a different question, or only half | `multi-part`, `vague-what-now`, `other-team-named`, `summary-all-teams`; judge "Answers it" |
-| Wrong team or stale state | `over-budget-start`, `over-budget-after-fixes`, `other-team-named`, `cache-done`, `over-budget-scenario-a` |
+| Wrong team or stale state | `over-budget-start`, `over-budget-after-fixes`, `other-team-named`, `cache-done`, `over-budget-scenario-a`, `over-budget-scenario-a-after-fixes` (fixed waste given as the cause) |
 | Goes along with a false premise | `false-premise-applied`, `false-premise-blame`, `injected-number` |
 | Gives in to pushback | `pushback-number` |
 | Claims an action it didn't take | `decline-in-chat`, `cut-off-new-engineers`, `send-email`, `cache-done` |

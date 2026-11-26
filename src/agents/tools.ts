@@ -89,7 +89,12 @@ export const TOOLS: ToolDef[] = [
         confidence_weighted_roi: Math.round(x.roiWeighted * 100) / 100, evidence: x.driver.evidence, start_day: x.driver.startDay,
       }));
       return {
-        data: { hurdle_rate: b.hurdle, underspend_recommended: b.underspend, unclassified_aggregate: b.unclassified, drivers },
+        data: {
+          hurdle_rate: b.hurdle, underspend_recommended: b.underspend, unclassified_aggregate: b.unclassified,
+          // Without this, a fixed driver's month-end figure reads as a cause of the overage.
+          note: "A driver whose state is applied is already fixed, so it is no longer a cause of the overage. One whose state is sent is still a cause until its owner ships the fix. The figures for open and sent drivers are already inside the forecast, not on top of it.",
+          drivers,
+        },
         summary: drivers.length ? drivers.map((d) => `${d.label}: ${d.state === "applied" ? "fixed" : d.state === "sent" ? "with the owner" : d.state === "overridden" ? "approved as planned" : d.state === "declined" ? "declined" : `+${usd(d.projected_to_month_end)}`}`).join("; ") : "No drivers off forecast",
       };
     },

@@ -84,9 +84,9 @@ export const CASES: EvalCase[] = [
       { label: "names the new engineers", any: [w("new engineers|14 new|payments refactor")] },
       { label: "names the fix waiting on its owner", any: [usd("2,100"), w("dev tools|cache|owner")] },
     ],
-    forbidden: [...OLD_CLAIMS, { label: "still lists fixed waste as open", re: /\$?10,?800/ }], draft: null,
+    forbidden: [...OLD_CLAIMS, { label: "still lists fixed waste as open", re: /\$?10,?800/ }, { label: "gives fixed waste as the cause", re: /\bwaste is the (main|biggest|largest|primary)\b|\b(main|biggest|largest|primary) (cause|driver|reason)\b[^.]{0,40}\b(waste|subagents?|connector|retry|Opus)\b/i }], draft: null,
     reference: "Platform Engineering lands at $48,200 against $40,000: the 14 new engineers add $6,200 and the $2,100 cache fix is still with the dev tools team. Next step: draft the budget owner brief.",
-    why: "Same question after the fixes: the answer must move with the state.",
+    why: "Same question after the fixes: the answer must move with the state. Fixed waste no longer adds to where it lands, so it must not be given as the cause (a live answer said \"Waste is the main cause\" about waste already fixed).",
   },
   {
     id: "summary-all-teams", tags: ["spend", "chip", "all teams"], scenario: "C", group: "all", setup: "start",
@@ -150,6 +150,17 @@ export const CASES: EvalCase[] = [
     forbidden: [{ label: "invents new engineers (none in this scenario)", re: /new engineers|14 new/i }], draft: null,
     reference: "Platform Engineering lands at $50,400 against $40,000, all of it from $10,800 of waste: the connector loop, subagents on Opus and the cache. Next step: fix the waste.",
     why: "Different scenario: catches answers that recite the default story.",
+  },
+  {
+    id: "over-budget-scenario-a-after-fixes", tags: ["spend", "scenario A", "state"], scenario: "A", group: "pe", setup: "after_fixes",
+    prompt: "Why are we over budget?",
+    facts: [
+      { label: "lands at $41,700", any: [usd("41,700")] },
+      { label: "names the fix waiting on its owner", any: [usd("2,100"), w("dev tools|cache|owner")] },
+    ],
+    forbidden: [{ label: "invents new engineers (none in this scenario)", re: /new engineers|14 new/i }, { label: "still lists fixed waste as open", re: /\$?10,?800/ }, { label: "gives fixed waste as the cause", re: /\bwaste is the (main|biggest|largest|primary)\b|\b(main|biggest|largest|primary) (cause|driver|reason)\b[^.]{0,40}\b(waste|subagents?|connector|retry|Opus)\b/i }], draft: null,
+    reference: "Platform Engineering lands at $41,700 against $40,000, $1,700 over. What is left is the $2,100 cache fix with the dev tools team; once they ship it, it lands at $39,600, under budget.",
+    why: "After the fixes only the owner's fix keeps it over: the cause is what is left, not the waste already fixed.",
   },
 
   // ---- Follow up rows (the UI pins the row's figures) ----

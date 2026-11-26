@@ -1,6 +1,6 @@
 # Answers eval: cases
 
-43 cases. Expected facts come from the engine in the default view and were checked by hand.
+44 cases. Expected facts come from the engine in the default view and were checked by hand.
 
 | id | group | state | expects | tags |
 |---|---|---|---|---|
@@ -13,6 +13,7 @@
 | finance-ask | C · pe | after fixes | answer, no draft | spend, question not action |
 | over-limit | C · pe | start | answer, no draft | spend |
 | over-budget-scenario-a | A · pe | start | answer, no draft | spend, scenario A |
+| over-budget-scenario-a-after-fixes | A · pe | after fixes | answer, no draft | spend, scenario A, state |
 | follow-up-user | C · pe | start | answer, no draft | follow-up, context given |
 | follow-up-pinned-figures | C · pe | start | answer, no draft | follow-up, context given |
 | follow-up-agent | C · pe | start | answer, no draft | follow-up, context given |
@@ -91,7 +92,7 @@ Reference answer: Platform Engineering lands at $56,900 against $40,000, the $10
 
 ## over-budget-after-fixes
 
-Same question after the fixes: the answer must move with the state.
+Same question after the fixes: the answer must move with the state. Fixed waste no longer adds to where it lands, so it must not be given as the cause (a live answer said "Waste is the main cause" about waste already fixed).
 
 ````
 Why are we over budget?
@@ -106,6 +107,7 @@ Must not:
 - claims work is never slowed
 - claims nobody is cut off for the month
 - still lists fixed waste as open
+- gives fixed waste as the cause
 
 Drafts: nothing
 
@@ -212,6 +214,27 @@ Must not:
 Drafts: nothing
 
 Reference answer: Platform Engineering lands at $50,400 against $40,000, all of it from $10,800 of waste: the connector loop, subagents on Opus and the cache. Next step: fix the waste.
+
+## over-budget-scenario-a-after-fixes
+
+After the fixes only the owner's fix keeps it over: the cause is what is left, not the waste already fixed.
+
+````
+Why are we over budget?
+````
+
+Must say:
+- lands at $41,700
+- names the fix waiting on its owner
+
+Must not:
+- invents new engineers (none in this scenario)
+- still lists fixed waste as open
+- gives fixed waste as the cause
+
+Drafts: nothing
+
+Reference answer: Platform Engineering lands at $41,700 against $40,000, $1,700 over. What is left is the $2,100 cache fix with the dev tools team; once they ship it, it lands at $39,600, under budget.
 
 ## follow-up-user
 
