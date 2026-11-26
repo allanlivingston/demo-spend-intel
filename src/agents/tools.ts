@@ -96,7 +96,7 @@ export const TOOLS: ToolDef[] = [
           note: "A driver whose state is applied is already fixed, so it is no longer a cause of the overage. One whose state is sent is still a cause until its owner ships the fix. The figures for open and sent drivers are already inside the forecast, not on top of it. For waste, give recoverable (what the fix saves, the figure the app shows), not projected_to_month_end (what it costs if left alone).",
           drivers,
         },
-        summary: drivers.length ? drivers.map((d) => `${d.label}: ${d.state === "applied" ? "fixed" : d.state === "sent" ? "with the owner" : d.state === "overridden" ? "approved as planned" : d.state === "declined" ? "declined" : `+${usd(d.projected_to_month_end)}`}`).join("; ") : "No drivers off forecast",
+        summary: drivers.length ? drivers.map((d) => `${d.label}: ${d.state === "applied" ? "fixed" : d.state === "sent" ? "with the owner" : d.state === "overridden" ? "approved as planned" : d.state === "declined" ? "declined" : d.kind === "waste" ? `fix saves ${usd(d.recoverable)}` : `+${usd(d.projected_to_month_end)}`}`).join("; ") : "No drivers off forecast",
       };
     },
   },

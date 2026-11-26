@@ -37,7 +37,8 @@ process.env.ANSWER_ARCH = arch;
 const useJudge = flag("judge") || (backend === "claude-code" && !flag("no-judge"));
 const MAX_ATTEMPTS = 3;
 
-if (!/^(baseline|v\d+)$/.test(variant)) throw new Error("--variant must be baseline or v<N>");
+// A plain folder name: baseline, v<N> or a descriptive one like base-3-runs (no paths).
+if (!/^[a-z0-9][a-z0-9-]{0,40}$/.test(variant)) throw new Error("--variant must be lowercase letters, digits and dashes, like baseline, v2 or base-3-runs");
 // The default view, as a reviewer first sees the app.
 setAdvancedView(false);
 

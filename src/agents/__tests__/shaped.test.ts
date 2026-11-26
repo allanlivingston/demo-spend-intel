@@ -38,6 +38,12 @@ describe("ANSWER_ARCH=shaped", () => {
     expect(sys).not.toContain("When you say why a team is over budget");
     // A request to block people leads with what it would stop.
     expect(sys).toContain("If asked to block, cut off or limit people, say plainly that you won't and what it would stop");
+    expect(sys).toContain('A change you draft is not approved yet: say what it does once the admin approves it, never "your approved changes".');
+    // The steps line under an answer gives what a waste fix saves, like the answer and the app.
+    const steps = callTool({ demo: initialState("C"), group: "pe", artifacts: [] }, "list_drivers", {}).output.summary;
+    expect(steps).toContain("Prompt cache hit rate fell from 78% to 31%: fix saves $2,100");
+    expect(steps).toContain("14 new engineers ramping on the payments refactor: +$6,200");
+    expect(steps).not.toContain("$2,300");
     expect(userPrompt("Why are we over budget?", [])).toMatch(/start with explain_overage\.$/);
     // Other agents are unchanged.
     expect(systemPrompt("routing", initialState("C"), "pe")).not.toContain("explain_overage");
