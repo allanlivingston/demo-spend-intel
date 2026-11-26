@@ -20,6 +20,9 @@ An engine computes every number: forecasts, savings and who is slowed. Claude ag
 ## How do we know it works?
 In the advanced view, the Health tab shows the last six months: how often month-end spend landed inside the forecast range, how close it came to budget, how much budget moved between workstreams, and merged PRs and passing tests per $1,000.
 
+## How do we know Claude's answers are right?
+Two ways. First, every figure Claude writes must match a number the engine returned; if one doesn't, Claude gets one corrected retry, and then the app shows a recorded answer instead. Second, we built an eval of 44 questions the admin might ask, including the ways chat assistants commonly go wrong: invented figures, half answers, false premises, giving in to pushback and claiming actions not taken. Rule checks and a second Claude model grade every answer for facts, plain words and staying true to the numbers. The first run passed 43% of answers. Fixing what it found brought that to 83% over three runs of every question. Then we moved the answering rules out of one long prompt and into the tools themselves, so each tool returns the figures to quote and how to say them. That reached 89%, with faster answers, and it is what the app uses now.
+
 ## Why a chat instead of a dashboard?
 A dashboard makes you work out what to do. Here Claude does the looking and drafting, so the conversation is the main screen. It reads top to bottom, newest at the bottom. Charts, drafts and approvals appear inside the conversation, and when numbers change a fresh copy is added at the bottom.
 
