@@ -1,9 +1,9 @@
-// Which answer architecture the chat agent runs. "base": one rules paragraph and general tools. "shaped" (behind the
-// ANSWER_ARCH=shaped flag, off by default): tools whose output is shaped for the answer carry the per-question rules,
-// the rules paragraph is shorter, and a question the app recognizes gets a hint naming the tool to start with.
+// Which answer architecture the chat agent runs. "shaped" (the default): tools whose output is shaped for the answer
+// carry the per-question rules, the rules paragraph is shorter, and a question the app recognizes gets a hint naming
+// the tool to start with. "base" (ANSWER_ARCH=base): the earlier setup, one rules paragraph and general tools.
 export type AnswerArch = "base" | "shaped";
 
-export const answerArch = (): AnswerArch => (typeof process !== "undefined" && process.env?.ANSWER_ARCH === "shaped" ? "shaped" : "base");
+export const answerArch = (): AnswerArch => (typeof process !== "undefined" && process.env?.ANSWER_ARCH === "base" ? "base" : "shaped");
 
 /** Free routing: chip questions (and typed ones like them) map to the tool that answers them. No model call. */
 const ROUTES: [RegExp, string][] = [

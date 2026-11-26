@@ -306,7 +306,7 @@ TOOLS.push({
   },
 });
 
-// ---------- Answer-shaped tools (ANSWER_ARCH=shaped only) ----------
+// ---------- Answer-shaped tools (the shaped setup, the default; not with ANSWER_ARCH=base) ----------
 // Each returns what one kind of question needs, with the figure to quote and how to say it, so the rule lives with the
 // data instead of in the prompt. The engine computes every number, as with the other tools.
 
@@ -415,7 +415,7 @@ const SHAPED_TOOLS: ToolDef[] = [
           means: "Nothing changes: the waste keeps running, and each person's monthly limit stops them when they reach it. Turning on hard monthly limits for everyone today leads to the same for people.",
           lands_at: r(f.p50), waste_still_running: r(k.wasteRunning),
           people_cut_off_this_month: t.blockedMonth, of_them_already_today: t.blockedToday, new_engineers_cut_off_by_day_22: t.newHiresBlockedByDay22,
-          work_at_risk: t.value, work_at_risk_is: "spend on work producing results that the limits stop",
+          work_at_risk: r100(t.value), work_at_risk_is: "spend on work producing results that the limits stop",
           about_the_new_engineers: overlapOf(ctx.demo, g).about_the_new_engineers ?? null,
         },
         pacing_instead: {

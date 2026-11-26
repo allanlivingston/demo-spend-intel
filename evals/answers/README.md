@@ -99,6 +99,6 @@ Runs on all cases; live runs go through the Claude Code login. Folders in `runs/
 | Tools carry the answering rules, final | shaped | 44 cases × 3 | 117 of 132 (89%), median 5.7s | `claude-code/shaped-3-runs` |
 | Offline fallback answers | offline | 44 cases × 1 | 21 (48%) | `offline/latest` |
 
-"shaped" is `--arch shaped` (`ANSWER_ARCH=shaped`, off by default in the app): `explain_overage`, `compare_choices` and `people_summary` return the figures to quote and how to answer, and a question the app recognizes gets a hint naming the tool to start with. Against the final base setup, case by case it was better on 12 cases, worse on 6 and the same on 26: likely better, but not yet proven at this sample size.
+"shaped" is the app's default, and the eval's (`--arch base` or `ANSWER_ARCH=base` runs the earlier setup): `explain_overage`, `compare_choices` and `people_summary` return the figures to quote and how to answer, and a question the app recognizes gets a hint naming the tool to start with. Against the final base setup, case by case it was better on 12 cases, worse on 6 and the same on 26: likely better, but not yet proven at this sample size.
 
 The offline run measures the app's fallback answers, which are written by rules and cover fewer questions; expect it to score lower than live.

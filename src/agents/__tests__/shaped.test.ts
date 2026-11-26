@@ -1,4 +1,4 @@
-// The shaped answer architecture (ANSWER_ARCH=shaped): off by default, and when on, tools that return what each
+// The shaped answer architecture (the default; ANSWER_ARCH=base gives the earlier setup): tools that return what each
 // question needs, so the figures and the rules come from the tool rather than the prompt.
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 import { initialState, setAdvancedView, type DemoState } from "@/engine";
@@ -9,13 +9,19 @@ import { routeHint } from "@/agents/arch";
 beforeAll(() => setAdvancedView(false));
 afterEach(() => { delete process.env.ANSWER_ARCH; });
 const shaped = () => { process.env.ANSWER_ARCH = "shaped"; };
+const base = () => { process.env.ANSWER_ARCH = "base"; };
 
 const afterFixes = (id: "A" | "C"): DemoState => ({ ...initialState(id), appliedFixes: ["a-connector", "a-subagents"], handedOff: ["a-cache"] });
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const run = (demo: DemoState, name: string): any => callTool({ demo, group: "pe", artifacts: [] }, name, {}).output.data;
 
-describe("off by default", () => {
-  test("the chat agent gets neither the tools, the shorter rules nor the hint", () => {
+describe("on by default", () => {
+  test("with no flag set, the chat agent gets the answer-shaped tools", () => {
+    expect(toolsFor("chat").map((t) => t.name)).toContain("explain_overage");
+    expect(userPrompt("Why are we over budget?", [])).toMatch(/start with explain_overage\.$/);
+  });
+  test("ANSWER_ARCH=base: the chat agent gets neither the tools, the shorter rules nor the hint", () => {
+    base();
     const names = toolsFor("chat").map((t) => t.name);
     expect(names).not.toContain("explain_overage");
     expect(systemPrompt("chat", initialState("C"), "pe")).toContain("When you say why a team is over budget");
@@ -86,12 +92,14 @@ describe("ANSWER_ARCH=shaped", () => {
     const d = run(initialState("C"), "compare_choices");
     expect(d.doing_nothing.people_cut_off_this_month).toBe(15);
     expect(d.doing_nothing.lands_at).toBe(56_900);
+    expect(d.doing_nothing.work_at_risk).toBe(3_900);
     expect(d.pacing_instead.people_cut_off).toBe(0);
     expect(d.fixing_the_waste.of_it_waiting_on_an_owner).toBe(2_100);
   });
 
   test("get_user carries its answer note only in the shaped architecture", () => {
     const user = () => callTool({ demo: initialState("C"), group: "pe", artifacts: [] }, "get_user", { user: "Vik D." }).output.data as { how_to_answer?: string };
+    base();
     expect(user().how_to_answer).toBeUndefined();
     shaped();
     expect(user().how_to_answer).toMatch(/their workstream/);

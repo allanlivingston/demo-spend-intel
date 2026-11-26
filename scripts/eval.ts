@@ -4,7 +4,7 @@
 //   npm run eval -- --backend claude-code          live, through this machine's Claude Code login (no API key)
 //   npm run eval -- --backend claude-code --only do-nothing,day-14 --reps 2
 //   npm run eval -- --selftest [--judge]           harness check: references must pass, empty answers must fail
-//   npm run eval -- --backend claude-code --arch shaped --variant v11   the answer-shaped tools (ANSWER_ARCH=shaped)
+//   npm run eval -- --backend claude-code --arch base --variant base   the earlier setup (ANSWER_ARCH=base)
 //   npm run eval -- --backend claude-code --variant v1 --regrade   re-apply the rule checks to saved answers (no model calls; judge grades kept)
 //
 // Output (per backend): evals/answers/runs/<backend>/<variant>/results.jsonl, traces/, errors.jsonl.
@@ -30,8 +30,8 @@ const variant = opt("variant", "baseline")!;
 const concurrency = Number(opt("concurrency", backend === "offline" ? "8" : "2"));
 const timeoutS = Number(opt("timeout-s", "180"));
 const only = opt("only")?.split(",");
-// The answer architecture under test; the app reads the same flag (ANSWER_ARCH), default "base".
-const arch = opt("arch", process.env.ANSWER_ARCH ?? "base")!;
+// The answer architecture under test; the app reads the same flag (ANSWER_ARCH), default "shaped".
+const arch = opt("arch", process.env.ANSWER_ARCH ?? "shaped")!;
 if (arch !== "base" && arch !== "shaped") throw new Error("--arch must be base or shaped");
 process.env.ANSWER_ARCH = arch;
 const useJudge = flag("judge") || (backend === "claude-code" && !flag("no-judge"));
