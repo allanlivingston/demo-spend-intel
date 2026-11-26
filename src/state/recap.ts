@@ -62,9 +62,19 @@ export function stillTrue(r: Recap, subject?: string): string {
     const then = r.after.lands - waitSum;
     return `${team} stays over budget until ${w.owner} ships ${w.fix}, which brings it to ${usd100(then)}${then <= r.after.budget ? ", under budget" : ""}.`;
   }
-  if (w) return `${w.owner.charAt(0).toUpperCase() + w.owner.slice(1)} still has ${w.fix} to ship, which brings it to ${usd100(r.after.lands - waitSum)}.`;
+  if (w) return `${w.owner.charAt(0).toUpperCase() + w.owner.slice(1)} still has ${w.fix} to ship, which brings ${subject ? subject.toLowerCase() : r.team === "All teams" ? "spend" : r.team} to ${usd100(r.after.lands - waitSum)}.`;
   if (over) return `${team} still lands ${usd100(r.after.lands - r.after.budget)} over budget.`;
   return "";
+}
+
+/** "What happens next?" once nothing is open: what is still true, then what to expect. */
+export function whatNext(r: Recap): string {
+  // Three sentences at most, like every answer.
+  return [
+    stillTrue(r),
+    r.waiting.length ? "You'll see it here when they ship it, and nothing else needs you this month." : "Nothing else needs you this month.",
+    `Anything new, such as another source of waste, shows up here as a recommendation${r.rules ? ", and your saved rules carry over to next month" : ""}.`,
+  ].filter(Boolean).join(" ");
 }
 
 /** The short form, for the line where the recommendations were: what, if anything, is still to come. */

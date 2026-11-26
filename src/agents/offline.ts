@@ -8,6 +8,7 @@ import {
 import { bestSection, firstSentences, sections } from "@/knowledge/knowledge";
 import type { AgentRequest } from "./types";
 import { nextAction } from "@/state/nextAction";
+import { recapOf, whatNext } from "@/state/recap";
 
 /** The next step in plain words, so every answer ends with what to do. */
 function nextStep(s: DemoState, sel: GroupSelection): string {
@@ -267,6 +268,13 @@ export function offlinePlan(req: AgentRequest): OfflinePlan {
       : kx.fixableWaste > 0 ? `${usd(kx.fixableWaste)} of waste is still open to fix.` : "Nothing needs you right now.";
     if (sel !== "all" && nextStep(s, sel)) return plan(`${lines.join("; ")}.${nextStep(s, sel)}`, [...teams.map((x) => ({ tool: "get_forecast", input: { group: x } })), { tool: "list_drivers", input: { group: g } }]);
     return plan(`${lines.join("; ")}. ${left}`.trim(), [...teams.map((x) => ({ tool: "get_forecast", input: { group: x } })), ...(sel === "all" ? [] : [{ tool: "list_drivers", input: { group: g } }])]);
+  }
+
+  if (/what happens next|what(?:'s| is) next/.test(p)) {
+    // Something still open comes first; otherwise what is still true (over budget until a fix ships) and what to expect.
+    if (nextAction(s, sel).cta) return plan(`${name(sel)}: ${headline(s, sel)}${nextStep(s, sel)}`);
+    // The figure once the owner ships comes from a what-if step, like every figure in an answer.
+    return plan(whatNext(recapOf(s, g)), s.handedOff.length ? [...base, { tool: "simulate_policy", input: { group: g, apply_fixes: s.handedOff } }] : base);
   }
 
   const faq = bestSection(req.prompt, sections("FAQ.md"), 2);

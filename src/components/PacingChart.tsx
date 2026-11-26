@@ -162,7 +162,7 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
           </button>
         </span>
       </div>
-      {anyHeld && <DailySummary data={stripDays} share={pacing(demo, group).teamShare} open={!!dailyOpen} onToggle={() => setDailyOpen(!dailyOpen)} />}
+      {anyHeld && <DailySummary data={stripDays} pace={pacing(demo, group)} open={!!dailyOpen} onToggle={() => setDailyOpen(!dailyOpen)} />}
       {anyHeld && dailyOpen && <DailyStrip data={stripDays} />}
     </div>
   );
@@ -298,14 +298,17 @@ const STEP_PHRASE: Record<Exclude<StepKey, "ran">, string> = { rerouted: "moved 
 
 /**
  * The daily bars in one line: from today, the share of runs pacing slows (the same figure the brief and Claude give),
- * and the step most of it takes. Opens the bars, with the month's totals as their legend, on click.
+ * and the step most of it takes. Once nobody is over their own limit, all of it is on people's busiest days, and the
+ * line says so (otherwise "On track" next to "7% slowed" reads as a contradiction). Opens the bars on click.
  */
-function DailySummary({ data, share, open, onToggle }: { data: StripDay[]; share: number; open: boolean; onToggle: () => void }) {
+function DailySummary({ data, pace, open, onToggle }: { data: StripDay[]; pace: { teamShare: number; capsBlocked: number }; open: boolean; onToggle: () => void }) {
+  const share = pace.teamShare;
+  const when = pace.capsBlocked === 0 ? " on people's busiest days" : "";
   const t = (k: StepKey, from = 1) => data.filter((d) => d.day >= from).reduce((a, d) => a + d[k], 0);
   const steps = STEPS.filter((st) => Math.round(t(st.key) / 100) > 0);
   const pct = Math.round(share * 100);
   const top = [...STEPS].sort((a, b) => t(b.key, TODAY + 1) - t(a.key, TODAY + 1)).find((st) => t(st.key, TODAY + 1) > 0);
-  const sentence = <>{pct ? `From today, about ${pct}% of runs are ` : "From today, under 1% of runs are "}<Term def={TERMS.slowed}>slowed</Term>{pct && top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}</>;
+  const sentence = <>{pct ? `From today, about ${pct}% of runs are ` : "From today, under 1% of runs are "}<Term def={TERMS.slowed}>slowed</Term>{when}{pct && top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}</>;
   return (
     <div id="slowed" className={`border-t border-neutral-100 px-4 py-2.5 text-[13px]${open ? " pb-1" : ""}`}>
       <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1">

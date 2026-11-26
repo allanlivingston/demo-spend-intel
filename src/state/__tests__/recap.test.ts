@@ -1,7 +1,8 @@
 // The end of the work: a recap once everything open is handled, and chips that point forward instead of trailing off.
 import { beforeAll, describe, expect, test } from "vitest";
 import { forecast, initialState, setAdvancedView, type DemoState } from "@/engine";
-import { anythingDone, peopleLine, questionOpen, recapOf, recapText, shouldRecap, stillTrue } from "@/state/recap";
+import { anythingDone, peopleLine, questionOpen, recapOf, recapText, shouldRecap, stillTrue, whatNext } from "@/state/recap";
+import { offlinePlan } from "@/agents/offline";
 import { chipsFor } from "@/state/chipRules";
 import { nextAction } from "@/state/nextAction";
 
@@ -43,7 +44,8 @@ describe("recap", () => {
     expect(stillTrue(waiting)).toBe(`Platform Engineering stays over budget until the dev tools team ships the cache fix, which brings it to $${(Math.round((waiting.after.lands - 2_100) / 100) * 100).toLocaleString("en-US")}, under budget.`);
     expect(recapText(waiting)).toContain(stillTrue(waiting));
     // On track but still waiting: says what the fix will do.
-    expect(stillTrue(recapOf(finished(), "pe"))).toMatch(/^The dev tools team still has the cache fix to ship, which brings it to \$[\d,]+\.$/);
+    expect(stillTrue(recapOf(finished(), "pe"))).toMatch(/^The dev tools team still has the cache fix to ship, which brings Platform Engineering to \$[\d,]+\.$/);
+    expect(stillTrue(recapOf(finished(), "pe"), "It")).toMatch(/which brings it to \$[\d,]+\.$/);
     // Over with nothing left to do (the funding declined): says how far over.
     expect(stillTrue(recapOf({ ...initialState("B"), declined: ["b-newhires"] }, "pe"))).toMatch(/^Platform Engineering still lands \$[\d,]+ over budget\.$/);
   });
@@ -52,6 +54,16 @@ describe("recap", () => {
     expect(peopleLine(recapOf(finished(), "pe"))).toBe("Nobody was cut off this month, and the 14 new engineers were not slowed.");
     expect(peopleLine(recapOf({ ...initialState("A"), appliedFixes: ["a-connector"] }, "pe"))).toBe("Nobody was cut off this month.");
     expect(peopleLine({ ...recapOf(finished(), "pe"), cutOff: 2 })).toBe("");
+  });
+
+  test("What happens next? says what is still true before saying nothing else needs you", () => {
+    const ask = (demo: DemoState) => offlinePlan({ agent: "chat", prompt: "What happens next?", demo, group: "pe", pinned: [] }).text;
+    const over = { ...initialState("A"), appliedFixes: ["a-connector", "a-subagents"], handedOff: ["a-cache"] };
+    expect(ask(over)).toBe(whatNext(recapOf(over, "pe")));
+    expect(ask(over)).toMatch(/^Platform Engineering stays over budget until the dev tools team ships the cache fix, .*You'll see it here when they ship it, and nothing else needs you this month\./);
+    expect(ask({ ...over, appliedFixes: [...over.appliedFixes, "a-cache"], handedOff: [] })).toMatch(/^Nothing else needs you this month\./);
+    // With something still open, that comes first.
+    expect(ask(initialState("C"))).toMatch(/Next step: fix the waste\.$/);
   });
 
   test("a month nothing was done in gets no recap", () => {

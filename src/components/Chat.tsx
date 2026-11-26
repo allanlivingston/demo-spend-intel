@@ -389,8 +389,8 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
         )}
         {allDone ? (
           <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1 rounded-xl border border-emerald-100 bg-emerald-50/40 px-3.5 py-2.5 text-[14px]">
-            <Check size={14} className="shrink-0 self-center text-ok-ink" />
-            <span className="min-w-0 flex-1"><span className="font-medium">All done for you.</span> <span className="text-muted">{doneLine(recapOf(s.demo, s.group))}</span></span>
+            {/* Room for the sentence first: where the button doesn't fit beside it, it goes underneath. */}
+            <span className="min-w-0 flex-[1_1_16rem]"><Check size={14} className="-mt-0.5 mr-1.5 inline-block text-ok-ink" /><span className="font-medium">All done for you.</span> <span className="text-muted">{doneLine(recapOf(s.demo, s.group))}</span></span>
             <button type="button" onClick={() => setShowDone(true)} className="whitespace-nowrap text-[13px] font-medium text-accent-ink hover:underline">
               Show the {rows.length} finished
             </button>
@@ -487,8 +487,11 @@ function Draft({ x, all }: { x: ChatMessage; all: ChatMessage[] }) {
 }
 
 /** What the month came to, posted once everything open is handled. Facts only, with a copy for the team or budget owner. */
-function RecapCard({ r }: { r: Recap }) {
+function RecapCard({ r, earlier }: { r: Recap; earlier: boolean }) {
   const [copied, setCopied] = useState(false);
+  // Like earlier forecast copies: folded once a newer recap is posted, until the admin opens it.
+  const [userOpen, setOpen] = useState<boolean | null>(null);
+  const open = userOpen ?? !earlier;
   const copy = () => {
     navigator.clipboard?.writeText(recapText(r));
     setCopied(true);
@@ -503,6 +506,22 @@ function RecapCard({ r }: { r: Recap }) {
   for (const w of r.waiting) lines.push(["Waiting on", <>{w.fix.charAt(4).toUpperCase() + w.fix.slice(5)}, with {w.owner} <span className="text-muted">({usd(w.amount)})</span></>]);
   if (r.declined > 0) lines.push(["Declined", `${r.declined} ${r.declined === 1 ? "recommendation" : "recommendations"}`]);
   if (r.rules > 0) lines.push(["Rules saved", String(r.rules)]);
+  const toggle = (
+    <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-md px-1.5 py-1 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">
+      {open ? "Collapse" : "Expand"}<ChevronDown size={13} className={cx("transition-transform", open && "rotate-180")} />
+    </button>
+  );
+  if (!open)
+    return (
+      <section className="overflow-hidden rounded-xl border border-black/[0.06] bg-white">
+        <button type="button" onClick={() => setOpen(true)} aria-expanded={false} className="flex w-full flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2.5 text-left text-[13px] text-muted hover:bg-neutral-50">
+          <ClipboardCheck size={15} className="shrink-0" />
+          <span>Earlier recap · {r.team} lands at <span className="font-medium tabular-nums text-ink">{usd100(r.after.lands)}</span> of {usd(r.after.budget)}</span>
+          <StatusPill status={r.after.status} />
+          <span className="ml-auto inline-flex items-center gap-0.5">Expand<ChevronDown size={13} /></span>
+        </button>
+      </section>
+    );
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
@@ -517,6 +536,7 @@ function RecapCard({ r }: { r: Recap }) {
           <button type="button" onClick={copy} className="flex items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-1 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">
             {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copied" : "Copy summary"}
           </button>
+          {earlier && toggle}
         </>}
       >
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 px-4 py-3 text-[15px]">
@@ -549,7 +569,10 @@ function Message({ m, all, liveIds }: { m: ChatMessage; all: ChatMessage[]; live
       </div>
     );
   }
-  if (m.recap) return <RecapCard r={m.recap} />;
+  if (m.recap) {
+    const team = m.recap.team;
+    return <RecapCard r={m.recap} earlier={all.slice(all.indexOf(m) + 1).some((x) => x.recap?.team === team)} />;
+  }
   if (m.why) return <WhyAsk m={m} />;
   if (m.rules) return <RuleSuggestion m={m} />;
   if (!m.run) {
