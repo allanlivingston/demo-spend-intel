@@ -41,7 +41,7 @@ export function policyRow(d: Driver): PolicyRow | null {
       return {
         driverId: d.id,
         control: "Claude Code subagents",
-        before: "run on Opus, the priciest model",
+        before: "run on Opus, the most expensive model",
         after: "run on Sonnet; Opus still there when asked for",
         savings: Math.round(excess - penalty),
         method: `Helper tasks: $${ROUTING.subagentOpusCost.toLocaleString()} on Opus → $${ROUTING.subagentSonnetCost.toLocaleString()} on Sonnet, plus $${Math.round(penalty).toLocaleString()} for the ${ROUTING.sonnetRetryRate * 100}% Sonnet redoes = saves $${Math.round(excess - penalty).toLocaleString()}.`,

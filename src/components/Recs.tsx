@@ -14,7 +14,7 @@ import { ask, busyOf } from "./chatShared";
 export const askAboutRow = (r: BreakdownRow) => {
   const c = confidenceOf(r.driver);
   return {
-    q: `Tell me about this: ${r.driver.label}.`,
+    q: `Tell me about this: ${r.driver.plain ?? r.driver.label}.`,
     context: [`${r.driver.label}: ${r.driver.evidence.join(", ")}. Projected +$${Math.round(r.projected)} to month end. Confidence ${c.level}: ${c.reason}`],
   };
 };

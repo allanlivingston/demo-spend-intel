@@ -433,8 +433,8 @@ export const useStore = create<Store>()(
           const afterRest = (over: number) => (over > 0 && rest > 0 ? `; ${over - rest > 0 ? `${usd100(over - rest)} over` : "on budget"} ${by}` : "");
           const lands = `${g === "all" ? "All teams are now forecast" : `${GROUPS[g].name}${sel === "all" ? ", the team over budget," : ""} is now forecast`} at ${usd100(f.p50)} against a ${usd(f.pool)} budget${f.p50 > f.pool ? `, ${usd100(f.p50 - f.pool)} over` : ""}${afterRest(f.p50 - f.pool)}.`;
           suggestRules(rules, `${ack} ${lands} ${rules.length > 1
-            ? "You could apply changes like these yourself. Want a rule for next month?"
-            : "You could apply this change yourself. Want a rule for next month?"}`, { decision: "applied" });
+            ? "Want rules for changes like these next month?"
+            : "Want a rule for changes like this next month?"}`, { decision: "applied" });
           const ruleMsg = get().messages.at(-1)!;
           get().patchMessage(ruleMsg.id, (x) => ({ ...x, held: { view: "forecast", text: headline(get().demo, sel), snap: { demo: get().demo, group: sel } } }));
         },

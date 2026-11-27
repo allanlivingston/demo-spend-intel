@@ -14,7 +14,7 @@ const CONNECTOR: Driver = {
 
 const SUBAGENTS: Driver = {
   id: "a-subagents", groupId: "pe", workstreamId: "pe-pay", kind: "waste",
-  label: "Claude Code subagents inheriting Opus", plain: "Background helper tasks on the priciest model", actionLabel: "Subagents use Sonnet, Opus still available on request",
+  label: "Claude Code subagents inheriting Opus", plain: "Background helper tasks on the most expensive model", actionLabel: "Subagents use Sonnet, Opus still available on request",
   tier: 1, category: "Production Code", startDay: 17, sunk: 60, forward: 4_800, recoverable: 4_600,
   sigma: 1_381, agentShare: 0.9, memberShare: 1,
   evidence: ["71% of subagent calls on Opus", "Search and lint tasks", "Sonnet does them as well"],
@@ -34,7 +34,7 @@ const CACHE: Driver = {
 
 const NEW_HIRES: Driver = {
   id: "b-newhires", groupId: "pe", workstreamId: "pe-pay", kind: "growth",
-  label: "14 new engineers ramping on the payments refactor", actionLabel: "Fund: move unused budget, then ask the budget owner",
+  label: "14 new engineers ramping on the payments refactor", plain: "14 new engineers starting on the payments refactor", actionLabel: "Fund: move unused budget, then ask the budget owner",
   tier: 2, category: "Production Code", startDay: 9, sunk: 300, forward: 6_200, recoverable: 0,
   sigma: 1_346, agentShare: 0.5, memberShare: 1, cohort: "new",
   evidence: ["31 PRs merged", "212 tests newly passing", "too early to tell if the code lasts"],

@@ -21,7 +21,7 @@ export function declineByText(q: string): boolean {
   }
   const lastAsked = [...st.messages].reverse().find((m) => m.role === "user" && /^(tell me about this|follow up on agent): /i.test(m.text ?? ""));
   const label = lastAsked?.text?.replace(/^(tell me about this|follow up on agent): /i, "").replace(/\.$/, "").toLowerCase();
-  const row = label ? breakdown(st.demo, "all").rows.find((r) => r.driver.label.toLowerCase() === label && r.state === "open") : undefined;
+  const row = label ? breakdown(st.demo, "all").rows.find((r) => [r.driver.label, r.driver.plain].some((n) => n?.toLowerCase() === label) && r.state === "open") : undefined;
   if (!row) return false;
   st.say({ role: "user", text: q });
   st.declineRec(row.driver.id);

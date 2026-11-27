@@ -155,7 +155,7 @@ describe("state moves the chips forward", () => {
   test("after asking about one fix from its card, the next step fixes that one, with a recording to replay", async () => {
     const demo = initialState("C");
     for (const r of breakdown(demo, "pe").rows.filter((x) => x.side === "fix" && x.state === "open")) {
-      const cs = chips(demo, "pe", [user(`Tell me about this: ${r.driver.label}.`)]);
+      const cs = chips(demo, "pe", [user(`Tell me about this: ${r.driver.plain ?? r.driver.label}.`)]);
       expect(cs[0].primary).toBe(true);
       expect(cs[0].text).toMatch(/^Fix the /);
       expect(cs.filter((c) => c.primary)).toHaveLength(1);

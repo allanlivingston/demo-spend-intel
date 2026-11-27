@@ -296,6 +296,8 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
             {/* Switching teams changes the headline's length and whether there is a button: the height glides instead of
                 jumping, and the new headline fades in. */}
             <SmoothHeight>
+            {/* Once the chat starts, this is how things stood then; the newest forecast below is the live one. */}
+            {!briefingLive && <div className="mb-1 text-[13px] text-muted">When this chat started</div>}
             <Headline key={briefingSnap.group} text={headline(briefingSnap.demo, briefingSnap.group)} />
             {!messages.length && chips.find((c) => c.primary)?.action.type === "run" && (
               <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5">

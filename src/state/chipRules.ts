@@ -36,19 +36,19 @@ const REVIEW_KINDS = ["cfo_brief", "governed_override"];
 
 /** The newest draft still waiting for the admin (older drafts of the same kind are superseded). */
 export function pendingDraft(messages: ChatMessage[]): ChatMessage | null {
-  return [...messages].reverse().find((m) => m.artifact && m.artifactStatus === "proposed" && m.artifact.kind !== "handoff") ?? null;
+  return [...messages].reverse().find((m) => m.artifact && m.artifactStatus === "proposed" && m.artifact.kind !== "handoff" && !isSuperseded(m, messages)) ?? null;
 }
 
-/** True when a newer draft of the same kind replaced this one. */
+/** True when a newer draft of the same kind came after this one, whether or not that one was approved. */
 export function isSuperseded(m: ChatMessage, messages: ChatMessage[]): boolean {
   if (!m.artifact || m.artifactStatus !== "proposed") return false;
   const i = messages.indexOf(m);
-  return messages.slice(i + 1).some((x) => x.artifact?.kind === m.artifact!.kind && x.artifactStatus === "proposed");
+  return messages.slice(i + 1).some((x) => x.artifact?.kind === m.artifact!.kind);
 }
 
 const ask = (q: string, context?: string[]): ChipSpec => ({ text: q, action: { type: "ask", q, context } });
 
-const SHORT: Record<string, string> = { "a-subagents": "Opus subagents", "a-connector": "Jira retry loop", "a-cache": "prompt cache drop" };
+const SHORT: Record<string, string> = { "a-subagents": "background helper tasks", "a-connector": "Jira link", "a-cache": "cached setup" };
 
 /** The agent run behind a recommendation's Fix it / Fund it button. */
 export function runFor(r: BreakdownRow): StartRun {
@@ -69,7 +69,7 @@ function askedFix(i: ChipInput): BreakdownRow | undefined {
   const lastUser = [...i.messages].reverse().find((m) => m.role === "user")?.text ?? "";
   const label = /^Tell me about this: (.+)\.$/.exec(lastUser)?.[1];
   if (!label) return undefined;
-  return breakdown(i.demo, "all").rows.find((r) => r.driver.label === label && r.side === "fix" && r.state === "open");
+  return breakdown(i.demo, "all").rows.find((r) => (r.driver.plain ?? r.driver.label) === label && r.side === "fix" && r.state === "open");
 }
 
 export function chipsFor(i: ChipInput): ChipSpec[] {
