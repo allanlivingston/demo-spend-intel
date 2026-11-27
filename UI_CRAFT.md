@@ -24,6 +24,7 @@ specific correction, the example is in brackets.
 - **Put closing and next-step controls where attention already is,** usually at the bottom of the newest message.
 - **Scrolling**
   - A question the user types moves to the top, and the answer streams in below it.
+  - A typed question moves to the top. A question sent by clicking (a card's Ask, a chip) scrolls only as far as needed to show the answer, then follows the answer as it grows, never past the question's first line. [Ask on a card used to push the cards off the top.]
   - A new reply scrolls down as far as it can without its first line leaving the top.
   - Never scroll the start of new text out of view.
   - Move calmly but promptly: a hard speed limit of 1,800px a second (about 30px a frame), full speed in about 0.2 seconds, speeding up and slowing down gently. A slow frame pauses the scroll rather than letting it leap to catch up. Stop as soon as the user scrolls. When content above folds, place the new reply mid-screen before the first paint and glide it up from there, so the page never jumps and then scrolls back. (`src/components/glide.ts`)

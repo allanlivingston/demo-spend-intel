@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, Check, ChevronLeft, ChevronRight } from "lucide-rea
 import { type ChipSpec } from "@/state/chipRules";
 import { useStore } from "@/state/store";
 import { cx } from "./ui";
-import { ask, busyOf, declineByText } from "./chatShared";
+import { ask, busyOf, declineByText, typed } from "./chatShared";
 
 export const MODEL_OPTIONS: { id: "auto" | "haiku" | "sonnet" | "opus"; name: string; hint: string }[] = [
   { id: "auto", name: "Auto", hint: "Haiku for quick answers, Sonnet for agents" },
@@ -81,6 +81,7 @@ export function Composer({ chips, onChip, onJump }: { chips: ChipSpec[]; onChip:
     const q = text.trim();
     if (!q || busy) return;
     setText("");
+    typed.at = Date.now();
     if (!declineByText(q)) ask(q);
   };
   return (

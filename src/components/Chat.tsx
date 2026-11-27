@@ -16,7 +16,7 @@ import { Activity } from "./Details";
 import { RuleSuggestion, WhyAsk } from "./Rules";
 import { glide, glideTo } from "./glide";
 import { SmoothHeight, useJustNow } from "./motion";
-import { ask, busyOf } from "./chatShared";
+import { ask, busyOf, typed } from "./chatShared";
 import { ForecastView } from "./ForecastView";
 import { Headline, Draft, RecapCard } from "./Drafts";
 import { Composer } from "./Composer";
@@ -203,6 +203,7 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
 
   // Like claude.ai: a new question moves to the top of the screen and the reply streams in below it. Streaming text
   // and new steps never scroll the page, so the start of a long reply stays put; a button jumps to the end.
+  const follow = useRef<string | null>(null);
   const seen = useRef(messages.length);
   const [viewH, setViewH] = useState(0);
   const [below, setBelow] = useState(false);
@@ -242,9 +243,17 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
     // looking, and let it glide up from there.
     const top = msg.getBoundingClientRect().top - el.getBoundingClientRect().top;
     if (top < 0) el.scrollTop += top - el.clientHeight * 0.5;
+    // A typed question moves to the top, like claude.ai. A question from a click (a card's Ask, a chip) scrolls only
+    // as far as needed to show it and the start of its answer, so the cards it came from stay in view when they fit.
+    const wasTyped = target === user && Date.now() - typed.at < 2_000;
+    follow.current = target === user && !wasTyped ? user.id : null;
+    const ANSWER_ROOM = 220;
     const aim = () => {
       const firstLine = el.scrollTop + msg.getBoundingClientRect().top - el.getBoundingClientRect().top - 24;
-      return target === user ? firstLine : Math.min(firstLine, el.scrollHeight - el.clientHeight);
+      if (target !== user) return Math.min(firstLine, el.scrollHeight - el.clientHeight);
+      if (wasTyped) return firstLine;
+      const needed = el.scrollTop + msg.getBoundingClientRect().bottom - el.getBoundingClientRect().bottom + ANSWER_ROOM;
+      return Math.min(firstLine, Math.max(el.scrollTop, needed));
     };
     requestAnimationFrame(() => glide(el, aim));
     // A card folding on screen (an approved draft) can finish after the scroll has landed and leave the reply's first
@@ -255,6 +264,28 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
     return () => clearTimeout(settle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
+  // After a clicked question, follow its answer as it streams in: scroll only when new text would be cut off at the
+  // bottom, and never so far that the question leaves the top. A typed question is already at the top.
+  useEffect(() => {
+    const sc = scroller.current, list = floorRef.current;
+    if (!sc || !list) return;
+    let stop: (() => void) | null = null;
+    const ro = new ResizeObserver(() => {
+      const qid = follow.current;
+      const lastId = shown.at(-1)?.id;
+      const q = qid ? document.getElementById(`msg-${qid}`) : null;
+      const last = lastId ? document.getElementById(`msg-${lastId}`) : null;
+      if (!q || !last) return;
+      const box = sc.getBoundingClientRect();
+      const cut = last.getBoundingClientRect().bottom + 16 - box.bottom + 120; // 120: clear of the message box
+      if (cut <= 0) return;
+      const ceiling = sc.scrollTop + q.getBoundingClientRect().top - box.top - 24;
+      stop?.();
+      stop = glide(sc, () => Math.min(ceiling, sc.scrollTop + Math.max(0, last.getBoundingClientRect().bottom + 16 - box.bottom + 120)));
+    });
+    [...list.children].forEach((c) => ro.observe(c));
+    return () => { ro.disconnect(); stop?.(); };
+  }, [shown]);
   // A floor under the conversation: the page never gets shorter than the bottom of what is on screen. Otherwise, when
   // something folds (an approved draft), the browser pulls the scroll back and the content above slides down.
   const floorRef = useRef<HTMLDivElement>(null);

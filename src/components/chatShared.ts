@@ -4,6 +4,8 @@ import { pendingDraft } from "@/state/chipRules";
 import { useStore, type ChatMessage, type Snapshot } from "@/state/store";
 
 export const ask = (q: string, context?: string[]) => startAgentRun({ agent: "chat", prompt: q, echo: true, context });
+/** When the admin last sent a typed question: typed questions move to the top; clicks scroll only as far as needed. */
+export const typed = { at: 0 };
 export const busyOf = (messages: ChatMessage[]) => messages.some((m) => m.run?.status === "running");
 /**
  * "deny it", "decline", "reject this"... declines the draft waiting for an answer, or else the recommendation the
