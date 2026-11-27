@@ -382,10 +382,11 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
     <div id={id} className="border-t border-neutral-100">
       <div className="flex items-center gap-2 px-4 pt-3">
         <h3 className="text-[15px] font-semibold">Recommendations</h3>
-        <span className="ml-auto whitespace-nowrap text-[13px] text-muted">{open ? `${open} open` : "Nothing open"}</span>
+        {/* How many are still open, as a small count beside the title; none open shows nothing. */}
+        {open > 0 && <span aria-label={`${open} open`} className="rounded-full bg-neutral-100 px-1.5 text-[12px] font-medium tabular-nums leading-5 text-muted">{open}</span>}
         {rows.length > 2 && !allDone && (
           <>
-            <button type="button" onClick={() => page(-1)} aria-label="Previous" className="rounded-md p-1 text-muted hover:bg-neutral-100 hover:text-ink"><ChevronLeft size={15} /></button>
+            <button type="button" onClick={() => page(-1)} aria-label="Previous" className="ml-auto rounded-md p-1 text-muted hover:bg-neutral-100 hover:text-ink"><ChevronLeft size={15} /></button>
             <button type="button" onClick={() => page(1)} aria-label="Next" className="rounded-md p-1 text-muted hover:bg-neutral-100 hover:text-ink"><ChevronRight size={15} /></button>
           </>
         )}
