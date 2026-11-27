@@ -1,7 +1,7 @@
 "use client";
 // Still example screens for the tour steps whose subject may not be on screen yet. Labels come from the engine.
 import type { ReactNode } from "react";
-import { ArrowRight, BookmarkCheck, Sparkles } from "lucide-react";
+import { ArrowRight, BookmarkCheck } from "lucide-react";
 import { LEVELS, ruleSentence, SCENARIOS } from "@/engine";
 import { cx } from "./ui";
 
@@ -21,7 +21,7 @@ const Pick = ({ children, on }: { children: ReactNode; on?: boolean }) => (
 );
 
 const Claude = ({ children }: { children: ReactNode }) => (
-  <div className="flex gap-1.5"><Sparkles size={11} className="mt-1 shrink-0 text-accent-ink" /><div className="font-serif text-[14px] leading-[19px]">{children}</div></div>
+  <div className="flex gap-1.5"><div className="font-serif text-[14px] leading-[19px]">{children}</div></div>
 );
 
 /** The starting month of the default situation, as the engine computes it. */

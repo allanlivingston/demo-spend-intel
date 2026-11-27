@@ -2,7 +2,7 @@
 // "Ask about this demo": a small Claude-style chat about the demo itself (problem, workflows, layout and nav choices).
 // Answers come from DEMO_GUIDE.md via the guide agent; its conversation is separate from the spend conversation.
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Sparkles, X } from "lucide-react";
+import { ArrowUp, CircleHelp, X } from "lucide-react";
 import type { AgentEvent } from "@/agents/types";
 import { useStore } from "@/state/store";
 import { cx } from "./ui";
@@ -92,7 +92,7 @@ export function DemoGuide({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/25 p-6" onClick={onClose}>
       <div role="dialog" aria-label="Ask about this demo" className="flex h-[min(640px,85vh)] w-full max-w-[640px] flex-col overflow-hidden rounded-2xl bg-canvas shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <header className="flex items-center gap-2 border-b border-neutral-200 px-5 py-3">
-          <Sparkles size={15} className="text-accent-ink" />
+          <CircleHelp size={16} className="text-accent-ink" />
           <h2 className="font-serif text-lg">Ask about this demo</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="ml-auto rounded-md p-1 text-muted hover:bg-black/5 hover:text-ink"><X size={16} /></button>
         </header>
@@ -107,7 +107,6 @@ export function DemoGuide({ onClose }: { onClose: () => void }) {
               <div key={i} className="ml-auto w-fit max-w-[80%] rounded-xl bg-black/5 px-4 py-3 text-[16px] leading-[23px]">{t.text}</div>
             ) : (
               <div key={i} className="flex gap-2">
-                <Sparkles size={14} className={cx("mt-1.5 shrink-0 text-accent-ink", t.status === "running" && "animate-pulse")} />
                 <p className={cx("font-serif text-[17px] leading-[26px]", t.status === "error" && "text-bad")}>
                   {t.text || (t.status === "running" ? <span className="text-muted">Thinking…</span> : null)}
                 </p>

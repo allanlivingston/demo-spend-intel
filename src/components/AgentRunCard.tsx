@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { CheckCircle2, ChevronRight, CircleAlert, Loader2, RotateCcw, Sparkles } from "lucide-react";
+import { CheckCircle2, ChevronRight, CircleAlert, Loader2, RotateCcw } from "lucide-react";
 import { AGENT_LABEL, retryRun, startAgentRun } from "@/state/agentClient";
 import type { ChatMessage } from "@/state/store";
 import { cx, mergeSteps } from "./ui";
@@ -21,7 +21,6 @@ export function AgentRunCard({ m }: { m: ChatMessage }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 text-[13px] text-muted">
-        <Sparkles size={13} className="text-accent-ink" />
         <span className="font-medium text-neutral-600">{AGENT_LABEL[run.agent]}</span>
         {running && <><Loader2 size={12} className="animate-spin" /> {run.steps.at(-1)?.phase ?? "Thinking"}…</>}
         {!running && run.steps.length > 0 && (
@@ -61,7 +60,7 @@ export function AgentRunCard({ m }: { m: ChatMessage }) {
               onClick={() => startAgentRun({ agent: run.agent, prompt: run.prompt, driverId: run.driverId, escalate: true, context: run.context, revision: run.revision })}
               title="Re-run this answer on Opus"
             >
-              <Sparkles size={11} /> Ask Opus
+              Ask Opus
             </button>
           )}
         </div>

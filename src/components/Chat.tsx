@@ -3,7 +3,7 @@
 // Everything after appends below. Views (forecast, recommendations) can be posted again at the bottom; only the
 // newest copy of each is live, older copies render from the state they were posted with, so they match their text.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Copy, LineChart, ListChecks, Sparkles, X } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Copy, LineChart, ListChecks, X } from "lucide-react";
 import {
   breakdown, confidenceOf, driverById, forecast, GROUP_IDS, GROUPS, headline, kpis, ownerOf, ruleFor, TODAY, usd100,
   type Artifact, type BreakdownRow, type GroupSelection,
@@ -549,7 +549,6 @@ function RecapCard({ r, earlier }: { r: Recap; earlier: boolean }) {
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
-        <Sparkles size={14} className="mt-1.5 shrink-0 text-accent-ink" />
         <p className="font-serif text-[17px] leading-[26px]">That&rsquo;s everything open for {r.team === "All teams" ? "every team" : r.team}. {stillTrue(r, "It")} {peopleLine(r)}</p>
       </div>
       <Frame
@@ -588,7 +587,6 @@ function Message({ m, all, liveIds }: { m: ChatMessage; all: ChatMessage[]; live
       <div className="space-y-3">
         {m.text && (
           <div className="flex gap-2">
-            <Sparkles size={14} className="mt-1.5 shrink-0 text-accent-ink" />
             <p className="font-serif text-[17px] leading-[26px]">{m.text}</p>
           </div>
         )}
@@ -607,7 +605,6 @@ function Message({ m, all, liveIds }: { m: ChatMessage; all: ChatMessage[]; live
     if (!m.text || m.artifact) return null;
     return (
       <div className="flex gap-2">
-        <Sparkles size={14} className="mt-1.5 shrink-0 text-accent-ink" />
         <p className="font-serif text-[17px] leading-[26px]">{m.text}</p>
       </div>
     );
@@ -936,7 +933,7 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
         <div ref={floorRef} className="mx-auto w-full max-w-[816px] 2xl:max-w-[1008px] space-y-7 px-4 pb-56 pt-6 sm:px-6 sm:pt-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-[13px] text-muted">
-              <Sparkles size={13} className="text-accent-ink" /> Today, day {TODAY} of the month
+              Today, day {TODAY} of the month
             </div>
             {/* Switching teams changes the headline's length and whether there is a button: the height glides instead of
                 jumping, and the new headline fades in. */}

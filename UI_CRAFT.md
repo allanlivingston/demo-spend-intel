@@ -59,6 +59,7 @@ specific correction, the example is in brackets.
 - **Buttons use short, fixed labels** ("Fix it", "Apply the changes"), never variable text.
 - **Don't promise what can't hold.** [Nothing can guarantee "no work is disrupted".] Soften charged words. ["avoid surveillance" became "address user concerns".]
 - **Use one term per idea,** and the same term in the app, the docs and the write-up. ["Slowed" means lighter model defaults first.]
+- **No AI badges or waiting theatre.** No sparkle icons marking Claude or AI features, no pulsing or pinging dots, no animated "Thinking…". Claude's messages carry no icon, as in Claude.ai; progress shows as steps. [Sparkles on every message and pulsing new-feature dots were removed.]
 - **Don't add notes about how an answer was produced** unless they help the user act. [The "Worded by Claude" label was removed.]
 
 ## 5. Numbers and charts tell the truth

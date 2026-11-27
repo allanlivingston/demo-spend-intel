@@ -2,7 +2,7 @@
 // Preference rules in the chat and in Activity: Claude asks why after a decline, suggests a rule when the reason
 // will hold, and the admin approves it where it is. Saved rules are listed under Activity, where they can be changed.
 import { useState } from "react";
-import { BookmarkCheck, Sparkles, Trash2 } from "lucide-react";
+import { BookmarkCheck, Trash2 } from "lucide-react";
 import { canAllow, DECLINE_REASONS, LEVELS, ruleSentence, type PrefRule, type RuleLevel } from "@/engine";
 import { useStore, type ChatMessage } from "@/state/store";
 import { cx } from "./ui";
@@ -27,7 +27,6 @@ export function LevelPicker({ value, topic, onChange, disabled }: { value: RuleL
 function Note({ text, children }: { text?: string; children?: React.ReactNode }) {
   return (
     <div className="flex gap-2">
-      <Sparkles size={14} className="mt-1.5 shrink-0 text-accent-ink" />
       <div className="min-w-0 flex-1">
         {text && <p className="font-serif text-[17px] leading-[26px]">{text}</p>}
         {children}
