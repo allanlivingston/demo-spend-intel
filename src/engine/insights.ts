@@ -334,5 +334,5 @@ function fundLine(s: DemoState, over: number): string {
 export function newWorkAsk(s: DemoState): number | null {
   if (s.scenarioId !== "C") return null;
   const pf = forecast(s, "pe");
-  return pf.p50 - pf.pool - kpis(s, "pe").fixableWaste;
+  return pf.p50 - pf.pool - (kpis(s, "pe").fixableWaste + kpis(s, "pe").waitingOnOwner);
 }

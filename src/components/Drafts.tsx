@@ -22,11 +22,14 @@ export function settledLine(a: Artifact): string {
   if (a.kind === "policy_diff") {
     const mine = a.rows.filter((r) => !ownerOf(r.driverId));
     const theirs = a.rows.filter((r) => ownerOf(r.driverId));
-    const saves = usd(a.rows.reduce((t, r) => t + r.savings, 0));
+    const sum = (rows: typeof a.rows) => usd(rows.reduce((t, r) => t + r.savings, 0));
     const applied = mine.length ? `Applied ${mine.length === 1 ? "1 fix" : `${mine.length} fixes`}` : "";
     const sent = theirs.length ? `sent ${theirs.length === 1 ? "1" : theirs.length} to ${ownerOf(theirs[0].driverId)!.short}` : "";
     const done = [applied, sent].filter(Boolean).join(" and ");
-    return `${done.charAt(0).toUpperCase()}${done.slice(1)} · saves ${saves} · in effect now`;
+    // Only what the admin applied is in effect now; a fix sent to another team saves nothing until they ship it.
+    const now = mine.length ? `saves ${sum(mine)} now` : "";
+    const later = theirs.length ? `${sum(theirs)} once ${ownerOf(theirs[0].driverId)!.short} ships their fix` : "";
+    return `${done.charAt(0).toUpperCase()}${done.slice(1)} · ${[now, later].filter(Boolean).join(", ")}`;
   }
   if (a.kind === "cfo_brief") return `Budget owner approved · budget now ${usd(a.newBudget)}`;
   if (a.kind === "governed_override") return `Approved as planned spend · ${driverById(a.driverId)?.label ?? a.driverId}`;

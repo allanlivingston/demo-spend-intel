@@ -6,6 +6,7 @@ import { findRecording } from "./backends/replay";
 import { freshSummary } from "./offline";
 import { offlineGuide, offlinePlan } from "./offline";
 import type { BackendResult, BackendRun, ToolCallRecord } from "./backends/types";
+import { forecast, GROUP_IDS, GROUPS, type DemoState, type GroupSelection } from "@/engine";
 import { ground, isTooLong, jargonIn, MAX_SENTENCES, MAX_WORDS, plainWords, polish, trimToLimit } from "./grounding";
 import { pickModel } from "./models";
 import { systemPrompt, userPrompt } from "./prompts";
@@ -164,7 +165,7 @@ async function* liveRun(
     if (isTooLong(result.text)) result = { ...result, text: trimToLimit(result.text) };
   }
 
-  yield { type: "text", text: polish(plainWords(result.text.trim())) };
+  yield { type: "text", text: scoped(req, polish(plainWords(result.text.trim()))) };
   for (const a of ctx.artifacts) yield { type: "artifact", artifact: a };
   const done = {
     type: "done" as const, costUsd: result.costUsd, inputTokens: result.inputTokens, outputTokens: result.outputTokens,
@@ -187,7 +188,7 @@ async function* replay(req: AgentRequest, reason: string, started: number): Asyn
       const def = TOOLS.find((t) => t.name === c.tool);
       if (def) yield { type: "step", phase: def.phase, tool: c.tool, summary: r.output.summary };
     }
-    yield { type: "text", text: polish(planned.text) };
+    yield { type: "text", text: scoped(req, polish(planned.text)) };
     yield { type: "done", costUsd: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, latencyMs: Date.now() - started, grounded: true, steps: planned.calls.length };
     return;
   }
@@ -212,7 +213,19 @@ async function* replay(req: AgentRequest, reason: string, started: number): Asyn
   // The draft is what the admin acts on; a message preview to its owner rides along with it.
   const art = ctx.artifacts.filter((a) => (a as { kind?: string }).kind !== "handoff").at(-1) as { kind: string } | undefined;
   const fresh = art ? freshSummary(req.demo, art.kind, art) : "State has changed since this run was recorded, so only the engine's fresh results are shown above.";
-  yield { type: "text", text: polish(grounded ? rec.text : fresh) };
+  yield { type: "text", text: scoped(req, polish(grounded ? rec.text : fresh)) };
   for (const a of ctx.artifacts) yield { type: "artifact", artifact: a };
   yield { type: "done", costUsd: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, latencyMs: Date.now() - started, grounded, steps: rec.calls.length };
+}
+
+/**
+ * In the all-teams view, a figure for one team can be read as the total. When only one team is over budget, the first
+ * time an answer names it, say so: "Platform Engineering, the team over budget, is forecast at …".
+ */
+export function scoped(req: { demo: DemoState; group: GroupSelection }, text: string): string {
+  if (req.group !== "all") return text;
+  const over = GROUP_IDS.filter((g) => { const f = forecast(req.demo, g); return f.p50 > f.pool; });
+  if (over.length !== 1) return text;
+  const name = GROUPS[over[0]].name;
+  return text.replace(new RegExp(`\\b${name.replace(/[&]/g, "\\$&")} is (now )?forecast`), `${name}, the team over budget, is $1forecast`);
 }

@@ -115,7 +115,7 @@ export function RuleSuggestion({ m }: { m: ChatMessage }) {
             <div key={r.id} className={cx("mt-1.5", i > 0 && "border-t border-neutral-100 pt-2.5")}>
               <div className="text-[16px] font-medium leading-snug">{ruleSentence(shown)}</div>
               <div className="mt-0.5 text-[13px] text-muted">{r.basedOn}</div>
-              <div className="mt-2"><LevelPicker value={shown.level} topic={r.topic} onChange={(l) => setLevels(levels.map((x, j) => (j === i ? l : x)))} /></div>
+              <div className="mt-2 flex flex-wrap items-center gap-2"><span className="text-[13px] text-muted">Next month:</span><LevelPicker value={shown.level} topic={r.topic} onChange={(l) => setLevels(levels.map((x, j) => (j === i ? l : x)))} /></div>
             </div>
           );
         })}
