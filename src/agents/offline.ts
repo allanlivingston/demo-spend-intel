@@ -47,7 +47,7 @@ function aboutDriver(s: DemoState, d: Driver, fixed: boolean): string {
   if (d.kind === "waste") {
     const owner = ownerOf(d.id);
     const state = fixed ? "It is already fixed." : waitingOnOwner(s, d.id) ? `The fix is with ${owner!.short}; it counts once they ship it.` : owner ? `The fix belongs to ${owner.short}, so Fix it drafts a hand-off.` : "Fix it drafts the change for you to approve.";
-    return `${d.plain ?? d.label} adds ${usd(d.forward)} by month end, and fixing it saves ${usd(recoveryOf(d))}${d.id === "a-subagents" && recoveryOf(d) < d.forward ? ", a little less because Sonnet redoes a few tasks" : ""}. ${c.level} confidence: ${c.reason} ${state}`;
+    return `${d.plain ?? d.label} adds ${usd(d.forward)} by month end, and fixing it saves ${recoveryOf(d) === d.forward ? "all of it" : usd(recoveryOf(d))}${d.id === "a-subagents" && recoveryOf(d) < d.forward ? ", a little less because Sonnet redoes a few tasks" : ""}. ${c.level} confidence: ${c.reason} ${state}`;
   }
   return `${d.plain ?? d.label} adds ${usd(d.forward)} by month end, and it is producing work: ${d.evidence.slice(0, 2).join(", ")}. ${c.level} confidence: ${c.reason}`;
 }

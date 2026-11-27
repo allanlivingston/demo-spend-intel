@@ -171,7 +171,7 @@ export function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean
   return (
     <Frame
       id={id}
-      title="Spend forecast"
+      title={`${s.group === "all" ? "All teams" : GROUPS[s.group].name}: spend forecast`}
       stale={stale && { ...stale, kind: "forecast", open }}
       right={
         live ? (

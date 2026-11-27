@@ -13,10 +13,10 @@ import { useJustNow } from "./motion";
 const ORDER: RuleLevel[] = ["allow", "ask", "skip"];
 
 /** Three-way choice of what a rule does. "Apply without asking" is left out where the admin can't act alone. */
-export function LevelPicker({ value, topic, onChange, disabled }: { value: RuleLevel; topic: PrefRule["topic"]; onChange: (l: RuleLevel) => void; disabled?: boolean }) {
+export function LevelPicker({ value, topic, onChange, disabled, levels = ORDER }: { value: RuleLevel; topic: PrefRule["topic"]; onChange: (l: RuleLevel) => void; disabled?: boolean; levels?: RuleLevel[] }) {
   return (
     <div role="radiogroup" aria-label="What the rule does" className="inline-flex rounded-lg border border-neutral-200 bg-neutral-50 p-0.5">
-      {ORDER.filter((l) => l !== "allow" || canAllow(topic)).map((l) => (
+      {levels.filter((l) => l !== "allow" || canAllow(topic)).map((l) => (
         <button key={l} type="button" role="radio" aria-checked={value === l} disabled={disabled} onClick={() => onChange(l)}
           className={cx("rounded-md px-2.5 py-1 text-[13px]", value === l ? "bg-white font-medium text-ink shadow-sm" : "text-muted hover:text-ink", disabled && "cursor-default")}>
           {LEVELS[l].label}
@@ -115,7 +115,7 @@ export function RuleSuggestion({ m }: { m: ChatMessage }) {
             <div key={r.id} className={cx("mt-1.5", i > 0 && "border-t border-neutral-100 pt-2.5")}>
               <div className="text-[16px] font-medium leading-snug">{ruleQuestion(shown)}</div>
               <div className="mt-0.5 text-[13px] text-muted">{r.basedOn}</div>
-              <div className="mt-2 flex flex-wrap items-center gap-2"><LevelPicker value={shown.level} topic={r.topic} onChange={(l) => setLevels(levels.map((x, j) => (j === i ? l : x)))} /></div>
+              <div className="mt-2 flex flex-wrap items-center gap-2"><LevelPicker value={shown.level} topic={r.topic} levels={r.level === "skip" ? ORDER : ORDER.filter((l) => l !== "skip")} onChange={(l) => setLevels(levels.map((x, j) => (j === i ? l : x)))} /></div>
             </div>
           );
         })}

@@ -222,8 +222,8 @@ export function retryRun(messageId: string) {
 }
 
 export const AGENT_LABEL: Record<AgentId, string> = {
-  connector: "Claude, on the Jira connector",
-  cache: "Claude, on the prompt cache",
+  connector: "Claude, checking the Jira link",
+  cache: "Claude, checking what it reuses",
   routing: "Claude, on the waste",
   funding: "Claude, on funding",
   chat: "Assistant",
