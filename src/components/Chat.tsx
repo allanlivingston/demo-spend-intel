@@ -23,7 +23,7 @@ import { cx, StatusPill, Term, TERMS, usd } from "./ui";
 import { markUsed, NewDot } from "./NewDot";
 import { RuleSuggestion, WhyAsk } from "./Rules";
 import { glide, glideTo } from "./glide";
-import { useJustNow, useRoll } from "./motion";
+import { SmoothHeight, useJustNow, useRoll } from "./motion";
 
 /** Money decisions an auditor or budget owner will ask about open in a full-page review. */
 
@@ -421,6 +421,12 @@ function View({ snap, live, id }: { kind?: ViewKind; snap: Snapshot; live: boole
 }
 
 // ---------- Conversation ----------
+
+/** The page headline; a new one (another team) fades in, but not on page load. */
+function Headline({ text }: { text: string }) {
+  const justNow = useJustNow();
+  return <h1 id="headline" className={cx("font-serif text-[28px] font-light leading-[34px] sm:text-[34px] sm:leading-[41px]", justNow && "settle-in")}>{text}</h1>;
+}
 
 /** What an approved card did, in one line. */
 function settledLine(a: Artifact): string {
@@ -892,9 +898,12 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
             <div className="flex items-center gap-2 text-[13px] text-muted">
               <Sparkles size={13} className="text-accent-ink" /> Today, day {TODAY} of the month
             </div>
-            <h1 id="headline" className="font-serif text-[28px] font-light leading-[34px] sm:text-[34px] sm:leading-[41px]">{headline(briefingSnap.demo, briefingSnap.group)}</h1>
+            {/* Switching teams changes the headline's length and whether there is a button: the height glides instead of
+                jumping, and the new headline fades in. */}
+            <SmoothHeight>
+            <Headline key={briefingSnap.group} text={headline(briefingSnap.demo, briefingSnap.group)} />
             {!messages.length && chips.find((c) => c.primary)?.action.type === "run" && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <button type="button" onClick={() => onChip(chips.find((c) => c.primary)!)}
                   className="shrink-0 whitespace-nowrap rounded-lg bg-ink px-4 py-2 text-[15px] font-medium text-white hover:bg-neutral-800">
                   {chips.find((c) => c.primary)!.text}
@@ -902,6 +911,7 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
                 <span className="text-[13px] text-muted">Claude drafts the change. Nothing is applied until you approve it.</span>
               </div>
             )}
+            </SmoothHeight>
             <div data-live-view={briefingLive ? "" : undefined} data-view="forecast">
               <View key={epoch} snap={chatStart} live={briefingLive} id="forecast" />
             </div>

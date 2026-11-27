@@ -1,7 +1,7 @@
 "use client";
 // Motion that explains a change, never decoration (UI_CRAFT.md, "Motion"). Everything here runs only when the user
 // just did something: a page load or reload shows the end state at once, so nothing replays. Reduced motion: none.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /** When this module loaded: the page load. Things that appear in the first moments came with the page, not an action. */
 const BOOT = typeof performance !== "undefined" ? performance.now() : 0;
@@ -13,6 +13,32 @@ export const reducedMotion = () => typeof window !== "undefined" && !!window.mat
 export function useJustNow(): boolean {
   const [v] = useState(() => typeof window !== "undefined" && performance.now() - BOOT > SETTLE_MS && !reducedMotion());
   return v;
+}
+
+/**
+ * A box whose height glides when its content changes height (a headline that wraps differently, a button row that
+ * comes or goes), so what sits below moves smoothly instead of jumping. The first height is set without motion.
+ */
+export function SmoothHeight({ children, className }: { children: React.ReactNode; className?: string }) {
+  const inner = useRef<HTMLDivElement>(null);
+  const [h, setH] = useState<number | null>(null);
+  const [ready, setReady] = useState(false);
+  useLayoutEffect(() => {
+    const el = inner.current;
+    if (!el) return;
+    const measure = () => setH(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    // Only changes after the first paint glide.
+    const t = requestAnimationFrame(() => setReady(true));
+    return () => { ro.disconnect(); cancelAnimationFrame(t); };
+  }, []);
+  return (
+    <div className={className} style={{ height: h ?? undefined, overflow: "clip", overflowClipMargin: 6, transition: ready && !reducedMotion() ? "height 260ms ease-out" : undefined }}>
+      <div ref={inner}>{children}</div>
+    </div>
+  );
 }
 
 /** Eases out: fast at first, settling gently. */
