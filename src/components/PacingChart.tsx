@@ -446,9 +446,8 @@ function DailySummary({ data, pace, open, onToggle }: { data: StripDay[]; pace: 
       {/* A link at the end of the sentence opens the day-by-day bars it summarises. */}
       <p className="text-ink">
         {sentence}{" "}
-        <button type="button" onClick={() => { onToggle(); markUsed("daily-bars"); }} aria-expanded={open} className="inline-flex items-center gap-0.5 whitespace-nowrap text-muted underline decoration-dotted underline-offset-2 hover:text-ink">
-          {open ? "Hide by day" : "See by day"}
-          <ChevronDown size={13} className={open ? "rotate-180 transition-transform" : "transition-transform"} />
+        <button type="button" onClick={() => { onToggle(); markUsed("daily-bars"); }} aria-expanded={open} aria-label={open ? "Hide the day-by-day bars" : "Show the day-by-day bars"} className="inline-flex items-center rounded p-0.5 align-middle text-muted hover:bg-neutral-100 hover:text-ink">
+          <ChevronDown size={15} className={open ? "rotate-180 transition-transform" : "transition-transform"} />
         </button>
       </p>
       {open && (

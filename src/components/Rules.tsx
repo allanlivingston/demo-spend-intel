@@ -5,6 +5,8 @@ import { useState } from "react";
 import { BookmarkCheck, Trash2 } from "lucide-react";
 import { canAllow, DECLINE_REASONS, LEVELS, ruleSentence, type PrefRule, type RuleLevel } from "@/engine";
 import { useStore, type ChatMessage } from "@/state/store";
+import { nextAction } from "@/state/nextAction";
+import { startAgentRun } from "@/state/agentClient";
 import { cx } from "./ui";
 import { useJustNow } from "./motion";
 
@@ -57,6 +59,23 @@ export function WhyAsk({ m }: { m: ChatMessage }) {
   );
 }
 
+/**
+ * After a rule answer closes a decline, the conversation would stop there. When this is the newest message and there is
+ * still something to do, offer it in place so the next step is one click.
+ */
+function NextStep({ m }: { m: ChatMessage }) {
+  const { messages, demo, group } = useStore();
+  if (messages[messages.length - 1]?.id !== m.id) return null;
+  const cta = nextAction(demo, group).cta;
+  if (!cta) return null;
+  const label = cta.label === "Fix it" ? (cta.run.driverId ? "Fix the next one" : "Fix the rest of the waste") : cta.label;
+  return (
+    <div className="mt-3">
+      <button type="button" onClick={() => startAgentRun({ ...cta.run, say: label })} className="rounded-md bg-ink px-3 py-1.5 text-[14px] font-medium text-white hover:bg-black">{label}</button>
+    </div>
+  );
+}
+
 /** A suggested rule: shown as a draft, changed or approved in place, then folded to one line. */
 export function RuleSuggestion({ m }: { m: ChatMessage }) {
   const { saveRules, dismissRules } = useStore();
@@ -65,6 +84,7 @@ export function RuleSuggestion({ m }: { m: ChatMessage }) {
   const justNow = useJustNow();
   if (m.rulesStatus === "saved")
     return (
+      <div>
       <div className={cx("flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-[15px]", justNow && "settle-in")}>
         <BookmarkCheck size={15} className={cx("shrink-0 text-ok-ink", justNow && "check-draw")} />
         <span className="flex-1">
@@ -75,9 +95,11 @@ export function RuleSuggestion({ m }: { m: ChatMessage }) {
           </span>
         </span>
       </div>
+      <NextStep m={m} />
+      </div>
     );
   if (m.rulesStatus === "dismissed")
-    return <Note><p className="text-[14px] text-muted">Not saved. I won&apos;t suggest {rules.length > 1 ? "these rules" : "this rule"} again.</p></Note>;
+    return <Note><p className="text-[14px] text-muted">Not saved. I won&apos;t suggest {rules.length > 1 ? "these rules" : "this rule"} again.</p><NextStep m={m} /></Note>;
   return (
     <Note text={m.text}>
       <div data-rule-suggestion="" className="mt-2 rounded-xl border border-neutral-200 bg-white p-3.5">
