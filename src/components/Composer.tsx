@@ -30,7 +30,7 @@ export function ModelSelect() {
   // under More models, and a one-line note.
   return (
     <div ref={ref} className="relative shrink-0">
-      <button type="button" onClick={() => { setOpen(!open); setMore(false); }} aria-haspopup="listbox" aria-expanded={open}
+      <button type="button" title="Which Claude model answers here" onClick={() => { setOpen(!open); setMore(false); }} aria-haspopup="listbox" aria-expanded={open}
         className={cx("flex h-7 items-center gap-1.5 rounded-md px-2 text-[14px] leading-[19px] text-ink hover:bg-black/5", open && "bg-black/5")}>
         {model === "auto" ? <>Haiku + Sonnet<span className="text-muted">Auto</span></> : current.name}
       </button>

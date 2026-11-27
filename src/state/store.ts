@@ -417,7 +417,8 @@ export const useStore = create<Store>()(
           // Lead with the result: what the applied fixes save, so the change is felt where the eye is.
           const saved = mine.reduce((t, id) => { const d = driverById(id); return t + (d ? recoveryOf(d) : 0); }, 0);
           const savesLine = saved > 0 ? ` That saves ${usd(saved)} by month end.` : "";
-          const done = (theirs.length ? (mine.length ? "Applied your changes and sent the rest to its owner." : "Sent to its owner.") : "Applied.");
+          const to = theirs.length ? `sent the code fix to ${ownerOf(theirs[0])!.short} to ship` : "";
+          const done = (theirs.length ? (mine.length ? `Applied your changes and ${to}.` : `${to[0].toUpperCase()}${to.slice(1)}.`) : "Applied.");
           const ack = (tickets.length ? `${done.replace(/\.$/, "")}, and sent the ticket to ${handoffTo(tickets[0])}.` : done) + savesLine;
           const rules = rulesFromApply(get().demo, mine, get().ruleNoThanks);
           // The rule offer sits with the change it is about; the updated forecast and next step stay at the bottom.
