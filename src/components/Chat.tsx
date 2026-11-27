@@ -341,7 +341,7 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
               </div>
             )}
             <Headline key={briefingSnap.group} text={headline(briefingSnap.demo, briefingSnap.group)} />
-            {headlineNote(briefingSnap.demo) && <p className="mt-2 text-[15px] text-muted">{headlineNote(briefingSnap.demo)}</p>}
+            {headlineNote(briefingSnap.demo, briefingSnap.group) && <p className="mt-2 text-[15px] text-muted">{headlineNote(briefingSnap.demo, briefingSnap.group)}</p>}
             {!messages.length && chips.find((c) => c.primary)?.action.type === "run" && (
               <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <button type="button" onClick={() => onChip(chips.find((c) => c.primary)!)}

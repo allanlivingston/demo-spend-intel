@@ -1,6 +1,6 @@
 // Fifth cold read: the ask holds after a fix is handed off, and all-teams answers say which team a figure is for.
 import { expect, test } from "vitest";
-import { initialState, newWorkAsk } from "@/engine";
+import { headlineNote, initialState, newWorkAsk } from "@/engine";
 import { scoped } from "@/agents/runAgent";
 
 test("the ask for new work doesn't change when the cache fix is sent to its owner", () => {
@@ -28,4 +28,11 @@ test("after the fixes, the all-teams headline gives Platform Engineering's own f
   const pe = headline(s, "pe");
   expect(pe).toMatch(/Ask the budget owner for the \$[\d,]+\.$/);
   expect(headline(s, "all")).toBe(`Platform Engineering: ${pe}`);
+});
+
+test("the note under the headline only shows for Platform Engineering and all teams", () => {
+  const s = initialState("C");
+  expect(headlineNote(s, "pe")).toMatch(/you can fix here/);
+  expect(headlineNote(s, "all")).toMatch(/you can fix here/);
+  expect(headlineNote(s, "fpa")).toBeNull();
 });
