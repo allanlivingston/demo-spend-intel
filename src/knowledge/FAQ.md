@@ -45,7 +45,7 @@ They have 31 merged pull requests and 212 tests that now pass, so the work is sh
 From things the company already tracks, never from what people type: team groups from the company directory (for example, the payments team), the code project a Claude Code session runs in, and project tags when a team chooses to share them. Budget moves between pieces of work, never between named people.
 
 ## What is proposed changes?
-The settings Claude suggests changing (which model runs which tasks, how often failing calls retry), shown before and after, with the savings and the new end-of-month figure. Changes you can make are under "You apply"; changes that belong to someone else are under "Needs the owner" and are sent to them when you apply.
+The settings Claude suggests changing (which model runs which tasks, how often failing calls retry), shown before and after, with the savings and the new end-of-month figure. Changes you can make are under "You can apply now"; changes that belong to another team are under "Needs the dev tools team" and are sent to them when you apply.
 
 ## What is a rebalance?
 Only in the advanced view, which splits a team's budget by workstream. It means moving unused budget from work that is spending less than planned to work that is producing results and about to run out. The sharing setting (none, up to 20%, or all) sets how much can move.
