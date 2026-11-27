@@ -126,10 +126,10 @@ export function headline(s: DemoState, sel: GroupSelection = "all"): string {
   const over = f.p50 - f.pool;
   const name = sel === "all" ? "" : GROUPS[sel].name;
   const affected = gs.filter((g) => driversOf(s, g).length > 0);
-  const onPace = `Lands at ${usd100(f.p50)} of ${usd(f.pool)}.`;
+  const onPace = `Forecast ${usd100(f.p50)} of ${usd(f.pool)}.`;
   if (!affected.length) {
     if (sel === "all") return "All teams on pace.";
-    return over > 0 ? `${name} lands ${usd100(over)} over budget.` : `${name} is on pace. ${onPace}`;
+    return over > 0 ? `${name} is forecast ${usd100(over)} over budget.` : `${name} is on pace. ${onPace}`;
   }
   const k = kpis(s, sel);
   const t = throttle(s, "pe");

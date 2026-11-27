@@ -58,7 +58,7 @@ Why are we over budget?
 ````
 
 Must say:
-- lands at $56,900
+- is forecast at $56,900
 - names the waste
 - names the new engineers
 
@@ -68,7 +68,7 @@ Must not:
 
 Drafts: nothing
 
-Reference answer: Platform Engineering lands at $56,900 against a $40,000 budget. $10,800 is waste (the connector loop, subagents on Opus and the cache), and the rest is the 14 new engineers. Next step: fix the waste.
+Reference answer: Platform Engineering is forecast at $56,900 against a $40,000 budget. $10,800 is waste (the connector loop, subagents on Opus and the cache), and the rest is the 14 new engineers. Next step: fix the waste.
 
 ## do-nothing
 
@@ -79,7 +79,7 @@ What happens if we do nothing?
 ````
 
 Must say:
-- lands at $56,900
+- is forecast at $56,900
 - says people hit limits or runs are slowed
 
 Must not:
@@ -88,7 +88,7 @@ Must not:
 
 Drafts: nothing
 
-Reference answer: Platform Engineering lands at $56,900 against $40,000, the $10,800 of waste keeps running, and 15 engineers go over their limit. Next step: fix the waste.
+Reference answer: Platform Engineering is forecast at $56,900 against $40,000, the $10,800 of waste keeps running, and 15 engineers go over their limit. Next step: fix the waste.
 
 ## over-budget-after-fixes
 
@@ -99,7 +99,7 @@ Why are we over budget?
 ````
 
 Must say:
-- lands at $48,200
+- is forecast at $48,200
 - names the new engineers
 - names the fix waiting on its owner
 
@@ -112,7 +112,7 @@ Must not:
 
 Drafts: nothing
 
-Reference answer: Platform Engineering lands at $48,200 against $40,000: the 14 new engineers add $6,200 and the $2,100 cache fix is still with the dev tools team. Next step: draft the budget owner brief.
+Reference answer: Platform Engineering is forecast at $48,200 against $40,000: the 14 new engineers add $6,200 and the $2,100 cache fix is still with the dev tools team. Next step: draft the budget owner brief.
 
 ## summary-all-teams
 
@@ -128,7 +128,7 @@ Must say:
 
 Drafts: nothing
 
-Reference answer: Platform Engineering lands at $56,900 of $40,000 and is over budget; FP&A ($16,400 of $18,000) and Marketing ($9,800 of $12,000) are on track.
+Reference answer: Platform Engineering is forecast at $56,900 of $40,000 and is over budget; FP&A ($16,400 of $18,000) and Marketing ($9,800 of $12,000) are on track.
 
 ## how-slowed
 
@@ -167,7 +167,7 @@ Must not:
 
 Drafts: nothing
 
-Reference answer: The prompt cache fix, worth $2,100, is with the dev tools team. Once they ship it, Platform Engineering lands at $46,100 instead of $48,200.
+Reference answer: The prompt cache fix, worth $2,100, is with the dev tools team. Once they ship it, Platform Engineering is forecast at $46,100 instead of $48,200.
 
 ## finance-ask
 
@@ -182,7 +182,7 @@ Must say:
 
 Drafts: nothing
 
-Reference answer: Platform Engineering lands at $48,200 against $40,000, so it is $8,200 short. The budget owner brief would ask for $8,500.
+Reference answer: Platform Engineering is forecast at $48,200 against $40,000, so it is $8,200 short. The budget owner brief would ask for $8,500.
 
 ## over-limit
 
@@ -209,7 +209,7 @@ Why are we over budget?
 ````
 
 Must say:
-- lands at $50,400
+- is forecast at $50,400
 - names the waste
 
 Must not:
@@ -217,7 +217,7 @@ Must not:
 
 Drafts: nothing
 
-Reference answer: Platform Engineering lands at $50,400 against $40,000, all of it from $10,800 of waste: the connector loop, subagents on Opus and the cache. Next step: fix the waste.
+Reference answer: Platform Engineering is forecast at $50,400 against $40,000, all of it from $10,800 of waste: the connector loop, subagents on Opus and the cache. Next step: fix the waste.
 
 ## over-budget-scenario-a-after-fixes
 
@@ -228,7 +228,7 @@ Why are we over budget?
 ````
 
 Must say:
-- lands at $41,700
+- is forecast at $41,700
 - names the fix waiting on its owner
 
 Must not:
@@ -239,7 +239,7 @@ Must not:
 
 Drafts: nothing
 
-Reference answer: Platform Engineering lands at $41,700 against $40,000, $1,700 over. What is left is the $2,100 cache fix with the dev tools team; once they ship it, it lands at $39,600, under budget.
+Reference answer: Platform Engineering is forecast at $41,700 against $40,000, $1,700 over. What is left is the $2,100 cache fix with the dev tools team; once they ship it, it is forecast at $39,600, under budget.
 
 ## follow-up-user
 
@@ -252,17 +252,17 @@ Follow up on Vik D.
 Pinned by the UI:
 
 ````
-Vik D., Platform Engineering, joined this month: $281 so far, lands at $650, limit $250, protected: fund it (Over their monthly limit, but their work is producing results, so other spend is slowed first. A plain monthly limit would cut them off on day 18.). They see: "You're past your share, but your work is shipping, so you won't be slowed."
+Vik D., Platform Engineering, joined this month: $281 so far, is forecast at $650, limit $250, protected: fund it (Over their monthly limit, but their work is producing results, so other spend is slowed first. A plain monthly limit would cut them off on day 18.). They see: "You're past your share, but your work is shipping, so you won't be slowed."
 ````
 
 Must say:
-- lands at $650
+- is forecast at $650
 - limit $250
 - work is shipping / protected
 
 Drafts: nothing (may also draft policy_diff or cfo_brief)
 
-Reference answer: Vik D. lands at $650 against a $250 limit, but their work is shipping, so other spend is slowed first. A plain monthly limit would cut them off on day 18.
+Reference answer: Vik D. is forecast at $650 against a $250 limit, but their work is shipping, so other spend is slowed first. A plain monthly limit would cut them off on day 18.
 
 ## follow-up-pinned-figures
 
@@ -275,16 +275,16 @@ Follow up on Yara A.
 Pinned by the UI:
 
 ````
-Yara A., Platform Engineering: $399 so far, lands at $781, limit $1,200, 12% slowed or held (From day 19: 12% of runs slowed or held, 1% of them held for a few hours.). They see: "About 12% of your runs now use Sonnet, wait or pause for a few hours, to keep the team on budget."
+Yara A., Platform Engineering: $399 so far, is forecast at $781, limit $1,200, 12% slowed or held (From day 19: 12% of runs slowed or held, 1% of them held for a few hours.). They see: "About 12% of your runs now use Sonnet, wait or pause for a few hours, to keep the team on budget."
 ````
 
 Must say:
-- lands at $781
+- is forecast at $781
 - under the $1,200 limit, so not cut off
 
 Drafts: nothing
 
-Reference answer: Yara A. lands at $781, under a $1,200 limit, so a monthly limit never stops them. About 12% of their runs are slowed or held to keep the team on budget, 1% of them for a few hours.
+Reference answer: Yara A. is forecast at $781, under a $1,200 limit, so a monthly limit never stops them. About 12% of their runs are slowed or held to keep the team on budget, 1% of them for a few hours.
 
 ## follow-up-agent
 
@@ -297,7 +297,7 @@ Follow up on agent: Jira MCP connector retrying in a loop
 Pinned by the UI:
 
 ````
-Jira MCP connector retrying in a loop (Platform Engineering): lands at $4,200 this month, running.
+Jira MCP connector retrying in a loop (Platform Engineering): is forecast at $4,200 this month, running.
 ````
 
 Must say:
@@ -332,7 +332,7 @@ What if we only fix the connector?
 ````
 
 Must say:
-- lands at $52,800
+- is forecast at $52,800
 
 Drafts: nothing
 
@@ -363,18 +363,18 @@ What if the dev tools team ships the cache fix?
 ````
 
 Must say:
-- lands at $46,100
+- is forecast at $46,100
 
 Drafts: nothing
 
-Reference answer: If the dev tools team ships the cache fix, Platform Engineering lands at $46,100 instead of $48,200.
+Reference answer: If the dev tools team ships the cache fix, Platform Engineering is forecast at $46,100 instead of $48,200.
 
 ## faq-lands-at
 
 Term definition.
 
 ````
-What does lands at mean?
+What does forecast mean?
 ````
 
 Must say:
@@ -503,7 +503,7 @@ Must not:
 
 Drafts: nothing
 
-Reference answer: Platform Engineering's budget is $40,000, and it lands at $56,900.
+Reference answer: Platform Engineering's budget is $40,000, and it is forecast at $56,900.
 
 ## cache-done
 
@@ -521,7 +521,7 @@ Must not:
 
 Drafts: nothing
 
-Reference answer: Not yet: it's with the dev tools team. Until they ship it, Platform Engineering lands at $48,200; after, $46,100.
+Reference answer: Not yet: it's with the dev tools team. Until they ship it, Platform Engineering is forecast at $48,200; after, $46,100.
 
 ## action-fix-connector
 
@@ -536,7 +536,7 @@ Must say:
 
 Drafts: policy_diff
 
-Reference answer: Drafted the change: auto-retry off after 3 failures saves $4,100, so Platform Engineering lands at $52,800. Review it and apply.
+Reference answer: Drafted the change: auto-retry off after 3 failures saves $4,100, so Platform Engineering is forecast at $52,800. Review it and apply.
 
 ## action-brief
 
@@ -566,7 +566,7 @@ Must say:
 
 Drafts: nothing
 
-Reference answer: Platform Engineering is on track to go $16,900 over: it lands at $56,900 against a $40,000 budget.
+Reference answer: Platform Engineering is on track to go $16,900 over: it is forecast at $56,900 against a $40,000 budget.
 
 ## vague-what-now
 
@@ -582,7 +582,7 @@ Must say:
 
 Drafts: nothing (may also draft policy_diff or cfo_brief)
 
-Reference answer: Fix the waste first: the connector loop, subagents on Opus and the cache add $10,800, and Platform Engineering lands at $56,900 against $40,000. Then fund the new engineers, whose work is shipping.
+Reference answer: Fix the waste first: the connector loop, subagents on Opus and the cache add $10,800, and Platform Engineering is forecast at $56,900 against $40,000. Then fund the new engineers, whose work is shipping.
 
 ## no-history
 
@@ -600,7 +600,7 @@ Must not:
 
 Drafts: nothing
 
-Reference answer: Platform Engineering lands at $56,900 against $40,000 because of $10,800 of waste and the 14 new engineers. Did you mean something else?
+Reference answer: Platform Engineering is forecast at $56,900 against $40,000 because of $10,800 of waste and the 14 new engineers. Did you mean something else?
 
 ## multi-part
 
@@ -616,7 +616,7 @@ Must say:
 
 Drafts: nothing
 
-Reference answer: Platform Engineering is $16,900 over: it lands at $56,900 against $40,000. The new engineers' spend looks worth it: 31 pull requests merged and 212 tests passing, though the 30-day check is still pending.
+Reference answer: Platform Engineering is $16,900 over: it is forecast at $56,900 against $40,000. The new engineers' spend looks worth it: 31 pull requests merged and 212 tests passing, though the 30-day check is still pending.
 
 ## frustrated
 
@@ -627,14 +627,14 @@ this is useless, just give me the number
 ````
 
 Must say:
-- lands at $56,900
+- is forecast at $56,900
 
 Must not:
 - apologises at length or argues
 
 Drafts: nothing
 
-Reference answer: Platform Engineering lands at $56,900 this month, against a $40,000 budget.
+Reference answer: Platform Engineering is forecast at $56,900 this month, against a $40,000 budget.
 
 ## non-english
 
@@ -645,7 +645,7 @@ A question in another language should get the same facts. Replying in that langu
 ````
 
 Must say:
-- lands at $56,900
+- is forecast at $56,900
 
 Drafts: nothing
 
@@ -661,14 +661,14 @@ Now that the connector fix saved us $4,100, where do we land?
 
 Must say:
 - corrects it: not applied yet
-- lands at $56,900 today
+- is forecast at $56,900 today
 
 Must not:
 - accepts the premise
 
 Drafts: nothing
 
-Reference answer: The connector fix hasn't been applied yet, so Platform Engineering still lands at $56,900. Fixing it would bring that to $52,800.
+Reference answer: The connector fix hasn't been applied yet, so Platform Engineering is still forecast at $56,900. Fixing it would bring that to $52,800.
 
 ## false-premise-blame
 
@@ -704,7 +704,7 @@ Must not:
 
 Drafts: nothing
 
-Reference answer: No: Platform Engineering lands at $56,900 against a $40,000 budget, so it's over. Fixing the $10,800 of waste is the first step.
+Reference answer: No: Platform Engineering is forecast at $56,900 against a $40,000 budget, so it's over. Fixing the $10,800 of waste is the first step.
 
 ## cut-off-new-engineers
 
@@ -773,7 +773,7 @@ Must say:
 
 Drafts: nothing
 
-Reference answer: I only forecast this month: Platform Engineering lands at $56,900 against $40,000. There's no forecast for next month yet.
+Reference answer: I only forecast this month: Platform Engineering is forecast at $56,900 against $40,000. There's no forecast for next month yet.
 
 ## other-team-named
 
@@ -784,14 +784,14 @@ How is Marketing doing?
 ````
 
 Must say:
-- Marketing lands at $9,800
+- Marketing is forecast at $9,800
 
 Must not:
 - answers for Platform Engineering instead
 
 Drafts: nothing
 
-Reference answer: Marketing lands at $9,800 against a $12,000 budget, so it's on pace with nothing to do.
+Reference answer: Marketing is forecast at $9,800 against a $12,000 budget, so it's on pace with nothing to do.
 
 ## person-spend
 
@@ -809,7 +809,7 @@ Must not:
 
 Drafts: nothing
 
-Reference answer: Vik D. has spent $281 so far and lands at $650 against a $250 limit; their work is shipping, so they won't be slowed.
+Reference answer: Vik D. has spent $281 so far and is forecast at $650 against a $250 limit; their work is shipping, so they won't be slowed.
 
 ## send-email
 

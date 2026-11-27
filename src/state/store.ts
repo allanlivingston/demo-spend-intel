@@ -356,8 +356,8 @@ export const useStore = create<Store>()(
           // Say why the forecast moved: the advanced view adds planned workstream work.
           if (before !== after && get().messages.length)
             get().postView("forecast", advanced
-              ? `Advanced view adds planned workstream work, like the SOC 2 documentation sprint, so Platform Engineering now lands at ${"$" + (Math.round(after / 100) * 100).toLocaleString("en-US")}.`
-              : `Default view leaves out planned workstream work, so Platform Engineering now lands at ${"$" + (Math.round(after / 100) * 100).toLocaleString("en-US")}.`);
+              ? `Advanced view adds planned workstream work, like the SOC 2 documentation sprint, so Platform Engineering is now forecast at ${"$" + (Math.round(after / 100) * 100).toLocaleString("en-US")}.`
+              : `Default view leaves out planned workstream work, so Platform Engineering is now forecast at ${"$" + (Math.round(after / 100) * 100).toLocaleString("en-US")}.`);
         },
         setModel: (model) => set({ model }),
         addMessage: (m) => {
@@ -422,7 +422,7 @@ export const useStore = create<Store>()(
           // One question at a time: the new landing goes in this message, and the full forecast waits for the answer.
           const g = get().group;
           const f = forecast(get().demo, g);
-          const lands = `${g === "all" ? "All teams now land" : `${GROUPS[g].name} now lands`} at ${usd100(f.p50)} against a ${usd(f.pool)} budget${f.p50 > f.pool ? `, ${usd100(f.p50 - f.pool)} over` : ""}.`;
+          const lands = `${g === "all" ? "All teams are now forecast" : `${GROUPS[g].name} is now forecast`} at ${usd100(f.p50)} against a ${usd(f.pool)} budget${f.p50 > f.pool ? `, ${usd100(f.p50 - f.pool)} over` : ""}.`;
           suggestRules(rules, `${ack} ${lands} ${rules.length > 1
             ? "You could apply changes like these yourself. Want a rule for next month?"
             : "You could apply this change yourself. Want a rule for next month?"}`, { decision: "applied" });

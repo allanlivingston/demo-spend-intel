@@ -32,6 +32,6 @@
       }
     }
   ],
-  "text": "Platform Engineering lands at $59,500 now and at $55,400 once auto-retry is off after 3 failures, which still leaves it over budget. None of the 9,400 retries since day 14 completed a write, and create_issue returns 401, so stopping them loses no work. Review the proposed changes below.",
+  "text": "Platform Engineering is forecast at $59,500 now and at $55,400 once auto-retry is off after 3 failures, which still leaves it over budget. None of the 9,400 retries since day 14 completed a write, and create_issue returns 401, so stopping them loses no work. Review the proposed changes below.",
   "recordedAt": "2026-11-22T10:54:44.858Z"
 }

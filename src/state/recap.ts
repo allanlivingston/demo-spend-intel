@@ -63,7 +63,7 @@ export function stillTrue(r: Recap, subject?: string): string {
     return `${team} stays over budget until ${w.owner} ships ${w.fix}, which brings it to ${usd100(then)}${then <= r.after.budget ? ", under budget" : ""}.`;
   }
   if (w) return `${w.owner.charAt(0).toUpperCase() + w.owner.slice(1)} still has ${w.fix} to ship, which brings ${subject ? subject.toLowerCase() : r.team === "All teams" ? "spend" : r.team} to ${usd100(r.after.lands - waitSum)}.`;
-  if (over) return `${team} still lands ${usd100(r.after.lands - r.after.budget)} over budget.`;
+  if (over) return `${team} is still forecast ${usd100(r.after.lands - r.after.budget)} over budget.`;
   return "";
 }
 
@@ -94,7 +94,7 @@ export function questionOpen(messages: { why?: { answer?: string }; rulesStatus?
 export function recapText(r: Recap): string {
   const lines = [
     `${r.team}, this month (day ${r.day} of 30)`,
-    `Lands at ${usd100(r.after.lands)} against a ${usd(r.after.budget)} budget: ${r.after.status.toLowerCase()}. With nothing changed it was heading for ${usd100(r.before.lands)}.`,
+    `Forecast ${usd100(r.after.lands)} against a ${usd(r.after.budget)} budget: ${r.after.status.toLowerCase()}. With nothing changed it was heading for ${usd100(r.before.lands)}.`,
   ];
   if (stillTrue(r)) lines.push(stillTrue(r));
   if (peopleLine(r)) lines.push(peopleLine(r));

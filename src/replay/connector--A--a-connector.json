@@ -32,6 +32,6 @@
       }
     }
   ],
-  "text": "Platform Engineering lands at $46,300 after this fix, down from $50,400, still above its $40,000 budget. The Jira connector has made 9,400 retries since day 14, and create_issue returns 401, so it has completed 0 successful writes. Review the proposed changes below, and the hand-off draft ticket goes to the connector owner to fix the credentials.",
+  "text": "Platform Engineering is forecast at $46,300 after this fix, down from $50,400, still above its $40,000 budget. The Jira connector has made 9,400 retries since day 14, and create_issue returns 401, so it has completed 0 successful writes. Review the proposed changes below, and the hand-off draft ticket goes to the connector owner to fix the credentials.",
   "recordedAt": "2026-11-22T02:09:11.033Z"
 }

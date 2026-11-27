@@ -31,7 +31,7 @@ describe("recap", () => {
   test("the copied summary is plain lines, one per change", () => {
     const text = recapText(recapOf(finished(), "pe"));
     expect(text.split("\n")[0]).toBe("Platform Engineering, this month (day 18 of 30)");
-    expect(text).toMatch(/^Lands at \$[\d,]+ against a \$[\d,]+ budget: on track\./m);
+    expect(text).toMatch(/^Forecast \$[\d,]+ against a \$[\d,]+ budget: on track\./m);
     expect(text).toContain("Waste fixed: $8,700.");
     expect(text).toContain("Waiting on the dev tools team: the cache fix ($2,100).");
     expect(text).not.toMatch(/Declined|Rules saved/);
@@ -47,7 +47,7 @@ describe("recap", () => {
     expect(stillTrue(recapOf(finished(), "pe"))).toMatch(/^The dev tools team still has the cache fix to ship, which brings Platform Engineering to \$[\d,]+\.$/);
     expect(stillTrue(recapOf(finished(), "pe"), "It")).toMatch(/which brings it to \$[\d,]+\.$/);
     // Over with nothing left to do (the funding declined): says how far over.
-    expect(stillTrue(recapOf({ ...initialState("B"), declined: ["b-newhires"] }, "pe"))).toMatch(/^Platform Engineering still lands \$[\d,]+ over budget\.$/);
+    expect(stillTrue(recapOf({ ...initialState("B"), declined: ["b-newhires"] }, "pe"))).toMatch(/^Platform Engineering is still forecast \$[\d,]+ over budget\.$/);
   });
 
   test("the people line comes from the engine: nobody cut off, and the new engineers when budget was added", () => {

@@ -32,6 +32,6 @@
       }
     }
   ],
-  "text": "Platform Engineering still lands at $59,500 after my changes, because this fix belongs to the dev tools team and changes nothing until they act. Once they move the date out of the session start, it lands at $57,400. The cause comes from cache metadata alone: every session has started differently since day 12, and I read no prompt text.",
+  "text": "Platform Engineering is still forecast at $59,500 after my changes, because this fix belongs to the dev tools team and changes nothing until they act. Once they move the date out of the session start, it is forecast at $57,400. The cause comes from cache metadata alone: every session has started differently since day 12, and I read no prompt text.",
   "recordedAt": "2026-11-22T10:54:54.878Z"
 }

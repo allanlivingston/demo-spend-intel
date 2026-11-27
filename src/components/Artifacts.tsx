@@ -191,7 +191,7 @@ function RebalanceCard({ a, status }: { a: RebalanceArtifact; status?: ArtifactS
           ))}
         </div>
       )}
-      <p className="text-[13px] text-muted">{a.after.p50 > a.before.p50 ? `Lands ${usd(Math.round((a.after.p50 - a.before.p50) / 100) * 100)} higher because less of the payments refactor's work is slowed. ` : ""}Budget moves between workstreams, never between people. Everyone who receives it keeps full access to Opus.</p>
+      <p className="text-[13px] text-muted">{a.after.p50 > a.before.p50 ? `The forecast is ${usd(Math.round((a.after.p50 - a.before.p50) / 100) * 100)} higher because less of the payments refactor's work is slowed. ` : ""}Budget moves between workstreams, never between people. Everyone who receives it keeps full access to Opus.</p>
       {!a.allowed && <p className="text-[13px] text-bad">{a.reason}</p>}
       {status !== "applied" && (
         <Button onClick={() => applyRebalance(a.id)} disabled={!a.allowed} title={a.allowed ? "" : a.reason}>Move the budget</Button>

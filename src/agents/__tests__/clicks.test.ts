@@ -75,7 +75,7 @@ describe.each(SCENARIOS)("scenario %s", (sc) => {
       expect(expectGoodAnswer(demo, "pe", "Where does the fixable waste come from?")).toMatch(/retry|subagent|cache/i);
     }
     if (sc === "B") expect(expectGoodAnswer(demo, "pe", "What work is at risk, and for whom?")).toMatch(/engineers/);
-    expect(expectGoodAnswer(demo, "all", "What does lands at mean?")).toMatch(/month/);
+    expect(expectGoodAnswer(demo, "all", "What does forecast mean?")).toMatch(/month/);
   });
 
   test("Ask on every recommendation explains that recommendation", () => {

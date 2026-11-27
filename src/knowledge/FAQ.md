@@ -20,7 +20,7 @@ Results show up late (code is merged days later, and checking that it lasted tak
 ## What are the stability rules?
 Budget for a piece of work never changes by more than 20% in a month unless you say so. Budget only comes from work that is using less than half of its share. New work keeps its budget for its first month so it has time to show results, and work funded last month isn't cut without a written reason. A small amount is kept back for new work that has no results yet.
 
-## What does "lands at" mean?
+## What does "forecast" mean?
 Where the team's spend will end the month if nothing changes: spend so far plus the remaining days at today's rate, following the team's usual weekday pattern. The shaded band on the chart shows how high it could reasonably go.
 
 ## What is the high case?

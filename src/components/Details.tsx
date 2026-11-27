@@ -51,7 +51,7 @@ export function Workstreams({ onFollowUp, busy }: { onFollowUp: FollowUp; busy: 
                 <span className="text-right tabular-nums">{usd(w.target)}<span className="block text-[12px] text-muted">target</span></span>
                 <span className={cx("text-right text-[13px]", share >= 0.2 ? "text-bad" : pm.length ? "text-warn-ink" : "text-muted")} title={pm.length ? `${pm.length} people. Cheaper model first, then paused runs, then runs held for a few hours.` : undefined}>{who}</span>
                 <button type="button" disabled={busy} className={FOLLOW}
-                  onClick={() => onFollowUp(`Follow up on workstream: ${w.ws.name}`, `${w.ws.name} (${GROUPS[g].name}): lands at ${usd(w.landing)} against a ${usd(w.target)} target, ${who.toLowerCase()}, ${levelOfTier(w.tier)} confidence; ${(() => { const a = evidenceAge(demo, w.ws.id); return `${a.label}, the estimate leans ${Math.round(a.ownWeight * 100)}% on its own data${a.settles ? `, ${a.settles}` : ""}${a.protectedRamp ? ", in a protected ramp" : ""}`; })()}.`)}>
+                  onClick={() => onFollowUp(`Follow up on workstream: ${w.ws.name}`, `${w.ws.name} (${GROUPS[g].name}): is forecast at ${usd(w.landing)} against a ${usd(w.target)} target, ${who.toLowerCase()}, ${levelOfTier(w.tier)} confidence; ${(() => { const a = evidenceAge(demo, w.ws.id); return `${a.label}, the estimate leans ${Math.round(a.ownWeight * 100)}% on its own data${a.settles ? `, ${a.settles}` : ""}${a.protectedRamp ? ", in a protected ramp" : ""}`; })()}.`)}>
                   Follow up
                 </button>
               </div>
@@ -117,7 +117,7 @@ export function Users({ onFollowUp, busy }: { onFollowUp: FollowUp; busy: boolea
               <span className="text-right tabular-nums text-muted">{usd(u.limit)}</span>
               <span className={cx("truncate pl-3 text-[13px]", u.st.tone)} title={`${u.st.title ? `${u.st.title}\n\n` : ""}${u.note ? `What they see: "${u.note}"` : "No note shown to them yet."}`}>{status}</span>
               <button type="button" disabled={busy} className={FOLLOW}
-                onClick={() => onFollowUp(`Follow up on ${u.name}`, `${u.name}, ${u.team}${simple ? "" : `, ${u.workstream}`}${u.isNew ? ", joined this month" : ""}: ${usd(u.spent)} so far, lands at ${usd(u.landing)}, limit ${usd(u.limit)}, ${status.toLowerCase()}${u.st.title ? ` (${u.st.title})` : ""}.${u.note ? ` They see: "${u.note}"` : ""}`)}>
+                onClick={() => onFollowUp(`Follow up on ${u.name}`, `${u.name}, ${u.team}${simple ? "" : `, ${u.workstream}`}${u.isNew ? ", joined this month" : ""}: ${usd(u.spent)} so far, is forecast at ${usd(u.landing)}, limit ${usd(u.limit)}, ${status.toLowerCase()}${u.st.title ? ` (${u.st.title})` : ""}.${u.note ? ` They see: "${u.note}"` : ""}`)}>
                 Follow up
               </button>
             </div>
@@ -165,7 +165,7 @@ export function Agents({ onFollowUp, busy }: { onFollowUp: FollowUp; busy: boole
           <span className="text-right tabular-nums">{usd(a.landing)}</span>
           <span className={cx("pl-3 text-[13px]", st.tone)}>{st.text}</span>
           <button type="button" disabled={busy} className={FOLLOW}
-            onClick={() => onFollowUp(`Follow up on agent: ${a.label}`, `${a.label} (${a.team}): lands at ${usd(a.landing)} this month, ${st.text.toLowerCase()}.`)}>
+            onClick={() => onFollowUp(`Follow up on agent: ${a.label}`, `${a.label} (${a.team}): is forecast at ${usd(a.landing)} this month, ${st.text.toLowerCase()}.`)}>
             Follow up
           </button>
         </div>

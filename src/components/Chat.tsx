@@ -212,8 +212,8 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
     k.fixableWaste > 0 ? { label: "Fixable waste", value: usd(k.fixableWaste), tone: "text-warn-ink", learn: { lines: fixLines("open"), note: "Spend that produced no completed work by month end. Fixing it loses nothing.", q: "Where does the fixable waste come from?" } }
     : k.waitingOnOwner > 0 ? { label: `Waiting on ${rowsNow.filter((r) => r.state === "sent").map((r) => ownerOf(r.driver.id)?.name.toLowerCase()).filter(Boolean)[0] ?? "owner"}`, value: usd(k.waitingOnOwner), tone: "text-neutral-600", learn: { lines: fixLines("sent"), note: `Sent to ${rowsNow.filter((r) => r.state === "sent").map((r) => ownerOf(r.driver.id)?.short).filter(Boolean)[0] ?? "its owner"}. The forecast drops once they ship it.`, q: "What waits on the dev tools team?" } }
     : k.throttledValue > 0 ? { label: "Work at risk", value: usd(k.throttledValue), tone: "text-bad", learn: { lines: [], note: "Work producing results that would be slowed or held if nothing changes. Funding it removes the risk.", q: "What work is at risk, and for whom?" } }
-    : f.p50 > f.pool ? { label: "Over budget", value: usd(f.p50 - f.pool), tone: "text-bad", learn: { lines: [], note: `Lands at ${usd(f.p50)} against a ${usd(f.pool)} budget.`, q: "Why are we over budget?" } }
-    : { label: "Under budget", value: usd(f.pool - f.p50), tone: "text-ok-ink", learn: { lines: [], note: `Lands at ${usd(f.p50)}, under its ${usd(f.pool)} budget.`, q: "Summarize spend" } };
+    : f.p50 > f.pool ? { label: "Over budget", value: usd(f.p50 - f.pool), tone: "text-bad", learn: { lines: [], note: `Forecast ${usd(f.p50)} against a ${usd(f.pool)} budget.`, q: "Why are we over budget?" } }
+    : { label: "Under budget", value: usd(f.pool - f.p50), tone: "text-ok-ink", learn: { lines: [], note: `Forecast ${usd(f.p50)}, under its ${usd(f.pool)} budget.`, q: "Summarize spend" } };
   return (
     <Frame
       id={id}
@@ -231,7 +231,7 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
           // An earlier copy: one line with its numbers at that point; the whole line opens it.
           <button type="button" onClick={() => { setOpen(!open); markUsed("earlier-copy"); }} aria-expanded={open}
             className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md px-2 py-1 text-left text-[13px] text-muted hover:bg-neutral-100">
-            <span>{open ? "" : "Earlier copy · "}{s.group === "all" ? "All teams" : GROUPS[s.group].name} lands at <span className="font-medium tabular-nums text-ink">{usd(f.p50)}</span> of {usd(f.pool)}</span>
+            <span>{open ? "" : "Earlier copy · "}{s.group === "all" ? "All teams" : GROUPS[s.group].name} forecast <span className="font-medium tabular-nums text-ink">{usd(f.p50)}</span> of {usd(f.pool)}</span>
             <StatusPill status={f.status} funded={f.fundedVariance} />
             <NewDot f="earlier-copy" label="Open this copy to see the numbers as they were then" />
             <span className="inline-flex items-center gap-0.5 hover:text-ink">{open ? "Collapse" : "Expand"}<ChevronDown size={13} className={cx("transition-transform", open && "rotate-180")} /></span>
@@ -435,7 +435,7 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
           <div className={CARD} id={id ? "first-rec" : undefined}>
             <div className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-accent-ink">Budget<span className="ml-auto font-semibold normal-case tracking-normal tabular-nums text-bad">+{usd(Math.ceil((fc.p50 - fc.pool) / 500) * 500)}</span></div>
             <div className="mt-1.5 text-[15px] font-medium leading-snug">Ask the budget owner for more</div>
-            <div className="mt-1 line-clamp-2 text-[13px] text-muted">Fixes, budget moves and approvals are done. Still lands at {usd(fc.p50)} of {usd(fc.pool)}.</div>
+            <div className="mt-1 line-clamp-2 text-[13px] text-muted">Fixes, budget moves and approvals are done. Forecast still {usd(fc.p50)} of {usd(fc.pool)}.</div>
             {live && (
               <div className="mt-auto flex justify-end">
                 <button type="button" disabled={busy} onClick={() => startAgentRun({ ...next.cta!.run, say: next.cta!.label })}
@@ -605,7 +605,7 @@ function RecapCard({ r, earlier }: { r: Recap; earlier: boolean }) {
       <section className="overflow-hidden rounded-xl border border-black/[0.06] bg-white">
         <button type="button" onClick={() => setOpen(true)} aria-expanded={false} className="flex w-full flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2.5 text-left text-[13px] text-muted hover:bg-neutral-50">
           <ClipboardCheck size={15} className="shrink-0" />
-          <span>Earlier recap · {r.team} lands at <span className="font-medium tabular-nums text-ink">{usd100(r.after.lands)}</span> of {usd(r.after.budget)}</span>
+          <span>Earlier recap · {r.team} forecast <span className="font-medium tabular-nums text-ink">{usd100(r.after.lands)}</span> of {usd(r.after.budget)}</span>
           <StatusPill status={r.after.status} />
           <span className="ml-auto inline-flex items-center gap-0.5">Expand<ChevronDown size={13} /></span>
         </button>

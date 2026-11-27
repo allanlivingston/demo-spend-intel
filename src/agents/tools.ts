@@ -46,7 +46,7 @@ function landing(demo: DemoState, g: GroupSelection) {
 export const TOOLS: ToolDef[] = [
   {
     name: "get_forecast",
-    description: "Where the month lands (likely and high case), the budget, status and nudge level for a group; for all teams, also each team's landing (by_team). Call first.",
+    description: "The month's forecast (likely and high case), the budget, status and nudge level for a group; for all teams, also each team's landing (by_team). Call first.",
     shape: { group: GroupArg.optional() },
     phase: "Looked into it",
     run: (ctx, a) => {
@@ -72,7 +72,7 @@ export const TOOLS: ToolDef[] = [
         // All teams: each team's own landing, so a summary can say which team is over.
         ...(g === "all" ? { by_team: (["pe", "fpa", "mkt"] as const).map((t) => { const x = landing(ctx.demo, t); return { team: GROUPS[t].name, budget: x.pool, lands_at: x.p50, status: x.status }; }) } : {}),
       };
-      return { data, summary: `Lands at ${usd(f.p50)} on a ${usd(f.pool)} budget: ${f.status.toLowerCase()}` };
+      return { data, summary: `Forecast ${usd(f.p50)} on a ${usd(f.pool)} budget: ${f.status.toLowerCase()}` };
     },
   },
   {
@@ -159,7 +159,7 @@ export const TOOLS: ToolDef[] = [
       const tg = single(g);
       return {
         data: { before, after: aft, change_in_p50: aft.p50 - before.p50, ...(a.rebalance && tg ? (() => { const rp = rebalancePlan(d, tg); return { moved: rp.moved, max_target_change_pct: Math.round(MAX_TARGET_CHANGE * 100), largest_target_change: { workstream: rp.largestChange.name, pct: Math.round(rp.largestChange.share * 100) } }; })() : {}), ...(typeof a.new_budget === "number" && g !== "all" ? { budget_increase: a.new_budget - forecast(d, g).pool, current_budget: forecast(d, g).pool } : {}), work_at_risk_before: throttle(d, tg).value, work_at_risk_after: throttle(after, tg).value, applied: false },
-        summary: `With the fix: lands at ${usd(aft.p50)} instead of ${usd(before.p50)} (${aft.status.toLowerCase()})`,
+        summary: `With the fix: forecast ${usd(aft.p50)} instead of ${usd(before.p50)} (${aft.status.toLowerCase()})`,
       };
     },
   },
@@ -248,11 +248,11 @@ TOOLS.push({
     const growth = driverEffects(ctx.demo, u.groupId).filter((e) => e.driver.kind === "growth" && e.driver.workstreamId === WORKSTREAM_ID(u)).map((e) => ({ driver: e.driver.label, evidence: e.driver.evidence, confidence: confidenceOf(e.driver).level }));
     const pm = pacing(ctx.demo, u.groupId).members.find((m) => m.id === u.id);
     const pacingStatus = pm ? `${Math.round(pm.trim * 100)}% of runs slowed or held from day ${TODAY + 1} (${Math.round(pm.hardShare * 100)}% held for a few hours)` : "not slowed or held";
-    return { data: { name: u.name, team: u.team, workstream: u.workstream, new_this_month: u.isNew, spent_to_date: u.spent, lands_at: u.landing, monthly_limit: u.limit, cut_off_day_with_plain_monthly_limit: u.blockDay, with_pacing: pacingStatus, trimmed_share_pct: pm ? Math.round(pm.trim * 100) : 0, note_they_see: userNote(u, pm ?? null), over_limit_by: Math.max(0, u.landing - u.limit), workstream_growth: growth }, summary: `${u.name}: ${usd(u.spent)} so far, lands at ${usd(u.landing)}` };
+    return { data: { name: u.name, team: u.team, workstream: u.workstream, new_this_month: u.isNew, spent_to_date: u.spent, lands_at: u.landing, monthly_limit: u.limit, cut_off_day_with_plain_monthly_limit: u.blockDay, with_pacing: pacingStatus, trimmed_share_pct: pm ? Math.round(pm.trim * 100) : 0, note_they_see: userNote(u, pm ?? null), over_limit_by: Math.max(0, u.landing - u.limit), workstream_growth: growth }, summary: `${u.name}: ${usd(u.spent)} so far, forecast ${usd(u.landing)}` };
   },
 }, {
   name: "get_workstream",
-  description: "One workstream: where it lands against its target, spend to date, how many people would go over their monthly limit, confidence that its spend pays off, and the drivers (waste or growth) inside it.",
+  description: "One workstream: its forecast against its target, spend to date, how many people would go over their monthly limit, confidence that its spend pays off, and the drivers (waste or growth) inside it.",
   shape: { workstream: z.string().describe("Workstream name, for example 'Payments Refactor'") },
   phase: "Looked into it",
   run: (ctx, a) => {
@@ -261,7 +261,7 @@ TOOLS.push({
     if (!w) return { data: { error: "No such workstream" }, summary: "Workstream not found" };
     const p = workstreamPaces(ctx.demo, w.groupId).find((x) => x.ws.id === w.id)!;
     const drivers = driverEffects(ctx.demo, w.groupId).filter((e) => e.driver.workstreamId === w.id).map((e) => ({ driver: e.driver.label, kind: e.driver.kind, adds: e.forward, fixed: e.fixed, confidence: confidenceOf(e.driver).level }));
-    return { data: { name: w.name, lands_at: Math.round(p.landing), target: p.target, over_target_by: Math.max(0, Math.round(p.landing - p.target)), spent_to_date: Math.round(p.actualToDate), people_blocked: p.membersBlocked, confidence: levelOfTier(p.tier), drivers, evidence: (() => { const e = evidenceAge(ctx.demo, w.id); return { behind_estimate: e.label, own_data_weight_pct: Math.round(e.ownWeight * 100), team_average_weight_pct: 100 - Math.round(e.ownWeight * 100), new_work: e.isNew, results_still_arriving: e.settles, protected_ramp: e.protectedRamp }; })() }, summary: `${w.name}: lands at ${usd(p.landing)} of ${usd(p.target)}` };
+    return { data: { name: w.name, lands_at: Math.round(p.landing), target: p.target, over_target_by: Math.max(0, Math.round(p.landing - p.target)), spent_to_date: Math.round(p.actualToDate), people_blocked: p.membersBlocked, confidence: levelOfTier(p.tier), drivers, evidence: (() => { const e = evidenceAge(ctx.demo, w.id); return { behind_estimate: e.label, own_data_weight_pct: Math.round(e.ownWeight * 100), team_average_weight_pct: 100 - Math.round(e.ownWeight * 100), new_work: e.isNew, results_still_arriving: e.settles, protected_ramp: e.protectedRamp }; })() }, summary: `${w.name}: forecast ${usd(p.landing)} of ${usd(p.target)}` };
   },
 }, {
   name: "get_pacing_health",
@@ -286,7 +286,7 @@ TOOLS.push({
   },
 }, {
   name: "list_agents",
-  description: "Autonomous agent sources for a group (scheduled runs and service accounts, Claude Code subagents, MCP connectors, cache-dependent tools): what each lands at this month and whether it is running, fixed or waiting on its owner.",
+  description: "Autonomous agent sources for a group (scheduled runs and service accounts, Claude Code subagents, MCP connectors, cache-dependent tools): each one's forecast for this month and whether it is running, fixed or waiting on its owner.",
   shape: { group: GroupArg.optional() },
   phase: "Looked into it",
   run: (ctx, a) => {
@@ -295,7 +295,7 @@ TOOLS.push({
   },
 }, {
   name: "lookup_faq",
-  description: "Look up how the product works or what a term means (lands at, high case, confidence levels, fixable waste, work at risk, workstreams, proposed changes, rebalance, planned spend, budget owner brief, privacy, offline replay). Use for any 'what is' or 'how does' question.",
+  description: "Look up how the product works or what a term means (forecast, high case, confidence levels, fixable waste, work at risk, workstreams, proposed changes, rebalance, planned spend, budget owner brief, privacy, offline replay). Use for any 'what is' or 'how does' question.",
   shape: { question: z.string().describe("The admin's question, in their words") },
   phase: "Checked the results",
   run: (_ctx, a) => {
@@ -361,7 +361,7 @@ function overlapOf(demo: DemoState, g: GroupId) {
 const SHAPED_TOOLS: ToolDef[] = [
   {
     name: "explain_overage",
-    description: "Why a team is over or under budget, ready to answer from: where it lands against its budget, each cause still open with the figure to quote and who acts on it, and what is already fixed. For all teams, also each team. Use it for why are we over, how much are we over, and what is left to do.",
+    description: "Why a team is over or under budget, ready to answer from: its forecast against its budget, each cause still open with the figure to quote and who acts on it, and what is already fixed. For all teams, also each team. Use it for why are we over, how much are we over, and what is left to do.",
     shape: { group: GroupArg.optional() },
     phase: "Looked into it",
     run: (ctx, a) => {
@@ -392,7 +392,7 @@ const SHAPED_TOOLS: ToolDef[] = [
         ...(g === "all" ? { by_team: TEAMS.map((t) => { const ft = forecast(ctx.demo, t); return { team: GROUPS[t].name, lands_at: r(ft.p50), budget: r(ft.pool), status: ft.status }; }) } : {}),
         how_to_answer: "Lead with lands_at against budget (and over_by), unless the admin asks to block or cut off people: then lead with what that would stop (the new work's evidence). Then name every open cause by what is going wrong (its what, for example subagents inheriting Opus), keeping who it is about (for example the 14 new engineers), with its figure and who acts. Naming only the fix or who acts is not enough. Never say how many causes there are (no 'two causes') and don't rank them unless asked. Say who acts by naming the fixes (who_does_what), never by position ('the first and third'). With more than three causes, you may give the waste's figure once as open_waste_total, split by who_does_what's totals (what you apply, what is with an owner), but still name each waste cause briefly; never credit the whole total to one of them. Mention budget_owner_request only when the question asks how much to ask Finance or the budget owner for; then give short_by, the_brief_asks_for and what_it_covers as it is worded (its parts don't add up to the request: it is rounded up). It is never a breakdown of the overage. A waste figure is what its fix saves: say 'the fix saves $4,600', never '$4,600 to fix'. New work is never waste: if the question calls it waste, say it isn't, without 'main' or 'only'. The figures are part of lands_at, not on top of it. For a fix with its owner, say what lands_at_once_shipped and still_over_by_then (or under_budget_by_then) say; never imply shipping it ends the overage when it doesn't. Items in already_fixed are not causes: mention them only as fixed.",
       };
-      return { data, summary: `${data.team} lands at ${usd(data.lands_at)} of ${usd(data.budget)}; ${open.length} open ${open.length === 1 ? "cause" : "causes"}` };
+      return { data, summary: `${data.team} is forecast at ${usd(data.lands_at)} of ${usd(data.budget)}; ${open.length} open ${open.length === 1 ? "cause" : "causes"}` };
     },
   },
   {

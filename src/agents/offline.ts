@@ -68,7 +68,7 @@ export function freshSummary(s: DemoState, kind: string, art?: { kind: string; g
     const owner = theirs.length ? ownerOf(theirs[0].driverId)! : null;
     const after = forecast({ ...s, appliedFixes: [...s.appliedFixes, ...mine.map((r) => r.driverId)] }, g).p50;
     if (mine.length)
-      return `It ${mine.map((r) => doesOf(r.driverId, label(r.driverId))).join(" and ")}. With ${mine.length > 1 ? "those" : "that"} applied, ${GROUPS[g].name} lands at ${usd100(after)}.${owner ? ` The cache fix is a code change, so it goes to ${owner.short}.` : ""}`;
+      return `It ${mine.map((r) => doesOf(r.driverId, label(r.driverId))).join(" and ")}. With ${mine.length > 1 ? "those" : "that"} applied, ${GROUPS[g].name} is forecast at ${usd100(after)}.${owner ? ` The cache fix is a code change, so it goes to ${owner.short}.` : ""}`;
     if (owner) {
       const what = label(theirs[0].driverId);
       return `${what.charAt(0).toUpperCase()}${what.slice(1)}. The fix is a code change, so it goes to ${owner.short}. It saves ${usd(theirs[0].savings)} once they ship it.`;
@@ -93,7 +93,7 @@ function draftAnswer(s: DemoState, p: string, kind: string): string {
     const after = forecast({ ...s, appliedFixes: [...s.appliedFixes, ...mine.map((d) => d.id)] }, g).p50;
     if (/risk/.test(p)) return "Low. Nobody is capped or blocked, Opus stays one click away for anyone who needs it, and Sonnet's occasional retries are already counted in the savings. You can undo it from the card.";
     if (/part/.test(p)) return `Each row stands on its own: ${open.map((d) => `${lc(d.label)} saves ${usd(recoveryOf(d))}`).join(", ")}. Tell me which to leave out and I will redraft it.`;
-    return `It ${mine.map((d) => doesOf(d.id, lc(d.label))).join(" and ")}. With those applied, ${GROUPS[g].name} lands at ${usd100(after)}.${theirs.length ? ` The cache fix is a code change, so it goes to ${ownerOf(theirs[0].id)!.short}.` : ""}`;
+    return `It ${mine.map((d) => doesOf(d.id, lc(d.label))).join(" and ")}. With those applied, ${GROUPS[g].name} is forecast at ${usd100(after)}.${theirs.length ? ` The cache fix is a code change, so it goes to ${ownerOf(theirs[0].id)!.short}.` : ""}`;
   }
   if (kind === "rebalance_plan") {
     const r = draftRebalance(s, g);
@@ -107,7 +107,7 @@ function draftAnswer(s: DemoState, p: string, kind: string): string {
   }
   const b = draftCfoBrief(s, g);
   if (/risk/.test(p)) return `If the budget owner says no, ${GROUPS[g].name} stays over budget and the new engineers' runs stay slowed for the rest of the month.`;
-  return `${s.rebalanceApplied ? "After moving budget and the approvals" : s.overrides.length ? "After the approvals" : "As things stand"}, ${GROUPS[g].name} still lands at ${usd100(b.p50)}. The brief asks for ${usd(b.requested)} more, taking the budget to ${usd(b.newBudget)}. ${b.covers}`;
+  return `${s.rebalanceApplied ? "After moving budget and the approvals" : s.overrides.length ? "After the approvals" : "As things stand"}, ${GROUPS[g].name} is still forecast at ${usd100(b.p50)}. The brief asks for ${usd(b.requested)} more, taking the budget to ${usd(b.newBudget)}. ${b.covers}`;
 }
 
 export function offlinePlan(req: AgentRequest): OfflinePlan {
@@ -140,7 +140,7 @@ export function offlinePlan(req: AgentRequest): OfflinePlan {
       const calls: OfflinePlan["calls"] = [{ tool: "get_workstream", input: { workstream: w.name } }];
       const inside = driverEffects(s, w.groupId).filter((e) => e.driver.workstreamId === w.id && !e.fixed);
       const over = p.landing > p.target;
-      const lead = `${w.name} lands at ${usd(p.landing)} against its ${usd(p.target)} target${over ? "" : ", within it"}${p.membersBlocked ? `, and ${p.membersBlocked} people would go over their monthly limit` : ""}.`;
+      const lead = `${w.name} is forecast at ${usd(p.landing)} against its ${usd(p.target)} target${over ? "" : ", within it"}${p.membersBlocked ? `, and ${p.membersBlocked} people would go over their monthly limit` : ""}.`;
       const blocked = "";
       const why = inside.length ? ` Driving it: ${inside.map((e) => `${lc(e.driver.label)} (${usd(e.forward)})`).join(", ")}.` : " Nothing unusual is driving it.";
       const age = evidenceAge(s, w.id);
@@ -155,7 +155,7 @@ export function offlinePlan(req: AgentRequest): OfflinePlan {
     const hit = allDrivers(s).find((x) => x.d.label.toLowerCase() === agentQ.toLowerCase());
     if (hit) return plan(aboutDriver(s, hit.d, hit.fixed), [...calls, ...base]);
     const row = agentsOf(s, sel).find((x) => x.label.toLowerCase() === agentQ.toLowerCase());
-    if (row) return plan(`${row.label} on ${row.team} lands at ${usd(row.landing)} this month, in line with its usual pattern. It is normal automation, so there is nothing to fix.`, calls);
+    if (row) return plan(`${row.label} on ${row.team} is forecast at ${usd(row.landing)} this month, in line with its usual pattern. It is normal automation, so there is nothing to fix.`, calls);
   }
 
   const userQ = req.prompt.match(/follow up on (?!agent:)(.+?)$/i)?.[1];
@@ -164,18 +164,18 @@ export function offlinePlan(req: AgentRequest): OfflinePlan {
     if (u) {
       const calls: OfflinePlan["calls"] = [{ tool: "get_user", input: { user: u.name } }];
       const pm = pacing(s, u.groupId).members.find((m) => m.id === u.id);
-      if (!pm && u.blockDay !== null && u.isNew) return plan(`${u.name} lands at ${usd(u.landing)} against a ${usd(u.limit)} limit, but their work is producing results, so other spend is slowed first (a plain monthly limit would cut them off on day ${u.blockDay}).${nextStep(s, u.groupId)}`, calls);
-      if (!pm) return plan(`${u.name} has spent ${usd(u.spent)} so far and lands at ${usd(u.landing)}, under the ${usd(u.limit)} monthly limit. Nothing to do.`, calls);
-      if (u.blockDay === null) return plan(`${u.name} lands at ${usd(u.landing)}, under the ${usd(u.limit)} monthly limit. As part of the team's pacing, about ${Math.round(pm.trim * 100)}% of their runs from day ${TODAY + 1} go to a cheaper model, wait, or are held for a few hours.`, calls);
+      if (!pm && u.blockDay !== null && u.isNew) return plan(`${u.name} is forecast at ${usd(u.landing)} against a ${usd(u.limit)} limit, but their work is producing results, so other spend is slowed first (a plain monthly limit would cut them off on day ${u.blockDay}).${nextStep(s, u.groupId)}`, calls);
+      if (!pm) return plan(`${u.name} has spent ${usd(u.spent)} so far and is forecast at ${usd(u.landing)}, under the ${usd(u.limit)} monthly limit. Nothing to do.`, calls);
+      if (u.blockDay === null) return plan(`${u.name} is forecast at ${usd(u.landing)}, under the ${usd(u.limit)} monthly limit. As part of the team's pacing, about ${Math.round(pm.trim * 100)}% of their runs from day ${TODAY + 1} go to a cheaper model, wait, or are held for a few hours.`, calls);
       if (pm.step === "rationed") {
         const growth = driverEffects(s, u.groupId).find((e) => e.driver.kind === "growth" && WORKSTREAMS.find((w) => w.id === e.driver.workstreamId)?.name === u.workstream);
         const why = growth ? `Their work is producing results (${growth.driver.evidence[0]}), so fund it.` : "Check what their work is producing before raising the limit.";
-        return plan(`${u.name} lands at ${usd(u.landing)} against a ${usd(u.limit)} limit, so a plain monthly limit would cut them off on day ${u.blockDay}; with pacing about ${Math.round(pm.trim * 100)}% of their runs are slowed or held instead. ${why}`, calls);
+        return plan(`${u.name} is forecast at ${usd(u.landing)} against a ${usd(u.limit)} limit, so a plain monthly limit would cut them off on day ${u.blockDay}; with pacing about ${Math.round(pm.trim * 100)}% of their runs are slowed or held instead. ${why}`, calls);
       }
-      if (pm.step !== "blocked") return plan(`${u.name} lands at ${usd(u.landing)} against a ${usd(u.limit)} limit. A plain monthly limit would cut them off on day ${u.blockDay}; with pacing about ${Math.round(pm.trim * 100)}% of their runs from day ${TODAY + 1} are slowed or held instead (${PACE_STEP_LABEL[pm.step].toLowerCase()}).`, calls);
+      if (pm.step !== "blocked") return plan(`${u.name} is forecast at ${usd(u.landing)} against a ${usd(u.limit)} limit. A plain monthly limit would cut them off on day ${u.blockDay}; with pacing about ${Math.round(pm.trim * 100)}% of their runs from day ${TODAY + 1} are slowed or held instead (${PACE_STEP_LABEL[pm.step].toLowerCase()}).`, calls);
       const growth = driverEffects(s, u.groupId).find((e) => e.driver.kind === "growth" && WORKSTREAMS.find((w) => w.id === e.driver.workstreamId)?.name === u.workstream);
       const why = growth ? `Their work is producing results (${growth.driver.evidence.slice(0, 2).join(", ")}), so fund it rather than slow it.` : "Check what their work is producing before raising the limit.";
-      return plan(`${u.name} lands at ${usd(u.landing)} against a ${usd(u.limit)} limit and is stopped for the month. ${why}`, calls);
+      return plan(`${u.name} is forecast at ${usd(u.landing)} against a ${usd(u.limit)} limit and is stopped for the month. ${why}`, calls);
     }
   }
 
@@ -230,7 +230,7 @@ export function offlinePlan(req: AgentRequest): OfflinePlan {
 
   if (/waits on|repo owner|owner/.test(p) && k.waitingOnOwner > 0) {
     const shipped = forecast({ ...s, appliedFixes: [...s.appliedFixes, ...s.handedOff] }, g).p50;
-    return plan(`The prompt cache fix, worth ${usd(k.waitingOnOwner)}, is with the dev tools team, who own the shared Claude Code setup. Until they ship it, ${GROUPS[g].name} lands at ${usd100(f.p50)}; once they do, ${usd100(shipped)}.`, [...base, { tool: "simulate_policy", input: { group: g, apply_fixes: s.handedOff } }]);
+    return plan(`The prompt cache fix, worth ${usd(k.waitingOnOwner)}, is with the dev tools team, who own the shared Claude Code setup. Until they ship it, ${GROUPS[g].name} is forecast at ${usd100(f.p50)}; once they do, ${usd100(shipped)}.`, [...base, { tool: "simulate_policy", input: { group: g, apply_fixes: s.handedOff } }]);
   }
 
   if (/waste come from|where.*waste|fixable waste/.test(p)) {
@@ -245,23 +245,23 @@ export function offlinePlan(req: AgentRequest): OfflinePlan {
   }
 
   if (/over budget/.test(p)) {
-    if (f.p50 <= f.pool) return plan(`${GROUPS[g].name} is not over budget: it lands at ${usd100(f.p50)} of ${usd(f.pool)}.`);
+    if (f.p50 <= f.pool) return plan(`${GROUPS[g].name} is not over budget: it is forecast at ${usd100(f.p50)} of ${usd(f.pool)}.`);
     // Name each growth driver with its own figure: a sum would be a number no tool returned.
     const growth = driverEffects(s, g).filter((e) => e.driver.kind === "growth").map((e) => `${lc(e.driver.label)} (${usd(e.driver.forward)}${s.overrides.includes(e.driver.id) ? ", approved as planned" : ""})`);
     const parts = [k.fixableWaste > 0 && `${usd(k.fixableWaste)} of fixable waste`, k.waitingOnOwner > 0 && `${usd(k.waitingOnOwner)} waiting on the dev tools team`, growth.length > 0 && `new work that is producing results: ${growth.join(", ")}`].filter(Boolean);
-    return plan(`${GROUPS[g].name} lands at ${usd100(f.p50)} against ${usd(f.pool)}, ${usd100(f.p50 - f.pool)} over. It comes from ${parts.join(" and ")}.${nextStep(s, sel)}`);
+    return plan(`${GROUPS[g].name} is forecast at ${usd100(f.p50)} against ${usd(f.pool)}, ${usd100(f.p50 - f.pool)} over. It comes from ${parts.join(" and ")}.${nextStep(s, sel)}`);
   }
 
   if (/do nothing/.test(p)) {
     const pc = pacing(s, g);
     const waste = k.fixableWaste > 0 ? ` and ${usd(k.fixableWaste)} of waste keeps running` : "";
     const people = t.blockedMonth > 0 ? ` ${t.blockedMonth} engineers go over their limit and about ${Math.round(pc.teamShare * 100)}% of the team's runs stay slowed each day.` : "";
-    return plan(`${GROUPS[g].name} lands at ${usd100(f.p50)} against ${usd(f.pool)}${waste}.${people}${nextStep(s, sel)}`, [...base, { tool: "get_evidence", input: { group: g } }]);
+    return plan(`${GROUPS[g].name} is forecast at ${usd100(f.p50)} against ${usd(f.pool)}${waste}.${people}${nextStep(s, sel)}`, [...base, { tool: "get_evidence", input: { group: g } }]);
   }
 
   if (/summari[sz]e|how is each team|how are the teams/.test(p)) {
     const teams = sel === "all" ? GROUP_IDS : [sel];
-    const lines = teams.map((x) => { const fx = forecast(s, x); return `${GROUPS[x].name} lands at ${usd100(fx.p50)} of ${usd(fx.pool)}, ${fx.status.toLowerCase()}`; });
+    const lines = teams.map((x) => { const fx = forecast(s, x); return `${GROUPS[x].name} is forecast at ${usd100(fx.p50)} of ${usd(fx.pool)}, ${fx.status.toLowerCase()}`; });
     const kx = kpis(s, g);
     const left = sel === "all" ? headline(s, sel)
       : kx.waitingOnOwner > 0 ? `${usd(kx.waitingOnOwner)} of waste is waiting on the dev tools team; nothing else needs you.`
