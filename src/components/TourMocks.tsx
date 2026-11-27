@@ -2,7 +2,7 @@
 // Still example screens for the tour steps whose subject may not be on screen yet. Labels come from the engine.
 import type { ReactNode } from "react";
 import { ArrowRight, BookmarkCheck } from "lucide-react";
-import { LEVELS, ruleSentence, SCENARIOS } from "@/engine";
+import { SCENARIOS } from "@/engine";
 import { cx } from "./ui";
 
 export type MockKind = "rules" | "slowed" | "composer";
@@ -42,7 +42,6 @@ export function TourMock({ kind }: { kind: MockKind }) {
 
 const BODY: Record<MockKind, (m: Month) => ReactNode> = {
   rules: (m) => {
-    const rule = { topic: "model" as const, groupId: "pe" as const, level: "skip" as const };
     return (
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
@@ -52,12 +51,12 @@ const BODY: Record<MockKind, (m: Month) => ReactNode> = {
           <Pick on>The team needs it</Pick>
         </div>
         <Card>
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-accent-ink">Suggested rule</div>
-          <div className="mt-0.5 text-[13px] font-medium leading-snug">{ruleSentence(rule)}</div>
-          <div className="mt-1.5 flex items-center gap-1 text-[11px]">
-            <span className="text-muted">{LEVELS.ask.label}</span><span className="rounded bg-white px-1.5 py-0.5 font-medium shadow-sm ring-1 ring-neutral-200">{LEVELS.skip.label}</span>
-            <span className="ml-auto"><Btn dark on>Save rule</Btn></span>
+          <div className="text-[13px] font-medium leading-snug">{m.sub.label}</div>
+          <div className="mt-1 flex items-start gap-1.5 text-[12px]">
+            <span className="mt-0.5 inline-flex h-3 w-3 shrink-0 items-center justify-center rounded-sm bg-ink text-[9px] leading-none text-white">✓</span>
+            <span>Don&apos;t suggest this for Platform Engineering again</span>
           </div>
+          <div className="mt-1.5 flex justify-end text-[11px]"><Btn dark on>Done</Btn></div>
         </Card>
         <div className="flex items-center gap-1.5 text-[12px] text-muted"><BookmarkCheck size={13} className="text-ok-ink" />Saved rules are listed in Activity, where you can change them.</div>
       </div>

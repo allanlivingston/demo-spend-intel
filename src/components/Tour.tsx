@@ -37,7 +37,7 @@ const STEPS: Step[] = [
     fallback: "actions",
     mock: "rules",
     title: "It learns what you prefer",
-    body: "Decline a suggestion and say why. If the reason will still hold next month, Claude suggests a rule. A rule only starts once you save it, and you can change it in Activity.",
+    body: "Decline a suggestion and say why, right on the card. If the reason will still hold next month, it offers to keep it as a rule. A rule only starts once you save it, and you can change it in Activity.",
   },
   {
     target: "slowed",

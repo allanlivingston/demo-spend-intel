@@ -86,3 +86,25 @@ test("moving on without answering the rule posts the held forecast first, never 
   expect(msgs.find((m) => m.id === proposal.id)!.rulesStatus).toBe("proposed");
   expect(msgs.filter((m) => m.held)).toHaveLength(0);
 });
+
+test("declining in the card posts nothing to the chat; a lasting reason can save a rule; Undo removes both", () => {
+  const count = st().messages.length;
+  st().declineInPlace("a-subagents", "needed", true);
+  expect(st().messages).toHaveLength(count);
+  expect(isDeclined(st().demo, "a-subagents")).toBe(true);
+  expect(st().demo.rules?.[0]).toMatchObject({ topic: "model", groupId: "pe", level: "skip" });
+  expect(st().audit.map((e) => e.action)).toEqual(expect.arrayContaining(["Declined recommendation", "Gave a reason", "Saved rule"]));
+  st().restoreRec("a-subagents", true);
+  expect(st().messages).toHaveLength(count);
+  expect(isDeclined(st().demo, "a-subagents")).toBe(false);
+  expect(st().demo.rules ?? []).toHaveLength(0);
+});
+
+test("declining in the card without keeping the rule, or for a short-term reason, saves no rule", () => {
+  st().declineInPlace("a-subagents", "needed", false);
+  expect(st().demo.rules ?? []).toHaveLength(0);
+  st().restoreRec("a-subagents", true);
+  st().declineInPlace("a-subagents", "later", true);
+  expect(st().demo.rules ?? []).toHaveLength(0);
+  expect(isDeclined(st().demo, "a-subagents")).toBe(true);
+});

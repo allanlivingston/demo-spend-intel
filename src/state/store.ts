@@ -157,7 +157,12 @@ interface Store {
   undoPolicy: (driverIds: string[], artifactId?: string) => void;
   /** Decline a recommendation: it stays in the forecast but is no longer suggested. Logged; Restore undoes it. */
   declineRec: (driverId: string) => void;
-  restoreRec: (driverId: string) => void;
+  restoreRec: (driverId: string, quiet?: boolean) => void;
+  /**
+   * Decline from the card itself: the reason, and (for a lasting reason) whether to keep it as a rule, are chosen in the
+   * card, so nothing is posted to the chat. Logged in Activity like any decline.
+   */
+  declineInPlace: (driverId: string, reasonId: DeclineReasonId, keepRule: boolean) => void;
   /** Decline a draft: nothing changes, and it is logged. */
   declineDraft: (artifactId: string) => void;
   /** Answer "why decline it?". A lasting reason leads to a suggested rule. */
@@ -438,11 +443,30 @@ export const useStore = create<Store>()(
           update(`Declined: ${label}. It stays in the forecast and won't be suggested again this month.`);
           askWhy(driverId);
         },
-        restoreRec: (driverId) => {
+        restoreRec: (driverId, quiet) => {
           const d = get().demo;
-          set({ demo: { ...d, declined: (d.declined ?? []).filter((x) => x !== driverId) } });
+          // Undoing an in-place decline also drops the rule that decline saved, or the rule would keep it hidden.
+          const label = driverById(driverId)?.label ?? driverId;
+          const fromThis = quiet ? (d.rules ?? []).filter((r) => r.level === "skip" && r.basedOn?.includes(`"${label}"`)) : [];
+          set({ demo: { ...d, declined: (d.declined ?? []).filter((x) => x !== driverId), rules: (d.rules ?? []).filter((r) => !fromThis.includes(r)) } });
           log({ actor: "Admin", action: "Restored recommendation", detail: driverId });
-          update(`Restored: ${driverById(driverId)?.label ?? driverId}.`);
+          fromThis.forEach((r) => log({ actor: "Admin", action: "Removed rule", detail: ruleSentence(r) }));
+          if (!quiet) update(`Restored: ${label}.`);
+        },
+        declineInPlace: (driverId, reasonId, keepRule) => {
+          const d = get().demo;
+          const reason = DECLINE_REASONS.find((r) => r.id === reasonId);
+          if (isDeclined(d, driverId) || !reason) return;
+          const runs = new Set(get().messages.filter((m) => m.run?.driverId === driverId).map((m) => m.id));
+          const rule = keepRule && reason.lasting ? ruleFromDecline(driverId, reason.label) : null;
+          const demo = { ...d, declined: [...(d.declined ?? []), driverId] };
+          set({
+            demo: rule ? withRules(demo, [rule]) : demo,
+            messages: get().messages.map((m) => (m.artifactStatus === "proposed" && m.runOf && runs.has(m.runOf) ? { ...m, artifactStatus: "declined" as const } : m)),
+          });
+          log({ actor: "Admin", action: "Declined recommendation", detail: driverId });
+          log({ actor: "Admin", action: "Gave a reason", detail: `${driverId}: ${reason.label}` });
+          if (rule) log({ actor: "Admin", action: "Saved rule", detail: ruleSentence(rule) });
         },
         declineDraft: (artifactId) => {
           const m = get().messages.find((x) => x.artifact?.id === artifactId);

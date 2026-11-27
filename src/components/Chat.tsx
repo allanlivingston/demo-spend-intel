@@ -7,6 +7,7 @@ import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, Chevro
 import {
   breakdown, confidenceOf, driverById, forecast, GROUP_IDS, GROUPS, headline, kpis, ownerOf, ruleFor, usd100,
   type Artifact, type BreakdownRow, type GroupSelection,
+  DECLINE_REASONS, topicOf, type DeclineReasonId, type GroupId,
 } from "@/engine";
 import { dropEarlyRun, keepEarlyRun, runKey, startEarlyRun, startAgentRun } from "@/state/agentClient";
 import { chipsFor, isSuperseded, pendingDraft, runFor, type ChipSpec } from "@/state/chipRules";
@@ -288,7 +289,18 @@ const CARD = "flex h-[192px] w-[280px] max-w-[88%] shrink-0 snap-start flex-col 
 
 function RecCard({ r, live, draftWaiting, id }: { r: BreakdownRow; live: boolean; draftWaiting: boolean; id?: string }) {
   const busy = busyOf(useStore((s) => s.messages));
-  const { declineRec, restoreRec } = useStore();
+  const { declineInPlace, restoreRec, ruleNoThanks } = useStore();
+  const demo = useStore((s) => s.demo);
+  // Declining happens in the card: "why" asks the reason, "rule" offers to keep a lasting reason as a rule.
+  const [step, setStep] = useState<null | "why" | { reason: DeclineReasonId }>(null);
+  const [keep, setKeep] = useState(true);
+  const teamName = GROUPS[r.driver.groupId as GroupId]?.name ?? "this team";
+  const canRule = (reasonId: DeclineReasonId) => {
+    const reason = DECLINE_REASONS.find((x) => x.id === reasonId);
+    const t = topicOf(r.driver.id);
+    return !!reason?.lasting && !!t && !ruleFor(demo, r.driver.id) && !ruleNoThanks.includes(`${t}:${r.driver.groupId}`);
+  };
+  const pick = (reasonId: DeclineReasonId) => (canRule(reasonId) ? (setKeep(true), setStep({ reason: reasonId })) : (declineInPlace(r.driver.id, reasonId, false), setStep(null)));
   // Not suggested because of a saved rule (rather than declined by hand): changed under Activity, not restored here.
   const byRule = useStore((s) => r.state === "declined" && !(s.demo.declined ?? []).includes(r.driver.id) && ruleFor(s.demo, r.driver.id)?.level === "skip");
   const fix = r.side === "fix";
@@ -306,15 +318,37 @@ function RecCard({ r, live, draftWaiting, id }: { r: BreakdownRow; live: boolean
             : <span className="text-ink" title="What this work adds by month end"><span className="text-[12px] font-normal text-muted">adds </span>{usd(r.projected)}</span>}
         </span>
       </div>
-      <div className="mt-1.5 line-clamp-2 text-[15px] font-medium leading-snug">{r.driver.plain ?? r.driver.label}</div>
-      <div className="mt-1 line-clamp-2 text-[13px] text-muted">{r.driver.evidence.join(" · ")}</div>
-      <div className="mt-auto flex items-center justify-end gap-1.5 pt-2">
+      <div className={cx("mt-1.5 text-[15px] font-medium leading-snug", step ? "line-clamp-1" : "line-clamp-2")}>{r.driver.plain ?? r.driver.label}</div>
+      {step === "why" ? (
+        <div className="mt-1 flex min-h-0 flex-1 flex-col">
+          <div className="text-[13px] text-muted">Why not?</div>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {DECLINE_REASONS.map((x) => (
+              <button key={x.id} type="button" onClick={() => pick(x.id)} className="rounded-full border border-neutral-200 px-2 py-0.5 text-[12px] text-ink hover:bg-neutral-100">{x.label}</button>
+            ))}
+          </div>
+          <div className="mt-auto flex justify-end pt-1"><button type="button" onClick={() => setStep(null)} className="rounded-md px-2 py-1 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">Cancel</button></div>
+        </div>
+      ) : step ? (
+        <div className="mt-1 flex min-h-0 flex-1 flex-col">
+          <label className="flex cursor-pointer items-start gap-2 text-[13px] text-ink">
+            <input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} className="mt-0.5 accent-[#191919]" />
+            <span>Don&apos;t suggest this for {teamName} again</span>
+          </label>
+          <div className="mt-0.5 pl-5 text-[12px] text-muted">Change it any time under Activity.</div>
+          <div className="mt-auto flex justify-end gap-1.5 pt-1">
+            <button type="button" onClick={() => setStep(null)} className="rounded-md px-2 py-1 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">Cancel</button>
+            <button type="button" onClick={() => { declineInPlace(r.driver.id, step.reason, keep); setStep(null); }} className="rounded-md bg-ink px-3 py-1 text-[13px] font-medium text-white hover:bg-black">Done</button>
+          </div>
+        </div>
+      ) : <div className="mt-1 line-clamp-2 text-[13px] text-muted">{r.driver.evidence.join(" · ")}</div>}
+      {!step && <div className="mt-auto flex items-center justify-end gap-1.5 pt-2">
         {done ? (
           <>
             <span className={cx("text-[13px] font-medium", r.state === "sent" || r.state === "declined" ? "text-muted" : "text-ok-ink")}>{done}</span>
             {r.state === "declined" && live && !byRule && (
-              <button type="button" disabled={busy} onClick={() => restoreRec(r.driver.id)} className="rounded-md px-2 py-1 text-[13px] text-neutral-600 hover:bg-neutral-100 hover:text-ink disabled:opacity-40">
-                Restore
+              <button type="button" disabled={busy} onClick={() => restoreRec(r.driver.id, true)} className="rounded-md px-2 py-1 text-[13px] text-neutral-600 hover:bg-neutral-100 hover:text-ink disabled:opacity-40">
+                Undo
               </button>
             )}
           </>
@@ -322,7 +356,7 @@ function RecCard({ r, live, draftWaiting, id }: { r: BreakdownRow; live: boolean
           <span className="text-[13px] text-muted">Not worth funding</span>
         ) : live ? (
           <>
-            <button type="button" disabled={busy} onClick={() => declineRec(r.driver.id)} title="Don't suggest this again. Logged in Activity; Restore undoes it."
+            <button type="button" disabled={busy} onClick={() => setStep("why")} title="Logged in Activity; Undo brings it back."
               className="mr-auto rounded-md px-1.5 py-1.5 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink disabled:opacity-40">
               Decline
             </button>
@@ -340,7 +374,7 @@ function RecCard({ r, live, draftWaiting, id }: { r: BreakdownRow; live: boolean
             )}
           </>
         ) : null}
-      </div>
+      </div>}
     </div>
   );
 }
@@ -350,8 +384,13 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
   const messages = useStore((st) => st.messages);
   const track = useRef<HTMLDivElement>(null);
   const rank = (r: BreakdownRow) => (r.state === "open" ? 0 : 1);
-  const rows = breakdown(s.demo, s.group).rows.slice()
+  const sorted = breakdown(s.demo, s.group).rows.slice()
     .sort((a, b) => rank(a) - rank(b) || (a.side === b.side ? b.recoverable - a.recoverable : a.side === "fix" ? -1 : 1));
+  // While this copy is on screen the cards keep their places: a card declined in place stays where it was instead of
+  // jumping to the end and dragging the row with it. A new copy sorts afresh.
+  const order = useRef<string[]>([]);
+  for (const r of sorted) if (!order.current.includes(r.driver.id)) order.current.push(r.driver.id);
+  const rows = sorted.slice().sort((a, b) => order.current.indexOf(a.driver.id) - order.current.indexOf(b.driver.id));
   const draftFor = (r: BreakdownRow) => messages.some((m) => m.artifact && m.artifactStatus === "proposed" && m.artifact.kind !== "handoff"
     && messages.find((x) => x.id === m.runOf)?.run?.driverId === r.driver.id);
   // When every fix and fund is done but the team is still over, the open step is the budget owner brief.
