@@ -6,7 +6,10 @@ import { dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, pacing, TODAY,
 import { useStore, type Snapshot } from "@/state/store";
 import { PHONE, Term, TERMS, usd, usdK, useMedia } from "./ui";
 import { markUsed, NewDot, useNew } from "./NewDot";
-import { useJustNow } from "./motion";
+import { useJustNow, useRoll } from "./motion";
+
+/** The live chart's last axis top, so a team switch can glide the scale from it (the chart may remount). */
+let lastTop: number | null = null;
 
 /** Chart readouts round to $100, like the rest of the app. */
 const r100 = (v: number) => Math.round(v / 100) * 100;
@@ -95,6 +98,10 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
   ].sort((a, b) => a.day - b.day);
   const dots = [...markers.map((d) => ({ day: d.startDay, value: yAt(d.startDay) })), ...Object.keys(blockDays).map((d) => ({ day: +d, value: yAt(+d) }))];
   const yMax = Math.max(f.pool, ...f.series.map((p) => p.p90 ?? 0), ...(ghost ?? []).map((p) => p.p90 ?? 0)) * 1.05;
+  const top = Math.ceil(yMax / 5000) * 5000;
+  // Switching team changes the scale: it glides there instead of snapping (not on page load).
+  const shownTop = Math.round(useRoll(top, !snap && justNow ? lastTop : null, 360));
+  useEffect(() => { if (!snap) lastTop = top; }, [snap, top]);
 
   return (
     <div>
@@ -115,7 +122,7 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
           >
             <CartesianGrid stroke="#eef0f3" vertical={false} />
             <XAxis dataKey="day" tick={{ fontSize: 12 }} tickLine={false} axisLine={{ stroke: "#e2e8f0" }} {...dayTicks(phone)} />
-            <YAxis domain={[0, Math.ceil(yMax / 5000) * 5000]} ticks={evenTicks(Math.ceil(yMax / 5000) * 5000)} tickFormatter={usdK} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={52} />
+            <YAxis domain={[0, shownTop]} allowDataOverflow ticks={evenTicks(top).filter((t) => t <= shownTop + 1)} tickFormatter={usdK} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={52} />
             <Tooltip
               formatter={(v, name) => (Array.isArray(v) ? [`${usd(r100(Number(v[0])))} to ${usd(r100(Number(v[1])))}`, "Likely range"] : [usd(r100(Number(v))), String(name)])}
               labelFormatter={(d) => `Day ${d}${Number(d) === TODAY ? " (today)" : ""}`}

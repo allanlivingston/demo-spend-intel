@@ -33,7 +33,7 @@ specific correction, the example is in brackets.
 
 - **Motion explains a change, never decorates.** (`src/components/motion.ts`)
   - Only where something the user did changed something: the landing rolls from where it was heading, the forecast line glides from the old curve (which stays as a dashed ghost), an approved card settles with its check drawn, and the month's recap lines arrive one after another.
-  - Switching team: the headline block's height glides (360ms) and the new headline fades in, so the forecast moves smoothly instead of jumping. Don't reserve empty space to avoid movement: it looks unfinished. [A fixed-height headline left too much white space.]
+  - Switching team: the headline block's height glides (360ms) and the new headline fades in, so the forecast moves smoothly instead of jumping. The chart's scale glides to the new team's range too. Don't reserve empty space to avoid movement: it looks unfinished. [A fixed-height headline left too much white space.]
   - A new draft grows open, and an approved one folds to its one line, over 360ms with even easing (a fast start drops frames while the new forecast renders). [Apply, Fund it and the budget owner approval jerked the page.]
   - Short and once: 600ms or less, a 250ms pause before a figure moves so the eye finds it, number and line in step.
   - Never on a page load or reload, and none at all with reduced motion.
