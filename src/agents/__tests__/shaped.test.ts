@@ -38,7 +38,7 @@ describe("ANSWER_ARCH=shaped", () => {
     expect(sys).not.toContain("When you say why a team is over budget");
     // A request to block people leads with what it would stop.
     expect(sys).toContain("If asked to block, cut off or limit people, say plainly that you won't and what it would stop");
-    expect(sys).toContain('A change you draft is not approved yet: say what it does once the admin approves it, never "your approved changes".');
+    expect(sys).toContain('A change you draft is not approved yet: say what it does once the admin approves it, never "your approved changes"; before approval say "once you approve the draft".');
     // The steps line under an answer gives what a waste fix saves, like the answer and the app.
     const steps = callTool({ demo: initialState("C"), group: "pe", artifacts: [] }, "list_drivers", {}).output.summary;
     expect(steps).toContain("Prompt cache hit rate fell from 78% to 31%: fix saves $2,100");
