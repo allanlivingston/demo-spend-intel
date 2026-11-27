@@ -371,9 +371,11 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
   // Undo and an optional reason, and clears itself after a few seconds or on the next thing the user does.
   const { declineInPlace, giveDeclineReason, restoreRec } = useStore();
   const [showDeclined, setShowDeclined] = useState(false);
+  const [showDone, setShowDone] = useState(false);
   const [just, setJust] = useState<{ id: string; rule?: boolean; reason?: boolean } | null>(null);
   const declinedRows = rows.filter((r) => r.state === "declined");
-  const shownRows = [...rows.filter((r) => r.state !== "declined"), ...(showDeclined ? declinedRows : [])];
+  // "Show the N finished" opens every card, declined ones included (they come last).
+  const shownRows = [...rows.filter((r) => r.state !== "declined"), ...(showDeclined || showDone ? declinedRows : [])];
   const msgCount = messages.length;
   const seenCount = useRef(msgCount);
   useEffect(() => {
@@ -391,7 +393,6 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
   const justRow = just && rows.find((r) => r.driver.id === just.id);
   const open = rows.filter((r) => r.state === "open").length + (briefOpen ? 1 : 0);
   // Everything handled: one card says so; the finished cards (with Restore on declined ones) open on request.
-  const [showDone, setShowDone] = useState(false);
   const allDone = rows.length > 0 && open === 0 && !next.cta && !showDone && !just;
   const page = (dir: number) => track.current?.scrollBy({ left: dir * 280, behavior: "smooth" });
   const [edge, setEdge] = useState({ left: false, right: false });
