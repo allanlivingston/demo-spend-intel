@@ -609,7 +609,8 @@ function Message({ m, all, liveIds }: { m: ChatMessage; all: ChatMessage[]; live
   return (
     <div className="space-y-3">
       <AgentRunCard m={m} />
-      {artifacts.map((x) => <Draft key={x.id} x={x} all={all} />)}
+      {/* A draft folds to one line when approved: its height glides instead of snapping, so the page doesn't jerk. */}
+      {artifacts.map((x) => <SmoothHeight key={x.id}><Draft x={x} all={all} /></SmoothHeight>)}
     </div>
   );
 }

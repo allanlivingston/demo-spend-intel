@@ -34,6 +34,7 @@ specific correction, the example is in brackets.
 - **Motion explains a change, never decorates.** (`src/components/motion.ts`)
   - Only where something the user did changed something: the landing rolls from where it was heading, the forecast line glides from the old curve (which stays as a dashed ghost), an approved card settles with its check drawn, and the month's recap lines arrive one after another.
   - Switching team: the headline block's height glides (260ms) and the new headline fades in, so the forecast moves smoothly instead of jumping. Don't reserve empty space to avoid movement: it looks unfinished. [A fixed-height headline left too much white space.]
+  - An approved draft folds to its one line over 260ms instead of snapping shut. [Apply the changes jerked the page.]
   - Short and once: 600ms or less, a 250ms pause before a figure moves so the eye finds it, number and line in step.
   - Never on a page load or reload, and none at all with reduced motion.
   - No wipes, slides, bounces or pulsing buttons: they slow the demo and pull attention from the next step.
