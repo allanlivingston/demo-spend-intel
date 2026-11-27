@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import type { Recap } from "./recap";
 import { persist } from "zustand/middleware";
-import { ownerOf, headline,
+import { ownerOf, headline, usd, usd100, GROUPS,
   setAdvancedView, draftCfoBrief, draftOverride, draftPolicyDiff, draftRebalance, forecast, initialState,
   type Artifact, type DayPoint, type DemoState, type GroupId, type GroupSelection, type ScenarioId, type SharingLevel, isDeclined, driverById,
   handoffTo, type Handoff, applyRulesAtStart, DECLINE_REASONS, ruleFromDecline, rulesFromApply, ruleSentence, topicOf, withRules,
@@ -73,6 +73,8 @@ export interface ChatMessage {
   dismissed?: boolean;
   /** A live view posted into the conversation (forecast or recommended actions). */
   view?: ViewKind;
+  /** A view held back while this message's question is open: posted once it is answered or the admin moves on. */
+  held?: { view: ViewKind; text: string; snap?: Snapshot };
   /** The state when this message was posted. Older copies render from it, so they match the text around them. */
   snap?: Snapshot;
   /** After a decline: Claude asks why. The answer is kept here. */
@@ -275,6 +277,14 @@ export const useStore = create<Store>()(
         get().patchMessage(id, (x) => ({ ...x, rules: all ? x.rules!.map((r, i) => ({ ...r, wording: worded[i] })) : x.rules, rulesWording: all ? "claude" : "template" }));
       };
       /** After any approved change: say what it did and show the updated forecast, at the bottom. */
+      /** Post the view a question was holding back (see ChatMessage.held). */
+      const releaseHeld = () => {
+        const h = get().messages.find((m) => m.held);
+        if (!h?.held) return;
+        const msgSeq = get().msgSeq + 1;
+        const { view, text, snap } = h.held;
+        set({ msgSeq, messages: [...get().messages.map((m) => (m.id === h.id ? { ...m, held: undefined } : m)), { role: "assistant", view, text, snap, id: `m${msgSeq}` }] });
+      };
       const update = (what: string) => get().postView("forecast", `${what} ${headline(get().demo, get().group)}`);
       return {
         ...fresh(),
@@ -329,6 +339,9 @@ export const useStore = create<Store>()(
         },
         setModel: (model) => set({ model }),
         addMessage: (m) => {
+          // One question at a time: a held view is posted before anything that follows, so ignoring the question never
+          // loses it or blocks anything.
+          releaseHeld();
           const msgSeq = get().msgSeq + 1;
           const id = `m${msgSeq}`;
           set({ msgSeq, messages: [...get().messages, { ...m, id }], unseen: get().unseen || (!m.anchor && !get().drawerOpen) });
@@ -384,10 +397,15 @@ export const useStore = create<Store>()(
           const rules = rulesFromApply(get().demo, mine, get().ruleNoThanks);
           // The rule offer sits with the change it is about; the updated forecast and next step stay at the bottom.
           if (!rules.length) return update(ack);
-          suggestRules(rules, `${ack} ${rules.length > 1
+          // One question at a time: the new landing goes in this message, and the full forecast waits for the answer.
+          const g = get().group;
+          const f = forecast(get().demo, g);
+          const lands = `${g === "all" ? "All teams now land" : `${GROUPS[g].name} now lands`} at ${usd100(f.p50)} against a ${usd(f.pool)} budget${f.p50 > f.pool ? `, ${usd100(f.p50 - f.pool)} over` : ""}.`;
+          suggestRules(rules, `${ack} ${lands} ${rules.length > 1
             ? "You could apply changes like these yourself. Want me to make them without asking next month?"
             : "You could apply this change yourself. Want me to make it without asking next month?"}`, { decision: "applied" });
-          get().postView("forecast", headline(get().demo, get().group));
+          const ruleMsg = get().messages.at(-1)!;
+          get().patchMessage(ruleMsg.id, (x) => ({ ...x, held: { view: "forecast", text: headline(get().demo, g), snap: { demo: get().demo, group: g } } }));
         },
         sendHandoff: (driverId) => {
           const d = get().demo;
@@ -452,6 +470,7 @@ export const useStore = create<Store>()(
           set({ demo: withRules(get().demo, rules) });
           get().patchMessage(messageId, (x) => ({ ...x, rules, rulesStatus: "saved" }));
           rules.forEach((r) => log({ actor: "Admin", action: "Saved rule", detail: ruleSentence(r) }));
+          releaseHeld();
           // The confirmation shows in the rule's own card (Rules.tsx), not as a new message at the bottom: the forecast
           // between the rule and the bottom hasn't been read yet, and a new message would scroll past it.
         },
@@ -460,6 +479,7 @@ export const useStore = create<Store>()(
           if (!m?.rules || m.rulesStatus !== "proposed") return;
           get().patchMessage(messageId, (x) => ({ ...x, rulesStatus: "dismissed" }));
           set({ ruleNoThanks: [...get().ruleNoThanks, ...m.rules.map((r) => `${r.topic}:${r.groupId}`)] });
+          releaseHeld();
         },
         setRuleLevel: (ruleId, level) => {
           const r = (get().demo.rules ?? []).find((x) => x.id === ruleId);

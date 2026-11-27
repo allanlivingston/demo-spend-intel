@@ -73,6 +73,9 @@ function askedFix(i: ChipInput): BreakdownRow | undefined {
 
 export function chipsFor(i: ChipInput): ChipSpec[] {
   if (i.messages.some((m) => m.run?.status === "running")) return [];
+  // One question at a time: while Claude's question holds the forecast back, its card's buttons are the only step.
+  // Typing still works, and posts the held forecast first.
+  if (i.messages.some((m) => m.held)) return [];
   const asked = new Set(i.messages.filter((m) => m.role === "user").map((m) => m.text));
   const next = nextAction(i.demo, i.group);
   const f = forecast(i.demo, i.group);

@@ -1,3 +1,4 @@
+import { chipsFor } from "@/state/chipRules";
 // Preference rules: a decline with a lasting reason suggests a rule; saved rules are enforced by the engine and carry to next month.
 import { beforeEach, expect, test } from "vitest";
 import { isDeclined, ruleSentence } from "@/engine";
@@ -34,17 +35,20 @@ test("a short-term reason gives no rule", () => {
 
 test("applying a fix suggests doing it without asking; saved, it applies itself next month", () => {
   st().applyPolicy(["a-connector"]);
-  // The offer comes with "Applied.", above the updated forecast, which stays last.
-  const proposal = st().messages.at(-2)!;
-  expect(proposal.text).toMatch(/^Applied\. You could apply this change yourself/);
-  expect(last().view).toBe("forecast");
-  expect(last().rules).toBeUndefined();
+  // One question at a time: the offer carries the new landing and is last; the forecast waits for the answer.
+  const proposal = last();
+  expect(proposal.text).toMatch(/^Applied\. Platform Engineering now lands at \$[\d,]+ against a \$40,000 budget.* You could apply this change yourself/);
+  expect(proposal.held?.view).toBe("forecast");
+  // No chips compete with the question.
+  expect(chipsFor({ demo: st().demo, group: st().group, messages: st().messages, auditCount: st().audit.length, forecastVisible: false, draftActionsVisible: true })).toEqual([]);
   expect(proposal.rules?.map((r) => [r.topic, r.level])).toEqual([["loop", "allow"]]);
   const count = st().messages.length;
   st().saveRules(proposal.id, ["allow"]);
-  // The confirmation is in the rule's card; nothing is added below the unread forecast.
-  expect(st().messages).toHaveLength(count);
+  // The confirmation is in the rule's card; the held forecast follows it, once.
+  expect(st().messages).toHaveLength(count + 1);
   expect(st().messages.at(-2)!.rulesStatus).toBe("saved");
+  expect(st().messages.at(-2)!.held).toBeUndefined();
+  expect(last().view).toBe("forecast");
   st().setScenario("A");
   expect(st().demo.appliedFixes).toContain("a-connector");
   expect(st().demo.rules).toHaveLength(1);
@@ -59,7 +63,8 @@ test("fixes owned by another team are never suggested as automatic", () => {
 
 test("No thanks stops the same suggestion; Reset demo clears rules", () => {
   st().applyPolicy(["a-connector"]);
-  st().dismissRules(st().messages.at(-2)!.id);
+  st().dismissRules(last().id);
+  expect(last().view).toBe("forecast");
   st().undoPolicy(["a-connector"]);
   st().applyPolicy(["a-connector"]);
   expect(st().messages.filter((m) => m.rules)).toHaveLength(1);
@@ -69,4 +74,15 @@ test("No thanks stops the same suggestion; Reset demo clears rules", () => {
   st().reset();
   expect(st().demo.rules ?? []).toHaveLength(0);
   expect(st().ruleNoThanks).toEqual([]);
+});
+
+test("moving on without answering the rule posts the held forecast first, never blocks", () => {
+  st().applyPolicy(["a-connector"]);
+  const proposal = last();
+  st().say({ role: "user", text: "Why are we over budget?" });
+  const msgs = st().messages;
+  expect(msgs.at(-2)!.view).toBe("forecast");
+  expect(msgs.at(-1)!.text).toBe("Why are we over budget?");
+  expect(msgs.find((m) => m.id === proposal.id)!.rulesStatus).toBe("proposed");
+  expect(msgs.filter((m) => m.held)).toHaveLength(0);
 });

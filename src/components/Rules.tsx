@@ -58,10 +58,6 @@ export function WhyAsk({ m }: { m: ChatMessage }) {
 }
 
 /** A suggested rule: shown as a draft, changed or approved in place, then folded to one line. */
-/** The admin answered a question in place: the chat scrolls the next message to the top (Chat.tsx). */
-export const ANSWERED_EVENT = "csi:answered-in-place";
-const answered = (id: string) => window.dispatchEvent(new CustomEvent(ANSWERED_EVENT, { detail: id }));
-
 export function RuleSuggestion({ m }: { m: ChatMessage }) {
   const { saveRules, dismissRules } = useStore();
   const [levels, setLevels] = useState<RuleLevel[]>(() => (m.rules ?? []).map((r) => r.level));
@@ -101,8 +97,8 @@ export function RuleSuggestion({ m }: { m: ChatMessage }) {
           );
         })}
         <div className="mt-3 flex items-center justify-end gap-1.5">
-          <button type="button" onClick={() => { dismissRules(m.id); answered(m.id); }} className="rounded-md px-2.5 py-1.5 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">No thanks</button>
-          <button type="button" onClick={() => { saveRules(m.id, levels); answered(m.id); }} className="rounded-md bg-ink px-3 py-1.5 text-[13px] font-medium text-white hover:bg-black">
+          <button type="button" onClick={() => dismissRules(m.id)} className="rounded-md px-2.5 py-1.5 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">No thanks</button>
+          <button type="button" onClick={() => saveRules(m.id, levels)} className="rounded-md bg-ink px-3 py-1.5 text-[13px] font-medium text-white hover:bg-black">
             {rules.length > 1 ? "Save rules" : "Save rule"}
           </button>
         </div>
