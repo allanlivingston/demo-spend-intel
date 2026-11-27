@@ -69,7 +69,9 @@ function Frame({ icon, title, right, children, id, stale }: {
     if (el) glideTo(el);
     else postView(kind);
   };
+  // An earlier copy folds to one line when a newer message arrives: the height glides, so the page never jumps.
   return (
+    <SmoothHeight>
     <section id={id} className={cx("overflow-hidden rounded-xl border bg-white", stale ? "border-black/[0.06]" : "border-black/10")}>
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-neutral-100 px-4 py-2.5">
         <span className="text-muted">{icon}</span>
@@ -86,6 +88,7 @@ function Frame({ icon, title, right, children, id, stale }: {
       )}
       <div className={cx(stale && "pointer-events-none opacity-80")}>{children}</div>
     </section>
+    </SmoothHeight>
   );
 }
 
@@ -905,8 +908,25 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
     sc.addEventListener("scroll", set, { passive: true });
     return () => sc.removeEventListener("scroll", set);
   }, []);
-  // Room under the newest question so it can sit at the top while the reply is still short.
+  // Room under the newest question so it can sit at the top while the reply is still short: whatever the question and
+  // its reply don't fill of (screen - 240px).
   const lastUser = shown.map((m) => m.role).lastIndexOf("user");
+  const lastUserId = lastUser >= 0 ? shown[lastUser].id : null;
+  const roomRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const room = roomRef.current, list = floorRef.current;
+    if (!room || !list) return;
+    const fit = () => {
+      const q = lastUserId ? document.getElementById(`msg-${lastUserId}`) : null;
+      if (!q) { room.style.height = "0px"; return; }
+      const used = room.getBoundingClientRect().top - q.getBoundingClientRect().top;
+      room.style.height = `${Math.max(0, viewH - 240 - used)}px`;
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    [...list.children].forEach((c) => ro.observe(c));
+    return () => ro.disconnect();
+  }, [lastUserId, viewH, shown.length]);
 
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
@@ -934,25 +954,15 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
               <View key={epoch} snap={chatStart} live={briefingLive} id="forecast" />
             </div>
           </div>
-          {shown.slice(0, Math.max(0, lastUser)).map((m) => (
+          {/* One flat list: a message never changes parent, so posting a question doesn't rebuild the messages above it
+              (that made the browser re-anchor the scroll and jump). */}
+          {shown.map((m) => (
             <div key={m.id} id={`msg-${m.id}`} data-live-view={liveIds.has(m.id) ? "" : undefined} data-view={m.view}>
               <Message m={m} all={messages} liveIds={liveIds} />
             </div>
           ))}
-          {lastUser >= 0 && (
-            <div className="space-y-7" style={{ minHeight: Math.max(0, viewH - 240) }}>
-              {shown.slice(lastUser).map((m) => (
-                <div key={m.id} id={`msg-${m.id}`} data-live-view={liveIds.has(m.id) ? "" : undefined} data-view={m.view}>
-                  <Message m={m} all={messages} liveIds={liveIds} />
-                </div>
-              ))}
-            </div>
-          )}
-          {lastUser < 0 && shown.map((m) => (
-            <div key={m.id} id={`msg-${m.id}`} data-live-view={liveIds.has(m.id) ? "" : undefined} data-view={m.view}>
-              <Message m={m} all={messages} liveIds={liveIds} />
-            </div>
-          ))}
+          {/* Room under the newest question, so it can sit at the top while the reply is still short. */}
+          <div ref={roomRef} aria-hidden className="!mt-0" />
         </div>
       </div>
       <Composer chips={chips} onChip={onChip}
