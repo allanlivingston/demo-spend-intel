@@ -3,7 +3,7 @@ import { isAdvanced } from "@/engine";
 // Used when Offline replay is on, and as the fallback when a live chat run fails. Never drafts anything.
 import {
   agentsOf, breakdown, confidenceOf, dayInfo, draftCfoBrief, findUser, WORKSTREAMS, workstreamPaces, draftOverride, draftRebalance, driverEffects, forecast, GROUP_IDS, GROUPS,
-  headline, kpis, MAX_TARGET_CHANGE, ownerOf, rebalancePlan, recoveryOf, throttle, waitingOnOwner,
+  headline, kpis, MAX_TARGET_CHANGE, newWorkAsk, ownerOf, rebalancePlan, recoveryOf, throttle, waitingOnOwner,
   type DemoState, type Driver, type GroupId, type GroupSelection, pacing, pacingHealth, evidenceAge, PACE_STEP_LABEL, TODAY } from "@/engine";
 import { bestSection, firstSentences, sections } from "@/knowledge/knowledge";
 import type { AgentRequest } from "./types";
@@ -276,9 +276,12 @@ export function offlinePlan(req: AgentRequest): OfflinePlan {
   if (/over budget|how much.*\bover\b|\bover by\b/.test(p)) {
     if (f.p50 <= f.pool) return plan(`${GROUPS[g].name} is not over budget: it is forecast at ${usd100(f.p50)} of ${usd(f.pool)}.`);
     // Name each growth driver with its own figure: a sum would be a number no tool returned.
-    const growth = driverEffects(s, g).filter((e) => e.driver.kind === "growth").map((e) => `${lc(e.driver.plain ?? e.driver.label)} (${usd(e.driver.forward)}${s.overrides.includes(e.driver.id) ? ", approved as planned" : ""})`);
+    // The new engineers' figure is given as the headline's ask when that is smaller (spare budget covers a little).
+    const ask = g === "pe" ? newWorkAsk(s) : null;
+    let askShown = false;
+    const growth = driverEffects(s, g).filter((e) => e.driver.kind === "growth").map((e) => `${lc(e.driver.plain ?? e.driver.label)} (${e.driver.id === "b-newhires" && ask != null && ask >= 100 && ask <= e.driver.forward && (askShown = true) ? `${usd100(ask)} to ask for once the waste is fixed` : usd(e.driver.forward)}${s.overrides.includes(e.driver.id) ? ", approved as planned" : ""})`);
     const parts = [k.fixableWaste > 0 && `${usd(k.fixableWaste)} of fixable waste`, k.waitingOnOwner > 0 && `${usd(k.waitingOnOwner)} waiting on the dev tools team`, growth.length > 0 && `new work that is producing results: ${growth.join(", ")}`].filter(Boolean);
-    return plan(`${GROUPS[g].name} is forecast at ${usd100(f.p50)} against ${usd(f.pool)}, ${usd100(f.p50 - f.pool)} over. It comes from ${parts.join(" and ")}.${nextStep(s, sel)}`);
+    return plan(`${GROUPS[g].name} is forecast at ${usd100(f.p50)} against ${usd(f.pool)}, ${usd100(f.p50 - f.pool)} over. It comes from ${parts.join(" and ")}.${nextStep(s, sel)}`, askShown ? [...base, { tool: "explain_overage", input: { group: g } }] : base);
   }
 
   if (/do nothing/.test(p)) {

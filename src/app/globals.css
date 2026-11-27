@@ -63,3 +63,6 @@ body {
 .ev-label { opacity: 0; transition: opacity 200ms; }
 .ev-label.ev-on { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .ev-label { transition: none; } }
+
+/* recharts measures label widths in an off-screen span; keep it out of the page text and screen readers. */
+#recharts_measurement_span { visibility: hidden; }
