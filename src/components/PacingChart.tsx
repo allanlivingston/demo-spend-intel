@@ -362,11 +362,12 @@ function EventLabels({ shown, labels, dots, lines, fixed }: {
     ...Array.from({ length: 8 }, (_, k) => [{ above: true, k, end: false, cost: k }, { above: true, k, end: true, cost: k + 0.5 }]).flat(),
     ...Array.from({ length: 5 }, (_, k) => [{ above: false, k, end: false, cost: k + 2.2 }, { above: false, k, end: true, cost: k + 2.7 }]).flat(),
   ].sort((a, b) => a.cost - b.cost);
-  for (const l of labels) {
+  // Only labels on screen make room for each other: a hidden label never pushes a shown one away from its dot.
+  for (const l of [...labels].sort((a, b) => Number(shown.has(b.key)) - Number(shown.has(a.key)))) {
     const x = X(l.day), y = Y(l.value);
     if (x === undefined || y === undefined) continue;
     const w = labelWidth(l.text) + 4;
-    const taken = [...obstacles, ...placed.map((p) => p.box)];
+    const taken = [...obstacles, ...placed.filter((p) => shown.has(p.l.key)).map((p) => p.box)];
     let chosen: { box: Box; above: boolean } | null = null;
     for (const s of spots) {
       const t = s.above ? y - 20 - s.k * 16 - H : y + 12 + s.k * 16;
@@ -383,7 +384,9 @@ function EventLabels({ shown, labels, dots, lines, fixed }: {
     }
     placed.push({ l, x, y, ...chosen });
   }
+  // Drawn above the chart's own lines (today, the hover line), so nothing cuts through a label.
   return (
+    <ZIndexLayer zIndex={1900}>
     <g pointerEvents="none">
       {/* Every leader line first, then every label on top, so a label's white halo covers a line passing behind it. */}
       {placed.map(({ l, box, x, y, above }) => (
@@ -393,6 +396,7 @@ function EventLabels({ shown, labels, dots, lines, fixed }: {
         <text key={`${l.key}-text`} className={cx("ev-label", shown.has(l.key) && "ev-on")} x={box.l + 2} y={box.t + 10} fontSize={11} fill={l.color} paintOrder="stroke" stroke="#fff" strokeWidth={4}>{l.text}</text>
       ))}
     </g>
+    </ZIndexLayer>
   );
 }
 
@@ -439,14 +443,14 @@ function DailySummary({ data, pace, open, onToggle }: { data: StripDay[]; pace: 
   const sentence = `${pct ? `If nothing changes, about ${pct}% of runs will be` : "If nothing changes, under 1% of runs will be"} slowed from today${when}${pct && top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}.`;
   return (
     <div id="slowed" className={`border-t border-neutral-100 px-4 py-2.5 text-[13px]${open ? " pb-1" : ""}`}>
-      {/* The sentence is the toggle: it opens the day-by-day bars it summarises. */}
-      <button type="button" onClick={() => { onToggle(); markUsed("daily-bars"); }} aria-expanded={open} className="group/daily flex w-full items-center gap-2 text-left">
-        <span className="text-ink">{sentence}</span>
-        <span className="ml-auto inline-flex shrink-0 items-center gap-0.5 text-muted group-hover/daily:text-ink">
-          By day
-          <ChevronDown size={14} className={open ? "rotate-180 transition-transform" : "transition-transform"} />
-        </span>
-      </button>
+      {/* A link at the end of the sentence opens the day-by-day bars it summarises. */}
+      <p className="text-ink">
+        {sentence}{" "}
+        <button type="button" onClick={() => { onToggle(); markUsed("daily-bars"); }} aria-expanded={open} className="inline-flex items-center gap-0.5 whitespace-nowrap text-muted underline decoration-dotted underline-offset-2 hover:text-ink">
+          {open ? "Hide by day" : "See by day"}
+          <ChevronDown size={13} className={open ? "rotate-180 transition-transform" : "transition-transform"} />
+        </button>
+      </p>
       {open && (
         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-muted">
           <span className="font-medium text-ink">This month</span>
