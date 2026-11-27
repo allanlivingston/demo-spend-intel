@@ -385,11 +385,14 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
     return () => clearTimeout(t);
   }, [just]);
   const onDecline = (driverId: string) => { declineInPlace(driverId); setJust({ id: driverId }); };
+  // While the line is up the decline can still be undone, so the month isn't closed yet (the recap waits).
+  const setJustDeclined = useStore((st) => st.setJustDeclined);
+  useEffect(() => { if (live) setJustDeclined(just?.id ?? null); }, [just, live, setJustDeclined]);
   const justRow = just && rows.find((r) => r.driver.id === just.id);
   const open = rows.filter((r) => r.state === "open").length + (briefOpen ? 1 : 0);
   // Everything handled: one card says so; the finished cards (with Restore on declined ones) open on request.
   const [showDone, setShowDone] = useState(false);
-  const allDone = rows.length > 0 && open === 0 && !next.cta && !showDone;
+  const allDone = rows.length > 0 && open === 0 && !next.cta && !showDone && !just;
   const page = (dir: number) => track.current?.scrollBy({ left: dir * 280, behavior: "smooth" });
   const [edge, setEdge] = useState({ left: false, right: false });
   useEffect(() => {
@@ -894,7 +897,8 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
   // When the last open step for the team on screen closes, say what the month came to (see recap.ts).
   const stepNow = nextAction(demo, group);
   const doneKey = `${epoch}|${currentChatId}|${demo.scenarioId}|${group}`;
-  const hasStep = !!stepNow.cta || !!pendingDraft(messages) || questionOpen(messages);
+  const justDeclined = useStore((s) => s.justDeclined);
+  const hasStep = !!stepNow.cta || !!pendingDraft(messages) || questionOpen(messages) || !!justDeclined;
   const prevDone = useRef<{ key: string; hasStep: boolean; verdict: typeof stepNow.verdict } | null>(null);
   useEffect(() => {
     const now = { key: doneKey, hasStep, verdict: stepNow.verdict };

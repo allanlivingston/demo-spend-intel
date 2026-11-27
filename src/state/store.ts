@@ -165,6 +165,9 @@ interface Store {
    * for the team; returns true when it did.
    */
   giveDeclineReason: (driverId: string, reasonId: DeclineReasonId) => boolean;
+  /** A card just declined whose Undo line is still up: the month isn't closed (no recap) until it clears. Not saved. */
+  justDeclined: string | null;
+  setJustDeclined: (driverId: string | null) => void;
   /** Reasons given for this month's declines (driver id → reason id), so the recap only asks about the rest. */
   declineReasons: Record<string, string>;
   /** From the recap: keep skipping these declines next month (saves a rule each), or not. */
@@ -323,6 +326,8 @@ export const useStore = create<Store>()(
         review: null,
         ruleNoThanks: [],
         declineReasons: {},
+        justDeclined: null,
+        setJustDeclined: (justDeclined) => set({ justDeclined }),
 
         setDailyOpen: (dailyOpen) => set({ dailyOpen }),
         setChartHidden: (chartHidden) => set({ chartHidden }),
@@ -617,6 +622,7 @@ export const useStore = create<Store>()(
       partialize: (s) => ({
         ...s,
         review: null,
+        justDeclined: null,
         // Which backend the last run used is only true for this visit: a saved one would show Offline after a key is added.
         lastBackend: null,
         messages: interrupted(s.messages),
