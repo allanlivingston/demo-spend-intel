@@ -52,3 +52,4 @@ evals/**/report.html
 evals/**/trajectory/
 evals/**/state.json
 evals/**/errors.jsonl
+evals/**/results.jsonl

@@ -86,7 +86,7 @@ On live runs, an AI judge (Claude Sonnet 5.5, not the Haiku model that answers m
 
 ## Results so far
 
-Runs on all cases; live runs go through the Claude Code login. Folders in `runs/` are kept only for the runs behind the numbers in the README; the rows for the others are in git history (up to commit `dadea69`).
+Runs on all cases; live runs go through the Claude Code login. Raw run output stays local (`results.jsonl`, traces and reports are gitignored); `_state.json` keeps each variant's scores in git. Older rows are in git history.
 
 | Run | Setup | Answers | Passed every check | Folder |
 |---|---|---|---|---|
