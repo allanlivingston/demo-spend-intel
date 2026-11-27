@@ -15,3 +15,9 @@ test("in the all-teams view, the one team over budget is named as such", () => {
   expect(scoped({ demo, group: "all" }, "Platform Engineering is now forecast at $48,200.")).toBe("Platform Engineering, the team over budget, is now forecast at $48,200.");
   expect(scoped({ demo, group: "pe" }, "Platform Engineering is forecast at $48,200.")).toBe("Platform Engineering is forecast at $48,200.");
 });
+
+test("a draft that only hands a fix to its owner folds to a line that says what it saves once they ship", async () => {
+  const { settledLine } = await import("@/components/Drafts");
+  const line = settledLine({ kind: "policy_diff", rows: [{ driverId: "a-cache", savings: 2100 }] } as never);
+  expect(line).toBe("Sent 1 to the dev tools team · saves $2,100 once they ship it");
+});

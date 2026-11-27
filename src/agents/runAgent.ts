@@ -164,14 +164,18 @@ async function* liveRun(
     if (!g.ok) return { ok: false, reason: `Grounding check failed (${g.unmatched.join(", ")}), showing recorded replay` };
     if (isTooLong(result.text)) result = { ...result, text: trimToLimit(result.text) };
   }
+  // Name the scope in the all-teams view, then keep the answer within the length limit with the added words.
+  result = { ...result, text: scoped(req, result.text) };
+  if (req.agent !== "guide" && isTooLong(result.text)) result = { ...result, text: trimToLimit(result.text) };
 
-  yield { type: "text", text: scoped(req, polish(plainWords(result.text.trim()))) };
+  const shown = polish(plainWords(result.text.trim()));
+  yield { type: "text", text: shown };
   for (const a of ctx.artifacts) yield { type: "artifact", artifact: a };
   const done = {
     type: "done" as const, costUsd: result.costUsd, inputTokens: result.inputTokens, outputTokens: result.outputTokens,
     cacheReadTokens: result.cacheReadTokens, latencyMs: Date.now() - started, grounded: true, steps: calls.length,
   };
-  onDone?.({ calls, text: result.text, shown: polish(plainWords(result.text.trim())), model, backend, servedModel: result.servedModel, retried }, done);
+  onDone?.({ calls, text: result.text, shown, model, backend, servedModel: result.servedModel, retried }, done);
   yield done;
   return { ok: true };
 }

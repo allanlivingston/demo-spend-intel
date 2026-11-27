@@ -28,7 +28,7 @@ export function settledLine(a: Artifact): string {
     const done = [applied, sent].filter(Boolean).join(" and ");
     // Only what the admin applied is in effect now; a fix sent to another team saves nothing until they ship it.
     const now = mine.length ? `saves ${sum(mine)} now` : "";
-    const later = theirs.length ? `${sum(theirs)} once ${ownerOf(theirs[0].driverId)!.short} ships their fix` : "";
+    const later = theirs.length ? `${mine.length ? "" : "saves "}${sum(theirs)} once ${mine.length ? `${ownerOf(theirs[0].driverId)!.short} ships their fix` : "they ship it"}` : "";
     return `${done.charAt(0).toUpperCase()}${done.slice(1)} · ${[now, later].filter(Boolean).join(", ")}`;
   }
   if (a.kind === "cfo_brief") return `Budget owner approved · budget now ${usd(a.newBudget)}`;
