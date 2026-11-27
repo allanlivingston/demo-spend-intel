@@ -4,7 +4,7 @@
 // newest copy of each is live, older copies render from the state they were posted with, so they match their text.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
-import { headline, headlineNote } from "@/engine";
+import { forecast, headline, headlineNote, usd100 } from "@/engine";
 import { dropEarlyRun, keepEarlyRun, runKey, startEarlyRun, startAgentRun } from "@/state/agentClient";
 import { chipsFor, stepOpen, type ChipSpec } from "@/state/chipRules";
 import { nextAction } from "@/state/nextAction";
@@ -328,7 +328,18 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
                 jumping, and the new headline fades in. */}
             <SmoothHeight>
             {/* Once the chat starts, this is how things stood then; the newest forecast below is the live one. */}
-            {!briefingLive && <div className="mb-1 text-[13px] text-muted">When this chat started</div>}
+            {!briefingLive && (
+              <div className="mb-1 flex flex-wrap items-baseline gap-x-2 text-[13px] text-muted">
+                When this chat started
+                {/* The figures above are frozen; say what they are now and go to the live copy. */}
+                {forecast(demo, group).p50 !== forecast(briefingSnap.demo, group).p50 && (
+                  <button type="button" onClick={() => { const el = document.querySelector<HTMLElement>('[data-live-view][data-view="forecast"]'); if (el) glideTo(el); else postView("forecast"); }}
+                    className="font-medium text-accent-ink hover:underline">
+                    Now {usd100(forecast(demo, group).p50)}. See current
+                  </button>
+                )}
+              </div>
+            )}
             <Headline key={briefingSnap.group} text={headline(briefingSnap.demo, briefingSnap.group)} />
             {headlineNote(briefingSnap.demo) && <p className="mt-2 text-[15px] text-muted">{headlineNote(briefingSnap.demo)}</p>}
             {!messages.length && chips.find((c) => c.primary)?.action.type === "run" && (
