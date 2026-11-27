@@ -110,6 +110,16 @@ function draftAnswer(s: DemoState, p: string, kind: string): string {
   return `${s.rebalanceApplied ? "After moving budget and the approvals" : s.overrides.length ? "After the approvals" : "As things stand"}, ${GROUPS[g].name} is still forecast at ${usd100(b.p50)}. The brief asks for ${usd(b.requested)} more, taking the budget to ${usd(b.newBudget)}. ${b.covers}`;
 }
 
+/** Which waste fix a typed question names, by everyday words for it. */
+const FIX_WORDS: [string, RegExp][] = [
+  ["a-connector", /connector|jira|retr(y|ies)/],
+  ["a-subagents", /subagent|helper|opus|sonnet|routing|model/],
+  ["a-cache", /cache|saved context|hook|setup/],
+];
+const namedFix = (p: string) => FIX_WORDS.find(([, re]) => re.test(p))?.[0];
+/** Words that make a question about this app; anything without them is out of scope. */
+const IN_SCOPE = /spend|budget|forecast|\bover\b|waste|fix|cost|\$|team|engineer|\bruns?\b|slow|limit|pac|model|opus|sonnet|haiku|claude|agent|cache|connector|jira|rule|draft|approve|declin|fund|owner|month|\bday\b|user|\bwho\b|\bwhy\b|what if|confidence|recommend|saving|save|money|usage|token/;
+
 export function offlinePlan(req: AgentRequest): OfflinePlan {
   const s = req.demo;
   const sel = req.group;
@@ -244,7 +254,26 @@ export function offlinePlan(req: AgentRequest): OfflinePlan {
       : `No work is at risk on ${GROUPS[g].name}: nobody doing useful work goes over their limit this month.`, [...base, { tool: "get_evidence", input: { group: g } }]);
   }
 
-  if (/over budget/.test(p)) {
+  // "What if we only fix the connector?": the forecast with just that fix, from the engine; nothing is drafted.
+  const whatIfFix = /what if|only fix|just fix/.test(p) ? namedFix(p) : undefined;
+  if (whatIfFix) {
+    const d = driverEffects(s, "pe").find((e) => e.driver.id === whatIfFix)?.driver;
+    if (d) {
+      const after = forecast({ ...s, appliedFixes: [...new Set([...s.appliedFixes, whatIfFix])] }, "pe");
+      const own = ownerOf(whatIfFix);
+      return plan(`With only that fix, ${GROUPS.pe.name} is forecast at ${usd100(after.p50)} against ${usd(after.pool)}, down from ${usd100(forecast(s, "pe").p50)}.${own ? ` It is a code change, so ${own.short} has to ship it.` : ""}${nextStep(s, sel)}`,
+        [...base, { tool: "simulate_policy", input: { group: "pe", apply_fixes: [whatIfFix] } }]);
+    }
+  }
+
+  // "Fix the connector.": offline replay never drafts, so point to the card that does.
+  const fixAsk = /^(please\s+)?(fix|turn off|stop|apply)\b/.test(p.trim()) ? namedFix(p) : undefined;
+  if (fixAsk) {
+    const d = driverEffects(s, "pe").find((e) => e.driver.id === fixAsk)?.driver;
+    if (d) return plan(`Press Fix it on the "${d.plain ?? d.label}" card to draft the change; it saves ${usd(recoveryOf(d))}. Offline replay doesn't draft changes from typed requests.`);
+  }
+
+  if (/over budget|how much.*\bover\b|\bover by\b/.test(p)) {
     if (f.p50 <= f.pool) return plan(`${GROUPS[g].name} is not over budget: it is forecast at ${usd100(f.p50)} of ${usd(f.pool)}.`);
     // Name each growth driver with its own figure: a sum would be a number no tool returned.
     const growth = driverEffects(s, g).filter((e) => e.driver.kind === "growth").map((e) => `${lc(e.driver.plain ?? e.driver.label)} (${usd(e.driver.forward)}${s.overrides.includes(e.driver.id) ? ", approved as planned" : ""})`);
@@ -280,7 +309,8 @@ export function offlinePlan(req: AgentRequest): OfflinePlan {
   const faq = bestSection(req.prompt, sections("FAQ.md"), 2);
   if (faq) return plan(firstSentences(faq.a, 3), [{ tool: "lookup_faq", input: { question: req.prompt } }]);
 
-  return plan(`${name(sel)}: ${headline(s, sel)} Offline mode answers questions about the forecast, the recommendations and the terms in the FAQ.`);
+  if (!IN_SCOPE.test(p)) return plan("That's outside what I can help with here. I can answer questions about your team's Claude spend, its forecast and the recommendations.", []);
+  return plan(`${name(sel)}: ${headline(s, sel)} Offline replay covers the suggested questions; turn it off in the ⋯ menu to ask Claude anything.`);
 }
 
 /** Demo guide questions, offline: the matching section of DEMO_GUIDE.md. */
