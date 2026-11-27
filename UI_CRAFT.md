@@ -99,3 +99,17 @@ specific correction, the example is in brackets.
 - **Work locally until "push it".** Don't bloat the version count or the README.
 - **When feedback is about one string or one screen, fix the same pattern everywhere.**
 - **Don't argue a layout the user has decided.** Explain trade-offs once, then build what was asked.
+
+## 9. Rating the app
+
+When asked to rate the app, score the same five things every time, 1 to 10 each, and give the average. Say which version was rated (live or local, and the commit) and compare with the last rating in UPDATE.md. Log the scores there.
+
+| | What it measures | A 10 means |
+|---|---|---|
+| **Idea** | A clear, arguable point the whole app serves | "Pacing, not caps" is obvious from the headline and every step supports it |
+| **Numbers** | Every figure right and consistent | Engine-computed, checked in Claude's answers, the same in cards, charts, chat, tour and docs |
+| **First use** | A newcomer gets it without help | Someone who hasn't seen it can explain what it does after 2 minutes, no tour, no voice-over |
+| **Polish** | Looks and feels like Claude | Plain words, nothing jumps or snaps, every chip fits the state, no dead ends |
+| **Robustness** | Holds up everywhere | Phone, tablet and desktop, reduced motion, Offline replay and live, a failed run recovers |
+
+Don't move a score without naming what changed. A half point between sessions with no change named is noise.
