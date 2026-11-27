@@ -45,10 +45,13 @@ export function glide(el: HTMLElement, target: () => number): () => void {
     const slowing = Math.sign(want) === Math.sign(vel) && Math.abs(want) < Math.abs(vel);
     vel = slowing ? want : vel + Math.max(-ACCEL * dt, Math.min(ACCEL * dt, want - vel));
     // Land exactly rather than step past the target and wobble back.
-    if (Math.abs(vel * dt) >= Math.abs(rem) || Math.abs(rem) < 0.5 || now - began > 4_000) {
+    if (Math.abs(vel * dt) >= Math.abs(rem) || Math.abs(rem) < 0.5) {
       el.scrollTop = clamp(target());
       return stop();
     }
+    // A safety stop for a page that keeps stalling: stop where it is. Never jump to the target, which reads as the page
+    // vanishing (the first Fund it, while the app is still loading code, used to leap here).
+    if (now - began > 8_000) return stop();
     pos += vel * dt;
     el.scrollTop = pos;
     set = el.scrollTop;

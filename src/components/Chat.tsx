@@ -894,13 +894,24 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
+  // A floor under the conversation: the page never gets shorter than the bottom of what is on screen. Otherwise, when
+  // something folds (an approved draft), the browser pulls the scroll back and the content above slides down.
+  const floorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const sc = scroller.current, el = floorRef.current;
+    if (!sc || !el) return;
+    const set = () => { el.style.minHeight = `${sc.scrollTop + sc.clientHeight - el.offsetTop}px`; };
+    set();
+    sc.addEventListener("scroll", set, { passive: true });
+    return () => sc.removeEventListener("scroll", set);
+  }, []);
   // Room under the newest question so it can sit at the top while the reply is still short.
   const lastUser = shown.map((m) => m.role).lastIndexOf("user");
 
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-[816px] 2xl:max-w-[1008px] space-y-7 px-4 pb-56 pt-6 sm:px-6 sm:pt-8">
+        <div ref={floorRef} className="mx-auto w-full max-w-[816px] 2xl:max-w-[1008px] space-y-7 px-4 pb-56 pt-6 sm:px-6 sm:pt-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-[13px] text-muted">
               <Sparkles size={13} className="text-accent-ink" /> Today, day {TODAY} of the month
