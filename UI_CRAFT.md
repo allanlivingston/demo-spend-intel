@@ -107,7 +107,7 @@ specific correction, the example is in brackets.
 
 ## 9. Rating the app
 
-When asked to rate the app, score the same five things every time, 1 to 10 each, and give the average. Say which version was rated (live or local, and the commit) and compare with the last rating in UPDATE.md. Log the scores there.
+When asked to rate the app, score the same five things every time, 1 to 10 each, and give the average. Say which version was rated (live or local, and the commit) and compare with the last rating. Log the scores in the private UPDATE.md outside the repo, never in the repo.
 
 | | What it measures | A 10 means |
 |---|---|---|
