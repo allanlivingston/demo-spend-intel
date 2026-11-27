@@ -198,7 +198,7 @@ export function draftCfoBrief(s: DemoState, g: GroupId): CfoBrief {
       : `Approve ${usd(requested)}. The extra spend is new work with ${levelOfTier(Math.min(tier, 4)).toLowerCase()} confidence that it is producing results, not waste.${throttledBase > 0 ? ` Without it, ${usd(throttledBase)} of that work is slowed or held.` : ""}`;
   const name = GROUPS[g].name;
   const outputPer1k = Math.round(((counts[2] ?? 0) / (f.actualToDate / 1000)) * 10) / 10;
-  const covers = requested > 0 ? `It covers ${usd(fund)} of new work${waiting > 0 ? ` and ${usd(waiting)} until the owner's fix ships` : ""}${fix > 0 ? ` and ${usd(fix)} of waste not yet fixed` : ""}, rounded up.` : "";
+  const covers = requested > 0 ? `It covers ${usd(fund)} of new work${waiting > 0 ? ` and ${usd(waiting)} until the dev tools team ships their fix` : ""}${fix > 0 ? ` and ${usd(fix)} of waste not yet fixed` : ""}, rounded up.` : "";
   const statusAfter = forecast({ ...s, budgetRevisions: { ...s.budgetRevisions, [g]: newBudget } }, g).status;
   // The request covers where spend is expected to land; the high case can still run over the new budget.
   const highOver = Math.round(f.p90 / 100) * 100 - newBudget;

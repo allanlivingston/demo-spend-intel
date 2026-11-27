@@ -83,7 +83,7 @@ describe("ANSWER_ARCH=shaped", () => {
     expect(d.open_causes.find((c: { kind: string }) => c.kind === "waste")).toMatchObject({ lands_at_once_shipped: 46_100, still_over_by_then: 6_100 });
     expect(d.how_to_answer).toMatch(/Never say how many causes/);
     // The Finance ask is the brief's request, not a cause's figure.
-    expect(d.budget_owner_request).toEqual({ short_by: 8_200, the_brief_asks_for: 8_500, new_budget: 48_500, what_it_covers: "It covers $6,100 of new work and $2,100 until the owner's fix ships, rounded up." });
+    expect(d.budget_owner_request).toEqual({ short_by: 8_200, the_brief_asks_for: 8_500, new_budget: 48_500, what_it_covers: "It covers $6,100 of new work and $2,100 until the dev tools team ships their fix, rounded up." });
     expect(run(initialState("C"), "explain_overage").budget_owner_request.what_it_covers).toBe("It covers $6,100 of new work and $10,800 of waste not yet fixed, rounded up.");
     expect(run(initialState("C"), "explain_overage").open_waste_total).toBe(10_800);
     expect(run(initialState("A"), "explain_overage").who_does_what).toEqual({

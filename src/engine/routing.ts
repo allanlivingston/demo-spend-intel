@@ -30,10 +30,10 @@ export function policyRow(d: Driver): PolicyRow | null {
       return {
         driverId: d.id,
         control: "Jira MCP connector",
-        before: "auto-retry on, unlimited",
-        after: `auto-retry off after ${ROUTING.connectorRetryCapAfter} failures`,
+        before: "keeps retrying a broken call, with no limit",
+        after: `stops after ${ROUTING.connectorRetryCapAfter} failed tries`,
         savings: d.forward,
-        method: "Loop removed: 0 of 9,400 retries completed a write, so no completed tasks are lost.",
+        method: "None of the 9,400 retries worked, so no finished work is lost.",
       };
     case "a-subagents": {
       const excess = ROUTING.subagentOpusCost - ROUTING.subagentSonnetCost;
@@ -41,10 +41,10 @@ export function policyRow(d: Driver): PolicyRow | null {
       return {
         driverId: d.id,
         control: "Claude Code subagents",
-        before: "inherit Opus from parent session",
-        after: "use Sonnet, Opus still available on request",
+        before: "run on Opus, the priciest model",
+        after: "run on Sonnet; Opus still there when asked for",
         savings: Math.round(excess - penalty),
-        method: `This month's subagent work: Opus $${ROUTING.subagentOpusCost.toLocaleString()} on Sonnet $${ROUTING.subagentSonnetCost.toLocaleString()}, less ${ROUTING.sonnetRetryRate * 100}% Sonnet retries.`,
+        method: `This month's helper tasks cost $${ROUTING.subagentOpusCost.toLocaleString()} on Opus and would cost $${ROUTING.subagentSonnetCost.toLocaleString()} on Sonnet, allowing for the ${ROUTING.sonnetRetryRate * 100}% Sonnet has to redo.`,
       };
     }
     case "a-cache": {
@@ -52,10 +52,10 @@ export function policyRow(d: Driver): PolicyRow | null {
       return {
         driverId: d.id,
         control: "Shared session start",
-        before: "a hook puts the date first, so every session starts differently (hit rate 31%)",
-        after: "date moved to the end, so the cache works (hit rate about 74%)",
+        before: "the date at the start of every session stops saved context being reused (31% reused)",
+        after: "date moved to the end, so saved context is reused again (about 74%)",
         savings: Math.round(d.forward * share),
-        method: "Gets back most of the loss: the hit rate returns to about 74%, against 78% before the drop.",
+        method: "Gets back most of the loss: about 74% reused, against 78% before the drop.",
       };
     }
     default:

@@ -93,7 +93,7 @@ function PolicyDiffCard({ a, status, runOf }: { a: PolicyDiff; status?: Artifact
     <Shell title="Proposed changes" status={status}>
       {mine.length > 0 && (
         <div>
-          {theirs.length > 0 && <div className="mb-1 text-[12px] font-semibold uppercase tracking-wide text-muted">You apply</div>}
+          {theirs.length > 0 && <div className="mb-1 text-[12px] font-semibold uppercase tracking-wide text-muted">You can apply now</div>}
           <div className="divide-y divide-neutral-100 rounded-md border border-neutral-200">
             {mine.map((r) => {
               const t = ticketOf(r.driverId);

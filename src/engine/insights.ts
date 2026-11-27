@@ -137,7 +137,13 @@ export function headline(s: DemoState, sel: GroupSelection = "all"): string {
   const lead = (line: string) => (sel === "all" && affected.length === 1 ? `${GROUPS[affected[0]].name}: ${line}` : line);
 
   // Drift and growth: waste first, then the growth story.
-  if (s.scenarioId === "C" && k.fixableWaste > 0) return lead(`${usd(k.fixableWaste)} of waste to fix, then ask for budget for the new engineers.`);
+  // Name both amounts up front, so the new engineers' share isn't a surprise after the fixes (what's left once the
+  // waste is fixed is theirs: the same figure the funding step gives later).
+  if (s.scenarioId === "C" && k.fixableWaste > 0) {
+    const hires = scenarioOf(s).newMembers.filter((m) => m.groupId === "pe").length;
+    const rest = over - k.fixableWaste;
+    return lead(rest >= 100 ? `${usd(k.fixableWaste)} of waste to fix, then ask for ${usd100(rest)} for the ${hires} new engineers.` : `${usd(k.fixableWaste)} of waste to fix.`);
+  }
 
   if (s.scenarioId === "A") {
     if (k.fixableWaste > 0) return lead(`${usd(k.fixableWaste)} of waste to fix.`);
@@ -319,6 +325,6 @@ function fundLine(s: DemoState, over: number): string {
     return `${usd100(over)} over budget from ${who} and a planned ${usd(soc2.forward)} SOC 2 sprint starting tomorrow. Approve the sprint, then ask the budget owner for the rest.`;
   const waiting = kpis(s, "pe").waitingOnOwner;
   if (waiting > 0 && over > waiting)
-    return `${usd100(over)} over budget: ${usd100(over - waiting)} from ${who} and ${usd(waiting)} until the owner's fix ships. Ask the budget owner for the rest.`;
+    return `${usd100(over)} over budget: ${usd100(over - waiting)} from ${who} and ${usd(waiting)} until the dev tools team ships their fix. Ask the budget owner for the rest.`;
   return `${usd100(over)} over budget from ${who}. Ask the budget owner for the rest.`;
 }

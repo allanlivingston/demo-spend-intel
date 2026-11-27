@@ -139,7 +139,7 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
   const labels: EventLabel[] = [
     ...markers.map((d) => ({ key: d.id, day: d.startDay, value: yAt(d.startDay), text: `${d.marker!.replace(/^Day \d+:\s*/, "")}${fixedState(d.id) === "fixed" ? " · fixed" : fixedState(d.id) ? " · sent to owner" : ""}`, color: fixedState(d.id) ? "#999" : "#555" })),
     ...throttleLabels,
-    ...(hovered ? [{ key: `h-${hovered.id}`, day: hovered.startDay, value: yAt(hovered.startDay), text: `Started day ${hovered.startDay}`, color: hovered.kind === "waste" ? "#9A6512" : "#2F6B43" }] : []),
+    ...(hovered ? [{ key: `h-${hovered.id}`, day: hovered.startDay, value: yAt(hovered.startDay), text: `${hovered.marker!.replace(/^Day \d+:\s*/, "")} · day ${hovered.startDay}`, color: hovered.kind === "waste" ? "#9A6512" : "#2F6B43" }] : []),
   ].sort((a, b) => a.day - b.day);
   // Marker labels stay hidden until the pointer is over the chart; a hovered or tapped dot shows its own label, and
   // right after a change the newly fixed causes show theirs for a few seconds.
