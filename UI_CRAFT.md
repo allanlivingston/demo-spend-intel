@@ -28,6 +28,8 @@ specific correction, the example is in brackets.
   - Never scroll the start of new text out of view.
   - Move calmly: a hard speed limit of 1,000px a second (about 17px a frame), speeding up and slowing down gently. A slow frame pauses the scroll rather than letting it leap to catch up. Stop as soon as the user scrolls. When content above folds, place the new reply mid-screen before the first paint and glide it up from there, so the page never jumps and then scrolls back. (`src/components/glide.ts`)
   - After the tour closes, return to the top so the first call to action is visible.
+  - When the user answers a question in place (saves a rule, says No thanks), the confirmation shows in that card and the page glides the next message to the top: it is unread. Nothing below, nothing moves.
+- **A confirmation belongs with what it confirms.** Never post it at the bottom when the messages between the action and the bottom haven't been read: the scroll follows it and skips them. [A saved rule's "Saved." used to land under the updated forecast and scroll it off the top.]
 
 ## 3. Show less by default
 

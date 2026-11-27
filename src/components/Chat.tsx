@@ -21,7 +21,7 @@ import { HealthPanel } from "./HealthPanel";
 import { PacingChart } from "./PacingChart";
 import { cx, StatusPill, Term, TERMS, usd } from "./ui";
 import { markUsed, NewDot } from "./NewDot";
-import { RuleSuggestion, WhyAsk } from "./Rules";
+import { ANSWERED_EVENT, RuleSuggestion, WhyAsk } from "./Rules";
 import { glide, glideTo } from "./glide";
 
 /** Money decisions an auditor or budget owner will ask about open in a full-page review. */
@@ -869,6 +869,28 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
+  // Answering a question in place (saving a rule, No thanks) adds no message, but the messages below it are unread:
+  // scroll the next one to the top, the same calm glide as a new question. Nothing below, nothing moves. Only a click
+  // sends the event, so reloading or switching chats never scrolls.
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+  useEffect(() => {
+    const onAnswered = (e: Event) => {
+      const el = scroller.current;
+      const list = shownRef.current;
+      const i = list.findIndex((m) => m.id === (e as CustomEvent<string>).detail);
+      const next = i >= 0 ? list[i + 1] : undefined;
+      if (!el || !next) return;
+      // Two frames: the card collapses first, then we aim, and the aim is re-read every frame after that.
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const msg = document.getElementById(`msg-${next.id}`);
+        if (!msg) return;
+        glide(el, () => el.scrollTop + msg.getBoundingClientRect().top - el.getBoundingClientRect().top - 24);
+      }));
+    };
+    window.addEventListener(ANSWERED_EVENT, onAnswered);
+    return () => window.removeEventListener(ANSWERED_EVENT, onAnswered);
+  }, []);
   // Room under the newest question so it can sit at the top while the reply is still short.
   const lastUser = shown.map((m) => m.role).lastIndexOf("user");
 

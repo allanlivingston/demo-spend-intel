@@ -452,10 +452,8 @@ export const useStore = create<Store>()(
           set({ demo: withRules(get().demo, rules) });
           get().patchMessage(messageId, (x) => ({ ...x, rules, rulesStatus: "saved" }));
           rules.forEach((r) => log({ actor: "Admin", action: "Saved rule", detail: ruleSentence(r) }));
-          const later = rules.some((r) => r.level === "allow");
-          get().say({ role: "assistant", text: later
-            ? "Saved. It starts next month: try another situation to see it. You can change or remove it under Activity."
-            : "Saved. You can change or remove it under Activity." });
+          // The confirmation shows in the rule's own card (Rules.tsx), not as a new message at the bottom: the forecast
+          // between the rule and the bottom hasn't been read yet, and a new message would scroll past it.
         },
         dismissRules: (messageId) => {
           const m = get().messages.find((x) => x.id === messageId);

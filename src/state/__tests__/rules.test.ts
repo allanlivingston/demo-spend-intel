@@ -40,7 +40,11 @@ test("applying a fix suggests doing it without asking; saved, it applies itself 
   expect(last().view).toBe("forecast");
   expect(last().rules).toBeUndefined();
   expect(proposal.rules?.map((r) => [r.topic, r.level])).toEqual([["loop", "allow"]]);
+  const count = st().messages.length;
   st().saveRules(proposal.id, ["allow"]);
+  // The confirmation is in the rule's card; nothing is added below the unread forecast.
+  expect(st().messages).toHaveLength(count);
+  expect(st().messages.at(-2)!.rulesStatus).toBe("saved");
   st().setScenario("A");
   expect(st().demo.appliedFixes).toContain("a-connector");
   expect(st().demo.rules).toHaveLength(1);
