@@ -14,7 +14,7 @@ const CONNECTOR: Driver = {
 
 const SUBAGENTS: Driver = {
   id: "a-subagents", groupId: "pe", workstreamId: "pe-pay", kind: "waste",
-  label: "Claude Code subagents inheriting Opus", plain: "Helper tasks on the priciest model", actionLabel: "Subagents use Sonnet, Opus still available on request",
+  label: "Claude Code subagents inheriting Opus", plain: "Background helper tasks on the priciest model", actionLabel: "Subagents use Sonnet, Opus still available on request",
   tier: 1, category: "Production Code", startDay: 17, sunk: 60, forward: 4_800, recoverable: 4_600,
   sigma: 1_381, agentShare: 0.9, memberShare: 1,
   evidence: ["71% of subagent calls on Opus", "Search and lint tasks", "Sonnet does them as well"],
@@ -24,12 +24,12 @@ const SUBAGENTS: Driver = {
 
 const CACHE: Driver = {
   id: "a-cache", groupId: "pe", workstreamId: "pe-tool", kind: "waste",
-  label: "Prompt cache hit rate fell from 78% to 31%", plain: "Saved context stopped being reused", actionLabel: "Move the date to the end of the shared session start so the cache works",
+  label: "Prompt cache hit rate fell from 78% to 31%", plain: "Cached setup stopped being reused", actionLabel: "Move the date to the end of the shared session start so the cache works",
   tier: 1, category: "Documentation", startDay: 12, sunk: 100, forward: 2_300, recoverable: 2_100,
   sigma: 441, agentShare: 0.6, memberShare: 0.7,
   evidence: ["Cache reads down 60%", "A shared Claude Code hook adds the date at the top of every session since day 12", "Found from cache usage only, no prompt text read"],
-  plainEvidence: ["Saved context reused 60% less since day 12", "a shared setup step puts the date first in every session", "found from usage alone, no prompts read"],
-  roi: 0.1, confidence: 0.85, marker: "Day 12: saved context stops being reused",
+  plainEvidence: ["Cached setup reused 60% less since day 12", "a shared setup step puts the date first in every session", "found from usage alone, no prompts read"],
+  roi: 0.1, confidence: 0.85, marker: "Day 12: cached setup stops being reused",
 };
 
 const NEW_HIRES: Driver = {

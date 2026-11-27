@@ -44,7 +44,7 @@ export function policyRow(d: Driver): PolicyRow | null {
         before: "run on Opus, the priciest model",
         after: "run on Sonnet; Opus still there when asked for",
         savings: Math.round(excess - penalty),
-        method: `Helper tasks: $${ROUTING.subagentOpusCost.toLocaleString()} on Opus → $${ROUTING.subagentSonnetCost.toLocaleString()} on Sonnet, plus $${Math.round(penalty).toLocaleString()} for the ${ROUTING.sonnetRetryRate * 100}% redone = saves $${Math.round(excess - penalty).toLocaleString()}.`,
+        method: `Helper tasks: $${ROUTING.subagentOpusCost.toLocaleString()} on Opus → $${ROUTING.subagentSonnetCost.toLocaleString()} on Sonnet, plus $${Math.round(penalty).toLocaleString()} for the ${ROUTING.sonnetRetryRate * 100}% Sonnet redoes = saves $${Math.round(excess - penalty).toLocaleString()}.`,
       };
     }
     case "a-cache": {
@@ -52,8 +52,8 @@ export function policyRow(d: Driver): PolicyRow | null {
       return {
         driverId: d.id,
         control: "Shared session start",
-        before: "the date at the start of every session stops saved context being reused (31% reused)",
-        after: "date moved to the end, so saved context is reused again (about 74%)",
+        before: "the date at the start of every session stops the cached setup being reused (31% reused)",
+        after: "date moved to the end, so the cached setup is reused again (about 74%)",
         savings: Math.round(d.forward * share),
         method: "Gets back most of the loss: about 74% reused, against 78% before the drop.",
       };

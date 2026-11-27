@@ -450,7 +450,7 @@ function DailySummary({ data, pace, open, onToggle }: { data: StripDay[]; pace: 
   const steps = STEPS.filter((st) => Math.round(t(st.key) / 100) > 0);
   const pct = Math.round(share * 100);
   const top = [...STEPS].sort((a, b) => t(b.key, TODAY + 1) - t(a.key, TODAY + 1)).find((st) => t(st.key, TODAY + 1) > 0);
-  const sentence = `${pct ? `If nothing changes, about ${pct}% of runs would be` : "If nothing changes, under 1% of runs would be"} slowed from today${when} to stay on budget${pct && top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}.`;
+  const sentence = `${pct ? `If nothing changes, about ${pct}% of runs would be` : "If nothing changes, under 1% of runs would be"} slowed automatically from today${when} to stay on budget${pct && top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}.`;
   return (
     <div id="slowed" className={`border-t border-neutral-100 px-4 py-2.5 text-[13px]${open ? " pb-1" : ""}`}>
       {/* A link at the end of the sentence opens the day-by-day bars it summarises. */}

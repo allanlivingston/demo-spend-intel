@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import type { Recap } from "./recap";
 import { persist } from "zustand/middleware";
-import { ownerOf, headline, usd, usd100, GROUPS,
+import { ownerOf, headline, usd, usd100, GROUPS, kpis, driverEffects,
   setAdvancedView, draftCfoBrief, draftOverride, draftPolicyDiff, draftRebalance, forecast, initialState,
   type Artifact, type DayPoint, type DemoState, type GroupId, type GroupSelection, type ScenarioId, type SharingLevel, isDeclined, driverById,
   handoffTo, type Handoff, applyRulesAtStart, DECLINE_REASONS, ruleFor, ruleFromDecline, rulesFromApply, ruleSentence, topicOf, withRules,
@@ -422,7 +422,13 @@ export const useStore = create<Store>()(
           // One question at a time: the new landing goes in this message, and the full forecast waits for the answer.
           const g = get().group;
           const f = forecast(get().demo, g);
-          const lands = `${g === "all" ? "All teams are now forecast" : `${GROUPS[g].name} is now forecast`} at ${usd100(f.p50)} against a ${usd(f.pool)} budget${f.p50 > f.pool ? `, ${usd100(f.p50 - f.pool)} over` : ""}.`;
+          // Say what is still over once the waste left is fixed, so the figure matches the headline's ask.
+          const k = kpis(get().demo, g);
+          const rest = k.fixableWaste + k.waitingOnOwner;
+          const owners = driverEffects(get().demo, g === "all" ? "pe" : g).filter((e) => e.driver.kind === "waste" && !e.fixed).map((e) => ownerOf(e.driver.id)?.short);
+          const by = owners.length && owners.every((o) => o && o === owners[0]) ? `once ${owners[0]} ships their fix` : "once the rest of the waste is fixed";
+          const afterRest = (over: number) => (over > 0 && rest > 0 ? `; ${over - rest > 0 ? `${usd100(over - rest)} over` : "on budget"} ${by}` : "");
+          const lands = `${g === "all" ? "All teams are now forecast" : `${GROUPS[g].name} is now forecast`} at ${usd100(f.p50)} against a ${usd(f.pool)} budget${f.p50 > f.pool ? `, ${usd100(f.p50 - f.pool)} over` : ""}${afterRest(f.p50 - f.pool)}.`;
           suggestRules(rules, `${ack} ${lands} ${rules.length > 1
             ? "You could apply changes like these yourself. Want a rule for next month?"
             : "You could apply this change yourself. Want a rule for next month?"}`, { decision: "applied" });
