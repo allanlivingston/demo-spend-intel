@@ -79,7 +79,7 @@ export function rulesFromApply(s: DemoState, driverIds: string[], noThanks: stri
     const d = driverById(id);
     if (!t || !d || ownerOf(id) || !canAllow(t) || ruleFor(s, id) || noThanks.includes(`${t}:${d.groupId}`)) continue;
     if (out.some((r) => r.topic === t && r.groupId === d.groupId)) continue;
-    out.push({ id: newId(t, d.groupId), topic: t, groupId: d.groupId, level: "allow", basedOn: `You applied "${d.label}".`, createdAt: at });
+    out.push({ id: newId(t, d.groupId), topic: t, groupId: d.groupId, level: "ask", basedOn: `You applied "${d.label}".`, createdAt: at });
   }
   return out;
 }

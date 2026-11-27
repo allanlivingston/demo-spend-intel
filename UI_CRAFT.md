@@ -71,6 +71,7 @@ specific correction, the example is in brackets.
   - Slowing must be spread across the month, not bunched at the start or end. Bunching means the model is wrong.
 - **One combined picture of one system.** Throttling and blocking are one range of actions, so show them as one stacked bar per day, not separate charts or side-by-side bars.
 - **A chart has to make sense without a paragraph.** Labels must not overlap, tooltips must not be clipped (watch z-order), and axis labels need room.
+- **Plain names on screen, technical names for Claude.** Cards and chart markers use a driver's `plain` name ("Jira link stuck retrying"); Claude, the docs and the eval keep `label`. [A first-time reader didn't know "MCP connector", "subagents" or "cache hit rate".]
 - **Examples must match reality.** A tour example said spend came "back under" budget when the real figure was still over. Compute example numbers rather than typing them.
 
 ## 6. Guide the user every step

@@ -119,7 +119,7 @@ function PolicyDiffCard({ a, status, runOf }: { a: PolicyDiff; status?: Artifact
               const what = t ? ` as ${handoffWhat(t)}` : "";
               const line = shipped ? <span className="text-ok-ink">Fixed by {ownerOf(r.driverId)!.short}.</span>
                 : sent ? <span>Sent to {ownerOf(r.driverId)!.short}{what}. Not counted until they ship it.</span>
-                : <span>{cap(ownerOf(r.driverId)!.short)} owns {ownerOf(r.driverId)!.owns}. Applying sends it to them{what}.</span>;
+                : <span>{cap(ownerOf(r.driverId)!.short)} owns {ownerOf(r.driverId)!.owns}. Applying sends them a ticket{what}.</span>;
               return (
                 <div key={r.driverId}>
                   <DiffRow r={r} />
@@ -144,6 +144,7 @@ function PolicyDiffCard({ a, status, runOf }: { a: PolicyDiff; status?: Artifact
       )}
       <LandingChange before={a.before} after={afterMine} label={theirs.length && mine.length ? "After your changes" : "Lands at"} />
       {theirs.length > 0 && mine.length > 0 && <LandingChange before={afterMine} after={afterAll} label="After the owner's fix" />}
+      {!applied && mine.length > 0 && <p className="text-[13px] text-muted">Nobody is cut off. Undo any time{theirs.length ? "; the owner gets a ticket" : ""}. Every change is logged in Activity.</p>}
       <div className="flex gap-2">
         {!applied ? (
           <Button onClick={() => applyPolicy(a.driverIds, a.id)} disabled={!a.rows.length}>{mine.length ? "Apply the changes" : "Send to owner"}</Button>

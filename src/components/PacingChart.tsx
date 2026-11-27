@@ -216,7 +216,6 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
         <span className="ml-auto inline-flex items-center gap-3 whitespace-nowrap">
           {onDay && (
             <span className="inline-flex items-center gap-1.5 text-ink">
-              <NewDot f="chart-day" label="Click any day to ask what happened" />
               <span className={daySeen ? "text-muted" : undefined}>Click any day to ask about it</span>
             </span>
           )}
@@ -371,7 +370,7 @@ function DailySummary({ data, pace, open, onToggle }: { data: StripDay[]; pace: 
   const steps = STEPS.filter((st) => Math.round(t(st.key) / 100) > 0);
   const pct = Math.round(share * 100);
   const top = [...STEPS].sort((a, b) => t(b.key, TODAY + 1) - t(a.key, TODAY + 1)).find((st) => t(st.key, TODAY + 1) > 0);
-  const sentence = <>{pct ? `From today, about ${pct}% of runs are ` : "From today, under 1% of runs are "}<Term def={TERMS.slowed}>slowed</Term>{when}{pct && top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}</>;
+  const sentence = <>{pct ? `If nothing changes, about ${pct}% of runs will be ` : "If nothing changes, under 1% of runs will be "}<Term def={TERMS.slowed}>slowed</Term>{" from today"}{when}{pct && top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}</>;
   return (
     <div id="slowed" className={`border-t border-neutral-100 px-4 py-2.5 text-[13px]${open ? " pb-1" : ""}`}>
       <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1">

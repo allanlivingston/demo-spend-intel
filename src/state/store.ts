@@ -402,8 +402,8 @@ export const useStore = create<Store>()(
           const f = forecast(get().demo, g);
           const lands = `${g === "all" ? "All teams now land" : `${GROUPS[g].name} now lands`} at ${usd100(f.p50)} against a ${usd(f.pool)} budget${f.p50 > f.pool ? `, ${usd100(f.p50 - f.pool)} over` : ""}.`;
           suggestRules(rules, `${ack} ${lands} ${rules.length > 1
-            ? "You could apply changes like these yourself. Want me to make them without asking next month?"
-            : "You could apply this change yourself. Want me to make it without asking next month?"}`, { decision: "applied" });
+            ? "You could apply changes like these yourself. Want a rule for next month?"
+            : "You could apply this change yourself. Want a rule for next month?"}`, { decision: "applied" });
           const ruleMsg = get().messages.at(-1)!;
           get().patchMessage(ruleMsg.id, (x) => ({ ...x, held: { view: "forecast", text: headline(get().demo, g), snap: { demo: get().demo, group: g } } }));
         },

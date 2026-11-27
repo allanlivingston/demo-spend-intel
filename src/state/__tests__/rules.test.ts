@@ -33,7 +33,7 @@ test("a short-term reason gives no rule", () => {
   expect(last().text).toMatch(/next month/);
 });
 
-test("applying a fix suggests doing it without asking; saved, it applies itself next month", () => {
+test("applying a fix suggests a rule (Ask me first by default); saved as Apply without asking, it applies itself next month", () => {
   st().applyPolicy(["a-connector"]);
   // One question at a time: the offer carries the new landing and is last; the forecast waits for the answer.
   const proposal = last();
@@ -41,7 +41,7 @@ test("applying a fix suggests doing it without asking; saved, it applies itself 
   expect(proposal.held?.view).toBe("forecast");
   // No chips compete with the question.
   expect(chipsFor({ demo: st().demo, group: st().group, messages: st().messages, auditCount: st().audit.length, forecastVisible: false, draftActionsVisible: true })).toEqual([]);
-  expect(proposal.rules?.map((r) => [r.topic, r.level])).toEqual([["loop", "allow"]]);
+  expect(proposal.rules?.map((r) => [r.topic, r.level])).toEqual([["loop", "ask"]]);
   const count = st().messages.length;
   st().saveRules(proposal.id, ["allow"]);
   // The confirmation is in the rule's card; the held forecast follows it, once.

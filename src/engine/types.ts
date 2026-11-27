@@ -60,6 +60,8 @@ export interface Driver {
   workstreamId: string;
   kind: DriverKind;
   label: string;
+  /** A plain name for cards and chart markers; `label` (the technical name) is what Claude and the docs use. */
+  plain?: string;
   /** Short label for the action that resolves it. */
   actionLabel: string;
   tier: Tier;

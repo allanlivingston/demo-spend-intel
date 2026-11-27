@@ -246,8 +246,6 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
             {tabs.map((t) => (
               <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => { setTab(t); if (t === "users") markUsed("tab-users"); if (t === "agents") markUsed("tab-agents"); }} className={cx("-mb-px inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 py-2", tab === t ? "border-accent font-medium" : "border-transparent text-muted hover:text-ink")}>
                 {TAB_LABEL[t]}{t === "activity" && auditCount > 0 ? ` (${auditCount})` : ""}
-                {t === "users" && <NewDot f="tab-users" label="Who is affected, and what each person sees" />}
-                {t === "agents" && <NewDot f="tab-agents" label="Subagents, connectors and scheduled runs" />}
               </button>
             ))}
           </div>
@@ -297,7 +295,7 @@ function RecCard({ r, live, draftWaiting, id }: { r: BreakdownRow; live: boolean
             : <span className="text-ink" title="What this work adds by month end"><span className="text-[12px] font-normal text-muted">adds </span>{usd(r.projected)}</span>}
         </span>
       </div>
-      <div className="mt-1.5 line-clamp-2 text-[15px] font-medium leading-snug">{r.driver.label}</div>
+      <div className="mt-1.5 line-clamp-2 text-[15px] font-medium leading-snug">{r.driver.plain ?? r.driver.label}</div>
       <div className="mt-1 line-clamp-2 text-[13px] text-muted">{r.driver.evidence.join(" · ")}</div>
       <div className="mt-auto flex items-center justify-end gap-1.5 pt-2">
         {done ? (
@@ -937,9 +935,6 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto [overflow-anchor:none]">
         <div ref={floorRef} className="mx-auto w-full max-w-[816px] 2xl:max-w-[1008px] space-y-7 px-4 pb-56 pt-6 sm:px-6 sm:pt-8">
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-[13px] text-muted">
-              Today, day {TODAY} of the month
-            </div>
             {/* Switching teams changes the headline's length and whether there is a button: the height glides instead of
                 jumping, and the new headline fades in. */}
             <SmoothHeight>

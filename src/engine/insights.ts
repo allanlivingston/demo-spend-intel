@@ -137,7 +137,7 @@ export function headline(s: DemoState, sel: GroupSelection = "all"): string {
   const lead = (line: string) => (sel === "all" && affected.length === 1 ? `${GROUPS[affected[0]].name}: ${line}` : line);
 
   // Drift and growth: waste first, then the growth story.
-  if (s.scenarioId === "C" && k.fixableWaste > 0) return lead(`${usd(k.fixableWaste)} of waste to fix, then fund the new engineers.`);
+  if (s.scenarioId === "C" && k.fixableWaste > 0) return lead(`${usd(k.fixableWaste)} of waste to fix, then ask for budget for the new engineers.`);
 
   if (s.scenarioId === "A") {
     if (k.fixableWaste > 0) return lead(`${usd(k.fixableWaste)} of waste to fix.`);
