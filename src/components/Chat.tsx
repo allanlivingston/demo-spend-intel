@@ -886,12 +886,17 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
     // looking, and let it glide up from there.
     const top = msg.getBoundingClientRect().top - el.getBoundingClientRect().top;
     if (top < 0) el.scrollTop += top - el.clientHeight * 0.5;
-    requestAnimationFrame(() => {
-      glide(el, () => {
-        const firstLine = el.scrollTop + msg.getBoundingClientRect().top - el.getBoundingClientRect().top - 24;
-        return target === user ? firstLine : Math.min(firstLine, el.scrollHeight - el.clientHeight);
-      });
-    });
+    const aim = () => {
+      const firstLine = el.scrollTop + msg.getBoundingClientRect().top - el.getBoundingClientRect().top - 24;
+      return target === user ? firstLine : Math.min(firstLine, el.scrollHeight - el.clientHeight);
+    };
+    requestAnimationFrame(() => glide(el, aim));
+    // A card folding on screen (an approved draft) can finish after the scroll has landed and leave the reply's first
+    // line above the screen. Once folds have settled, bring it back into view.
+    const settle = setTimeout(() => {
+      if (msg.isConnected && msg.getBoundingClientRect().top < el.getBoundingClientRect().top) glide(el, aim);
+    }, 450);
+    return () => clearTimeout(settle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
   // A floor under the conversation: the page never gets shorter than the bottom of what is on screen. Otherwise, when
