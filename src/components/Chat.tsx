@@ -422,6 +422,12 @@ function View({ snap, live, id }: { kind?: ViewKind; snap: Snapshot; live: boole
 
 // ---------- Conversation ----------
 
+/** A draft grows open when it arrives now (not on reload) and folds smoothly when approved. */
+function DraftBox({ x, all }: { x: ChatMessage; all: ChatMessage[] }) {
+  const justNow = useJustNow();
+  return <SmoothHeight enter={justNow}><Draft x={x} all={all} /></SmoothHeight>;
+}
+
 /** The page headline; a new one (another team) fades in, but not on page load. */
 function Headline({ text }: { text: string }) {
   const justNow = useJustNow();
@@ -610,7 +616,7 @@ function Message({ m, all, liveIds }: { m: ChatMessage; all: ChatMessage[]; live
     <div className="space-y-3">
       <AgentRunCard m={m} />
       {/* A draft folds to one line when approved: its height glides instead of snapping, so the page doesn't jerk. */}
-      {artifacts.map((x) => <SmoothHeight key={x.id}><Draft x={x} all={all} /></SmoothHeight>)}
+      {artifacts.map((x) => <DraftBox key={x.id} x={x} all={all} />)}
     </div>
   );
 }

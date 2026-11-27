@@ -19,23 +19,27 @@ export function useJustNow(): boolean {
  * A box whose height glides when its content changes height (a headline that wraps differently, a button row that
  * comes or goes), so what sits below moves smoothly instead of jumping. The first height is set without motion.
  */
-export function SmoothHeight({ children, className }: { children: React.ReactNode; className?: string }) {
+export function SmoothHeight({ children, className, enter }: { children: React.ReactNode; className?: string; enter?: boolean }) {
   const inner = useRef<HTMLDivElement>(null);
-  const [h, setH] = useState<number | null>(null);
+  // With enter, a box that appears in front of the user grows open from nothing instead of popping in at full height.
+  const grow = !!enter && !reducedMotion();
+  const [h, setH] = useState<number | null>(grow ? 0 : null);
   const [ready, setReady] = useState(false);
   useLayoutEffect(() => {
     const el = inner.current;
     if (!el) return;
     const measure = () => setH(el.offsetHeight);
-    measure();
+    if (!grow) measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     // Only changes after the first paint glide.
-    const t = requestAnimationFrame(() => setReady(true));
+    const t = requestAnimationFrame(() => { setReady(true); if (grow) requestAnimationFrame(measure); });
     return () => { ro.disconnect(); cancelAnimationFrame(t); };
+    // Only on mount: whether to grow is decided once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
-    <div className={className} style={{ height: h ?? undefined, overflow: "clip", overflowClipMargin: 6, transition: ready && !reducedMotion() ? "height 260ms ease-out" : undefined }}>
+    <div className={className} style={{ height: h ?? undefined, overflow: "clip", overflowClipMargin: 6, transition: ready && !reducedMotion() ? "height 360ms ease-in-out" : undefined }}>
       <div ref={inner}>{children}</div>
     </div>
   );
