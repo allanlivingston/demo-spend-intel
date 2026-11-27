@@ -115,15 +115,23 @@ export function RuleSuggestion({ m }: { m: ChatMessage }) {
             <div key={r.id} className={cx("mt-1.5", i > 0 && "border-t border-neutral-100 pt-2.5")}>
               <div className="text-[16px] font-medium leading-snug">{ruleQuestion(shown)}</div>
               <div className="mt-0.5 text-[13px] text-muted">{r.basedOn}</div>
-              <div className="mt-2 flex flex-wrap items-center gap-2"><LevelPicker value={shown.level} topic={r.topic} levels={r.level === "skip" ? ORDER : ORDER.filter((l) => l !== "skip")} onChange={(l) => setLevels(levels.map((x, j) => (j === i ? l : x)))} /></div>
+              {rules.length > 1 && <div className="mt-2 flex flex-wrap items-center gap-2"><LevelPicker value={shown.level} topic={r.topic} levels={r.level === "skip" ? ORDER : ORDER.filter((l) => l !== "skip")} onChange={(l) => setLevels(levels.map((x, j) => (j === i ? l : x)))} /></div>}
             </div>
           );
         })}
-        <div className="mt-3 flex items-center justify-end gap-1.5">
+        <div className="mt-3 flex flex-wrap items-center justify-end gap-1.5">
           <button type="button" onClick={() => dismissRules(m.id)} className="rounded-md px-2.5 py-1.5 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">No thanks</button>
-          <button type="button" onClick={() => saveRules(m.id, levels)} className="rounded-md bg-ink px-3 py-1.5 text-[13px] font-medium text-white hover:bg-black">
-            {rules.length > 1 ? "Save rules" : "Save rule"}
-          </button>
+          {rules.length > 1 ? (
+            <button type="button" onClick={() => saveRules(m.id, levels)} className="rounded-md bg-ink px-3 py-1.5 text-[13px] font-medium text-white hover:bg-black">Save rules</button>
+          ) : (
+            // One rule: each choice saves it in one click; the suggested level is the dark button.
+            (rules[0].level === "skip" ? ORDER : ORDER.filter((l) => l !== "skip")).filter((l) => l !== "allow" || canAllow(rules[0].topic)).map((l) => (
+              <button key={l} type="button" onClick={() => saveRules(m.id, [l])}
+                className={cx("rounded-md px-3 py-1.5 text-[13px] font-medium", l === rules[0].level ? "bg-ink text-white hover:bg-black" : "border border-neutral-300 text-ink hover:border-neutral-400")}>
+                {LEVELS[l].label}
+              </button>
+            ))
+          )}
         </div>
       </div>
     </Note>

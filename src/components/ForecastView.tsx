@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, ChevronDown } from "lucide-react";
-import { breakdown, forecast, GROUP_IDS, GROUPS, kpis, ownerOf, type GroupSelection } from "@/engine";
+import { breakdown, forecast, GROUP_IDS, GROUPS, kpis, ownerOf, usd100, type GroupSelection } from "@/engine";
 import { verdictFor, type Verdict } from "@/state/nextAction";
 import { useStore, type Snapshot, type ViewKind } from "@/state/store";
 import { Activity, Agents, Users, Workstreams } from "./Details";
@@ -197,6 +197,7 @@ export function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean
         <Stat label="Forecast" value={usd(lands === f.p50 ? f.p50 : Math.round(lands / 100) * 100)} tone={lands > f.pool ? "text-bad" : undefined} />
         <Stat label="Budget" value={usd(f.pool)} />
         <Stat label={third.label} value={third.value} tone={third.tone} learn={live ? third.learn : undefined} />
+        {s.group === "all" && underTeams(s.demo) && <p className="basis-full text-[13px] text-muted">{underTeams(s.demo)}</p>}
       </div>}
       {/* An earlier copy shows its chart as it was then; the tabs read today's numbers, so only the live copy has them. */}
       {open && !live && <div className="border-t border-neutral-100"><PacingChart snap={s} /></div>}
@@ -226,4 +227,12 @@ export function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean
       {(live || open) && <Recs s={s} live={live} id={id ? "actions" : undefined} />}
     </Frame>
   );
+}
+
+/** In the all-teams view: the other teams are under budget, and their unused budget doesn't pay for the team that's over. */
+function underTeams(d: Snapshot["demo"]): string | null {
+  const over = GROUP_IDS.filter((g) => { const f = forecast(d, g); return f.p50 > f.pool; });
+  if (over.length !== 1) return null;
+  const spare = GROUP_IDS.filter((g) => g !== over[0]).reduce((t, g) => { const f = forecast(d, g); return t + Math.max(0, f.pool - f.p50); }, 0);
+  return spare >= 100 ? `The other teams are ${usd100(spare)} under budget, but unused budget doesn't move between teams.` : null;
 }

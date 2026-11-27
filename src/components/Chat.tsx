@@ -4,7 +4,7 @@
 // newest copy of each is live, older copies render from the state they were posted with, so they match their text.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
-import { forecast, GROUP_IDS, headline, usd100 } from "@/engine";
+import { headline } from "@/engine";
 import { dropEarlyRun, keepEarlyRun, runKey, startEarlyRun, startAgentRun } from "@/state/agentClient";
 import { chipsFor, stepOpen, type ChipSpec } from "@/state/chipRules";
 import { nextAction } from "@/state/nextAction";
@@ -299,9 +299,6 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
             {/* Once the chat starts, this is how things stood then; the newest forecast below is the live one. */}
             {!briefingLive && <div className="mb-1 text-[13px] text-muted">When this chat started</div>}
             <Headline key={briefingSnap.group} text={headline(briefingSnap.demo, briefingSnap.group)} />
-            {briefingSnap.group === "all" && underTeams(briefingSnap.demo) && (
-              <div className="mt-1.5 text-[15px] text-muted">{underTeams(briefingSnap.demo)}</div>
-            )}
             {!messages.length && chips.find((c) => c.primary)?.action.type === "run" && (
               <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <button type="button" onClick={() => onChip(chips.find((c) => c.primary)!)}
@@ -333,10 +330,3 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
   );
 }
 
-/** In the all-teams view: the other teams are under budget, and their unused budget doesn't pay for the team that's over. */
-function underTeams(d: Snapshot["demo"]): string | null {
-  const over = GROUP_IDS.filter((g) => { const f = forecast(d, g); return f.p50 > f.pool; });
-  if (over.length !== 1) return null;
-  const spare = GROUP_IDS.filter((g) => g !== over[0]).reduce((t, g) => { const f = forecast(d, g); return t + Math.max(0, f.pool - f.p50); }, 0);
-  return spare >= 100 ? `The other teams are ${usd100(spare)} under budget, but unused budget doesn't move between teams.` : null;
-}
