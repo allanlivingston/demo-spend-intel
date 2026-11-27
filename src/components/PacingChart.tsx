@@ -5,7 +5,7 @@ import { Area, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line, Referenc
 import { DAYS, dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, pacing, TODAY, usd100, type GroupId } from "@/engine";
 import { useStore, type Snapshot } from "@/state/store";
 import { cx, PHONE, Term, TERMS, usd, usdK, useMedia } from "./ui";
-import { markUsed, NewDot, useNew } from "./NewDot";
+import { markUsed, useNew } from "./NewDot";
 import { useJustNow, useRoll } from "./motion";
 
 /** The live chart's last axis top, so a team switch can glide the scale from it (the chart may remount). */
@@ -463,19 +463,17 @@ function DailySummary({ data, pace, open, onToggle }: { data: StripDay[]; pace: 
   const steps = STEPS.filter((st) => Math.round(t(st.key) / 100) > 0);
   const pct = Math.round(share * 100);
   const top = [...STEPS].sort((a, b) => t(b.key, TODAY + 1) - t(a.key, TODAY + 1)).find((st) => t(st.key, TODAY + 1) > 0);
-  const sentence = <>{pct ? `If nothing changes, about ${pct}% of runs will be ` : "If nothing changes, under 1% of runs will be "}<Term def={TERMS.slowed}>slowed</Term>{" from today"}{when}{pct && top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}</>;
+  const sentence = `${pct ? `If nothing changes, about ${pct}% of runs will be` : "If nothing changes, under 1% of runs will be"} slowed from today${when}${pct && top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}.`;
   return (
     <div id="slowed" className={`border-t border-neutral-100 px-4 py-2.5 text-[13px]${open ? " pb-1" : ""}`}>
-      <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1">
+      {/* The sentence is the toggle: it opens the day-by-day bars it summarises. */}
+      <button type="button" onClick={() => { onToggle(); markUsed("daily-bars"); }} aria-expanded={open} className="group/daily flex w-full items-center gap-2 text-left">
         <span className="text-ink">{sentence}</span>
-      <button type="button" onClick={() => { onToggle(); markUsed("daily-bars"); }} aria-expanded={open} className="ml-auto flex shrink-0 items-center text-left text-muted hover:text-ink">
-        <span className="inline-flex shrink-0 items-center gap-1 text-accent-ink">
-          <NewDot f="daily-bars" label="The month day by day: what ran, what was slowed" className="mr-1" />
-          {open ? "Hide daily bars" : "Show daily bars"}
+        <span className="ml-auto inline-flex shrink-0 items-center gap-0.5 text-muted group-hover/daily:text-ink">
+          By day
           <ChevronDown size={14} className={open ? "rotate-180 transition-transform" : "transition-transform"} />
         </span>
       </button>
-      </div>
       {open && (
         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-muted">
           <span className="font-medium text-ink">This month</span>

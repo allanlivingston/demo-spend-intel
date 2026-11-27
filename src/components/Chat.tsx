@@ -19,7 +19,7 @@ import { ArtifactCard } from "./Artifacts";
 import { Activity, Agents, Users, Workstreams } from "./Details";
 import { HealthPanel } from "./HealthPanel";
 import { PacingChart } from "./PacingChart";
-import { cx, StatusPill, Term, TERMS, usd } from "./ui";
+import { cx, StatusPill, usd } from "./ui";
 import { markUsed, NewDot } from "./NewDot";
 import { RuleSuggestion, WhyAsk } from "./Rules";
 import { glide, glideTo } from "./glide";
@@ -128,8 +128,8 @@ function TeamSwitch({ s }: { s: Snapshot }) {
 
 type Learn = { lines: { label: string; value: string }[]; note: string; q: string };
 
-/** "Learn more" opens a small breakdown in place; asking Claude is one click further, inside it. */
-function LearnMore({ learn }: { learn: Learn }) {
+/** The figure's title opens a small breakdown in place; asking Claude is one click further, inside it. */
+function LearnMore({ learn, children }: { learn: Learn; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -142,11 +142,11 @@ function LearnMore({ learn }: { learn: Learn }) {
   }, [open]);
   return (
     <div ref={ref} className="relative">
-      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="text-[13px] text-muted underline decoration-dotted hover:text-ink">
-        Learn more
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="inline-flex items-center gap-0.5 uppercase tracking-wide underline decoration-dotted underline-offset-2 hover:text-ink">
+        {children}<ChevronDown size={12} className={cx("transition-transform", open && "rotate-180")} />
       </button>
       {open && (
-        <div role="dialog" className="absolute left-0 top-6 z-30 w-[320px] rounded-xl border border-neutral-200 bg-white p-3 text-[13px] shadow-lg">
+        <div role="dialog" className="absolute left-0 top-6 z-30 w-[320px] normal-case tracking-normal rounded-xl border border-neutral-200 bg-white p-3 text-[13px] shadow-lg">
           {learn.lines.length > 0 && (
             <ul className="mb-2 space-y-1">
               {learn.lines.map((l) => (
@@ -167,10 +167,9 @@ function LearnMore({ learn }: { learn: Learn }) {
 function Stat({ label, value, tone, learn, hint }: { label: React.ReactNode; value: string; tone?: string; learn?: Learn; hint?: string }) {
   return (
     <div>
-      <div className="text-[12px] uppercase tracking-wide text-muted">{label}</div>
+      <div className="text-[12px] uppercase tracking-wide text-muted">{learn ? <LearnMore learn={learn}>{label}</LearnMore> : label}</div>
       <div className={cx("text-[26px] font-semibold tabular-nums", tone)}>{value}</div>
       {hint && <div className="text-[13px] text-muted">{hint}</div>}
-      {learn && <LearnMore learn={learn} />}
     </div>
   );
 }
@@ -207,7 +206,7 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
   const lands = useRoll(f.p50, live && justNow && ghost ? ghost.at(-1)?.p50 ?? null : null, 600, 250);
   const k = kpis(s.demo, s.group);
   const rowsNow = breakdown(s.demo, s.group).rows;
-  const fixLines = (state: string) => rowsNow.filter((r) => r.side === "fix" && r.state === state).sort((a, b) => b.recoverable - a.recoverable).map((r) => ({ label: r.driver.label, value: usd(r.recoverable) }));
+  const fixLines = (state: string) => rowsNow.filter((r) => r.side === "fix" && r.state === state).sort((a, b) => b.recoverable - a.recoverable).map((r) => ({ label: r.driver.plain ?? r.driver.label, value: usd(r.recoverable) }));
   const third: { label: string; value: string; tone: string; learn: Learn } =
     k.fixableWaste > 0 ? { label: "Fixable waste", value: usd(k.fixableWaste), tone: "text-warn-ink", learn: { lines: fixLines("open"), note: "Spend that produced no completed work by month end. Fixing it loses nothing.", q: "Where does the fixable waste come from?" } }
     : k.waitingOnOwner > 0 ? { label: "Waiting on owner", value: usd(k.waitingOnOwner), tone: "text-neutral-600", learn: { lines: fixLines("sent"), note: `Sent to ${rowsNow.filter((r) => r.state === "sent").map((r) => ownerOf(r.driver.id)?.short).filter(Boolean)[0] ?? "its owner"}. The forecast drops once they ship it.`, q: "What waits on the dev tools team?" } }
@@ -240,9 +239,9 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
       }
     >
       {(live || open) && <div className="flex flex-wrap gap-x-10 gap-y-2 px-4 py-3">
-        <Stat label={<Term def={TERMS.landsAt}>Forecast</Term>} value={usd(lands === f.p50 ? f.p50 : Math.round(lands / 100) * 100)} tone={lands > f.pool ? "text-bad" : undefined} />
+        <Stat label="Forecast" value={usd(lands === f.p50 ? f.p50 : Math.round(lands / 100) * 100)} tone={lands > f.pool ? "text-bad" : undefined} />
         <Stat label="Budget" value={usd(f.pool)} />
-        <Stat label={third.label === "Fixable waste" ? <Term def={TERMS.fixable}>{third.label}</Term> : third.label === "Waiting on owner" ? <Term def={TERMS.waiting}>{third.label}</Term> : third.label} value={third.value} tone={third.tone} learn={live ? third.learn : undefined} />
+        <Stat label={third.label} value={third.value} tone={third.tone} learn={live ? third.learn : undefined} />
       </div>}
       {/* An earlier copy shows its chart as it was then; the tabs read today's numbers, so only the live copy has them. */}
       {open && !live && <div className="border-t border-neutral-100"><PacingChart snap={s} /></div>}
