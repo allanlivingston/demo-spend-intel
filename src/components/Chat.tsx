@@ -836,7 +836,7 @@ function ActivitySheet({ onClose }: { onClose: () => void }) {
 
 export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boolean; setActivityOpen: (v: boolean) => void }) {
   const { messages, chatStart, demo, group, audit, postView, epoch, currentChatId } = useStore();
-  const shown = messages.filter((m) => !m.runOf);
+  const shown = messages.filter((m) => !m.runOf && !m.dismissed); // A retried run's failed card goes away.
   const scroller = useRef<HTMLDivElement>(null);
 
   // The newest copy of each view is the live one; the briefing's copies are live until a newer one is posted.
