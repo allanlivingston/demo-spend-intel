@@ -3,7 +3,7 @@
 // will hold, and the admin approves it where it is. Saved rules are listed under Activity, where they can be changed.
 import { useState } from "react";
 import { BookmarkCheck, Trash2 } from "lucide-react";
-import { canAllow, DECLINE_REASONS, LEVELS, ruleSentence, type PrefRule, type RuleLevel } from "@/engine";
+import { canAllow, DECLINE_REASONS, LEVELS, ruleQuestion, ruleSentence, type PrefRule, type RuleLevel } from "@/engine";
 import { useStore, type ChatMessage } from "@/state/store";
 import { nextAction } from "@/state/nextAction";
 import { startAgentRun } from "@/state/agentClient";
@@ -113,9 +113,9 @@ export function RuleSuggestion({ m }: { m: ChatMessage }) {
           const shown = { ...r, level: levels[i] ?? r.level };
           return (
             <div key={r.id} className={cx("mt-1.5", i > 0 && "border-t border-neutral-100 pt-2.5")}>
-              <div className="text-[16px] font-medium leading-snug">{ruleSentence(shown)}</div>
+              <div className="text-[16px] font-medium leading-snug">{ruleQuestion(shown)}</div>
               <div className="mt-0.5 text-[13px] text-muted">{r.basedOn}</div>
-              <div className="mt-2 flex flex-wrap items-center gap-2"><span className="text-[13px] text-muted">Next month:</span><LevelPicker value={shown.level} topic={r.topic} onChange={(l) => setLevels(levels.map((x, j) => (j === i ? l : x)))} /></div>
+              <div className="mt-2 flex flex-wrap items-center gap-2"><LevelPicker value={shown.level} topic={r.topic} onChange={(l) => setLevels(levels.map((x, j) => (j === i ? l : x)))} /></div>
             </div>
           );
         })}

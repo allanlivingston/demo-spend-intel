@@ -52,8 +52,8 @@ export function policyRow(d: Driver): PolicyRow | null {
       return {
         driverId: d.id,
         control: "Shared session start",
-        before: "the date at the start of every session stops the cached setup being reused (31% reused)",
-        after: "date moved to the end, so the cached setup is reused again (about 74%)",
+        before: "the date at the top of every session makes it look new, so Claude reuses little (31%)",
+        after: "date moved to the end, so Claude reuses earlier work again (about 74%)",
         savings: Math.round(d.forward * share),
         method: "Gets back most of the loss: about 74% reused, against 78% before the drop.",
       };

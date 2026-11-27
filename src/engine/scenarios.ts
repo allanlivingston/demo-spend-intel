@@ -24,12 +24,12 @@ const SUBAGENTS: Driver = {
 
 const CACHE: Driver = {
   id: "a-cache", groupId: "pe", workstreamId: "pe-tool", kind: "waste",
-  label: "Prompt cache hit rate fell from 78% to 31%", plain: "Cached setup stopped being reused", actionLabel: "Move the date to the end of the shared session start so the cache works",
+  label: "Prompt cache hit rate fell from 78% to 31%", plain: "Claude redoing work it used to reuse", actionLabel: "Move the date to the end of the shared session start so the cache works",
   tier: 1, category: "Documentation", startDay: 12, sunk: 100, forward: 2_300, recoverable: 2_100,
   sigma: 441, agentShare: 0.6, memberShare: 0.7,
   evidence: ["Cache reads down 60%", "A shared Claude Code hook adds the date at the top of every session since day 12", "Found from cache usage only, no prompt text read"],
-  plainEvidence: ["Cached setup reused 60% less since day 12", "a shared setup step puts the date first in every session", "found from usage alone, no prompts read"],
-  roi: 0.1, confidence: 0.85, marker: "Day 12: cached setup stops being reused",
+  plainEvidence: ["60% less reuse since day 12", "a shared setup step adds today's date at the top, so every session looks new", "found from usage alone, no prompts read"],
+  roi: 0.1, confidence: 0.85, marker: "Day 12: Claude stops reusing earlier work",
 };
 
 const NEW_HIRES: Driver = {

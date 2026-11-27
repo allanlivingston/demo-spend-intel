@@ -114,7 +114,7 @@ function draftAnswer(s: DemoState, p: string, kind: string): string {
 const FIX_WORDS: [string, RegExp][] = [
   ["a-connector", /connector|jira|retr(y|ies)/],
   ["a-subagents", /subagent|helper|opus|sonnet|routing|model/],
-  ["a-cache", /cache|cached setup|saved context|hook|setup/],
+  ["a-cache", /cache|reus|cached setup|saved context|hook|setup/],
 ];
 const namedFix = (p: string) => FIX_WORDS.find(([, re]) => re.test(p))?.[0];
 /** Words that make a question about this app; anything without them is out of scope. */

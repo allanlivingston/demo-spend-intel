@@ -39,7 +39,7 @@ export function RecCard({ r, live, draftWaiting, id, onDecline, ask: askFor }: {
         <span title={c.reason} className={cx("cursor-help rounded px-1.5 py-px text-[11px] normal-case tracking-normal", CONF_TONE[c.level])}>{c.level} confidence</span>
         <span className="ml-auto text-[14px] normal-case tracking-normal tabular-nums">
           {fix
-            ? <span className="text-warn-ink" title="What fixing it saves by month end"><span className="text-[12px] font-normal text-muted">saves </span>{usd(r.recoverable)}</span>
+            ? <span className="text-warn-ink" title="What fixing it saves by month end"><span className="text-[12px] font-normal text-muted">{r.state === "applied" ? "saved " : "saves "}</span>{usd(r.recoverable)}</span>
             : askFor != null && askFor >= 100 && askFor < r.projected
               ? <span className="text-ink" title={`This work adds ${usd(r.projected)} by month end; ${usd(r.projected - askFor)} of the budget is still free once the waste is fixed`}><span className="text-[12px] font-normal text-muted">ask </span>{usd100(askFor)}</span>
               : <span className="text-ink" title="What this work adds by month end"><span className="text-[12px] font-normal text-muted">adds </span>{usd(r.projected)}</span>}

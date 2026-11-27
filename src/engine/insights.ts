@@ -143,7 +143,7 @@ export function headline(s: DemoState, sel: GroupSelection = "all"): string {
     // Their team's figures, not all teams': other teams' unused budget doesn't pay for them. The line names who it is
     // about, so it needs no team prefix in the all-teams view.
     const rest = newWorkAsk(s) ?? 0;
-    return rest >= 100 ? `Fix ${usd(k.fixableWaste)} of waste, then ask for ${usd100(rest)}.` : lead(`Fix ${usd(k.fixableWaste)} of waste.`);
+    return rest >= 100 ? `Fix ${usd(k.fixableWaste)} of waste, then ask for ${usd100(rest)}${sel === "all" ? " for Platform Engineering's new engineers" : ""}.` : lead(`Fix ${usd(k.fixableWaste)} of waste.`);
   }
 
   if (s.scenarioId === "A") {

@@ -27,7 +27,7 @@ export function ModelSelect() {
   const current = MODEL_OPTIONS.find((o) => o.id === model) ?? MODEL_OPTIONS[0];
   return (
     <div ref={ref} className="relative shrink-0">
-      <button type="button" onClick={() => setOpen(!open)} aria-haspopup="listbox" aria-expanded={open}
+      <button type="button" onClick={() => setOpen(!open)} aria-haspopup="listbox" aria-expanded={open} title={`Which Claude model answers: ${current.hint}`}
         className="flex h-7 items-center gap-1 rounded-lg px-2.5 text-[14px] font-[450] leading-[19px] text-ink hover:bg-black/5">
         {current.name}
         {model === "auto" && <span className="ml-1 hidden text-muted sm:inline">Haiku + Sonnet</span>}

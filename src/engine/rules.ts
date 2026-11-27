@@ -11,12 +11,12 @@ export const TOPIC_OF: Record<string, RuleTopic> = {
 };
 
 /** Plain words for each kind: the action (imperative) and the noun phrase. */
-export const TOPICS: Record<RuleTopic, { action: string; noun: string }> = {
-  loop: { action: "turn off retries for agents stuck on a broken call", noun: "turning off retries for agents stuck on a broken call" },
-  model: { action: "move routine work to a cheaper Claude model", noun: "moving work to a cheaper Claude model" },
-  cache: { action: "fix broken prompt caching", noun: "fixes to prompt caching" },
-  "fund-new": { action: "fund new engineers while they ramp up", noun: "funding new engineers while they ramp up" },
-  planned: { action: "approve planned projects as planned spend", noun: "approving planned projects as planned spend" },
+export const TOPICS: Record<RuleTopic, { action: string; noun: string; when: string }> = {
+  loop: { action: "turn off retries for agents stuck on a broken call", noun: "turning off retries for agents stuck on a broken call", when: "an agent keeps retrying a broken call" },
+  model: { action: "move routine work to a cheaper Claude model", noun: "moving work to a cheaper Claude model", when: "routine work runs on an expensive model" },
+  cache: { action: "fix broken prompt caching", noun: "fixes to prompt caching", when: "Claude stops reusing earlier work" },
+  "fund-new": { action: "fund new engineers while they ramp up", noun: "funding new engineers while they ramp up", when: "new engineers need funding while they start" },
+  planned: { action: "approve planned projects as planned spend", noun: "approving planned projects as planned spend", when: "a planned project needs approval" },
 };
 
 /** The three levels, in plain words, with the Managed Agents permission policy each matches. */
@@ -53,6 +53,11 @@ export function ruleSentence(r: Pick<PrefRule, "topic" | "groupId" | "level" | "
 }
 
 /** The app's own wording, used offline and whenever Claude's wording doesn't pass the checks. */
+/** The question a suggested rule asks, before a choice is made: neutral, so the choices say what happens. */
+export function ruleQuestion(r: Pick<PrefRule, "topic" | "groupId">): string {
+  return `Next month in ${GROUPS[r.groupId].name}, when ${TOPICS[r.topic].when}:`;
+}
+
 export function templateSentence(r: Pick<PrefRule, "topic" | "groupId" | "level">): string {
   const team = GROUPS[r.groupId].name;
   const t = TOPICS[r.topic];
