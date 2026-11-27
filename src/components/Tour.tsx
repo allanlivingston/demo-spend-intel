@@ -24,13 +24,13 @@ const STEPS: Step[] = [
     target: "forecast-chart",
     fallback: "forecast",
     title: "Where spending is headed",
-    body: "Spend so far, and where it will likely end the month against the budget. Click any day to ask what happened.",
+    body: "Spend so far, and the forecast for the end of the month against the budget.",
   },
   {
     target: "first-rec",
     fallback: "actions",
     title: "Fix it or fund it",
-    body: "Fix spending that produced nothing, like a Jira connection retrying a broken call over and over. Fund new work that's paying off, like new engineers shipping code.",
+    body: "Fix spending that produced nothing, like a Jira link retrying a broken call over and over. Fund new work that's paying off, like new engineers shipping code.",
   },
   {
     target: "first-rec",
@@ -44,8 +44,8 @@ const STEPS: Step[] = [
     fallback: "forecast",
     mock: "slowed",
     title: "If a team still goes over",
-    body: "Some of its work moves to a cheaper Claude model or waits a few hours. Nobody is locked out. The Users and Agents tabs show who and what is affected.",
-    advancedBody: "Some of its work moves to a cheaper Claude model or waits a few hours. Nobody is locked out. Workstreams and Users show who is affected, and Health shows the last six months.",
+    body: "Some of its runs are slowed: moved to a cheaper Claude model or held for a few hours. Nobody is locked out. The Users and Agents tabs show who and what is affected.",
+    advancedBody: "Some of its runs are slowed: moved to a cheaper Claude model or held for a few hours. Nobody is locked out. Workstreams and Users show who is affected, and Health shows the last six months.",
   },
   {
     target: "composer",
@@ -55,8 +55,8 @@ const STEPS: Step[] = [
   },
   {
     target: "sidebar",
-    title: "Try another month",
-    body: "Try another situation plays out a different month, with your rules already applied. Activity lists your rules and everything you approved. Orange dots mark features you haven't tried yet.",
+    title: "Try another situation",
+    body: "Play out a different month, with your rules already applied. Activity lists your rules and everything you approved. Orange dots mark features you haven't tried yet.",
     narrowBody: "Open the menu at the top left to try another situation or see Activity, where your rules are. Orange dots mark features you haven't tried yet.",
   },
 ];

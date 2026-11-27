@@ -40,7 +40,7 @@ const BODY: Record<MockKind, (m: Month) => ReactNode> = {
     return (
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
-          <span>Declined <b className="font-medium text-ink">{m.sub.label}</b> · Why?</span>
+          <span>Declined <b className="font-medium text-ink">{m.sub.plain ?? m.sub.label}</b> · Why?</span>
           <Pick on>Team needs it</Pick><Pick>Planned</Pick><Pick>Not now</Pick>
           <span className="ml-auto font-medium text-ink">Undo</span>
         </div>
@@ -64,8 +64,8 @@ const BODY: Record<MockKind, (m: Month) => ReactNode> = {
   composer: (m) => (
     <div className="flex flex-col gap-2">
       <div className="ml-auto w-fit rounded-lg bg-black/5 px-2.5 py-1 text-[13px]">Why did spend jump on day {m.loop.startDay}?</div>
-      <Claude>The Jira MCP connector started retrying a broken call: {m.loop.evidence[0]}, {m.loop.evidence[1]}.</Claude>
-      <div className="flex gap-1.5"><Pick on>Fix the connector loop</Pick><Pick>What else is driving it?</Pick></div>
+      <Claude>The Jira link started retrying a broken call: {(m.loop.plainEvidence ?? m.loop.evidence).slice(0, 2).join(", ")}.</Claude>
+      <div className="flex gap-1.5"><Pick on>Fix all the waste</Pick><Pick>Why are we over budget?</Pick></div>
     </div>
   ),
 };
