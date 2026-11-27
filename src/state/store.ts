@@ -458,7 +458,7 @@ export const useStore = create<Store>()(
         restoreRec: (driverId, quiet) => {
           const d = get().demo;
           // Undoing an in-place decline also drops the rule that decline saved, or the rule would keep it hidden.
-          const label = driverById(driverId)?.label ?? driverId;
+          const dr = driverById(driverId); const label = dr ? dr.plain ?? dr.label : driverId;
           const fromThis = quiet ? (d.rules ?? []).filter((r) => r.level === "skip" && r.basedOn?.includes(`"${label}"`)) : [];
           set({ demo: { ...d, declined: (d.declined ?? []).filter((x) => x !== driverId), rules: (d.rules ?? []).filter((r) => !fromThis.includes(r)) } });
           log({ actor: "Admin", action: "Restored recommendation", detail: driverId });

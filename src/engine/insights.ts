@@ -142,8 +142,7 @@ export function headline(s: DemoState, sel: GroupSelection = "all"): string {
   if (s.scenarioId === "C" && k.fixableWaste > 0) {
     // Their team's figures, not all teams': other teams' unused budget doesn't pay for them. The line names who it is
     // about, so it needs no team prefix in the all-teams view.
-    const pf = forecast(s, "pe");
-    const rest = pf.p50 - pf.pool - kpis(s, "pe").fixableWaste;
+    const rest = newWorkAsk(s) ?? 0;
     return rest >= 100 ? `Fix ${usd(k.fixableWaste)} of waste, then ask for ${usd100(rest)}.` : lead(`Fix ${usd(k.fixableWaste)} of waste.`);
   }
 
@@ -329,4 +328,11 @@ function fundLine(s: DemoState, over: number): string {
   if (waiting > 0 && over > waiting)
     return `${usd100(over)} over budget: ${usd100(over - waiting)} from ${who} and ${usd(waiting)} until the dev tools team ships their fix. Ask the budget owner for the rest.`;
   return `${usd100(over)} over budget from ${who}. Ask the budget owner for the rest.`;
+}
+
+/** What to ask for the new engineers' work: what is still over budget once all waste is fixed (scenario C only). */
+export function newWorkAsk(s: DemoState): number | null {
+  if (s.scenarioId !== "C") return null;
+  const pf = forecast(s, "pe");
+  return pf.p50 - pf.pool - kpis(s, "pe").fixableWaste;
 }

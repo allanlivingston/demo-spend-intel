@@ -82,7 +82,7 @@ describe.each(SCENARIOS)("scenario %s", (sc) => {
     for (const g of GROUP_IDS) {
       for (const r of breakdown(demo, g).rows) {
         const text = expectGoodAnswer(demo, g, `Tell me about this: ${r.driver.label}.`);
-        expect(text).toContain(r.driver.label);
+        expect(text).toContain(r.driver.plain ?? r.driver.label);
         expect(text).toContain(confidenceOf(r.driver).level);
       }
     }
@@ -91,7 +91,7 @@ describe.each(SCENARIOS)("scenario %s", (sc) => {
   test("clicking any day on the chart answers", () => {
     for (const g of GROUP_IDS) {
       for (const d of driverEffects(demo, g).map((e) => e.driver).filter((d) => d.marker))
-        expect(expectGoodAnswer(demo, g, `What happened on day ${d.startDay}?`)).toContain(d.label);
+        expect(expectGoodAnswer(demo, g, `What happened on day ${d.startDay}?`)).toContain(d.plain ?? d.label);
       const starts = new Set(driverEffects(demo, g).map((e) => e.driver.startDay));
       // Days where an event started answer about the event; other block days answer about the block.
       for (const day of Object.keys(throttle(demo, g).blockDays).filter((d) => !starts.has(+d)))

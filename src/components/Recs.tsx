@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
-import { breakdown, confidenceOf, forecast, GROUPS, headline, ruleFor, type BreakdownRow, DECLINE_REASONS, topicOf, type GroupId } from "@/engine";
+import { breakdown, confidenceOf, forecast, GROUPS, headline, newWorkAsk, ruleFor, usd100, type BreakdownRow, DECLINE_REASONS, topicOf, type GroupId } from "@/engine";
 import { startAgentRun } from "@/state/agentClient";
 import { runFor } from "@/state/chipRules";
 import { nextAction } from "@/state/nextAction";
@@ -22,7 +22,7 @@ export const askAboutRow = (r: BreakdownRow) => {
 export const CONF_TONE = { High: "bg-emerald-50 text-ok-ink", Medium: "bg-amber-50 text-warn-ink", Low: "bg-neutral-100 text-muted" };
 export const CARD = "flex h-[192px] w-[280px] max-w-[88%] shrink-0 snap-start flex-col rounded-xl border border-neutral-200 bg-white p-3.5";
 
-export function RecCard({ r, live, draftWaiting, id, onDecline }: { r: BreakdownRow; live: boolean; draftWaiting: boolean; id?: string; onDecline: (driverId: string) => void }) {
+export function RecCard({ r, live, draftWaiting, id, onDecline, ask: askFor }: { r: BreakdownRow; live: boolean; draftWaiting: boolean; id?: string; onDecline: (driverId: string) => void; ask?: number | null }) {
   const busy = busyOf(useStore((s) => s.messages));
   const { restoreRec } = useStore();
   // Not suggested because of a saved rule (rather than declined by hand): changed under Activity, not restored here.
@@ -40,7 +40,9 @@ export function RecCard({ r, live, draftWaiting, id, onDecline }: { r: Breakdown
         <span className="ml-auto text-[14px] normal-case tracking-normal tabular-nums">
           {fix
             ? <span className="text-warn-ink" title="What fixing it saves by month end"><span className="text-[12px] font-normal text-muted">saves </span>{usd(r.recoverable)}</span>
-            : <span className="text-ink" title="What this work adds by month end"><span className="text-[12px] font-normal text-muted">adds </span>{usd(r.projected)}</span>}
+            : askFor != null && askFor >= 100 && askFor < r.projected
+              ? <span className="text-ink" title={`This work adds ${usd(r.projected)} by month end; ${usd(r.projected - askFor)} of the budget is still free once the waste is fixed`}><span className="text-[12px] font-normal text-muted">ask </span>{usd100(askFor)}</span>
+              : <span className="text-ink" title="What this work adds by month end"><span className="text-[12px] font-normal text-muted">adds </span>{usd(r.projected)}</span>}
         </span>
       </div>
       <div className="mt-1.5 line-clamp-2 text-[15px] font-medium leading-snug">{r.driver.plain ?? r.driver.label}</div>
@@ -188,7 +190,7 @@ export function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string 
             </button>
           </div>
         ) : rows.length ? (
-          shownRows.map((r, i) => <RecCard key={r.driver.id} r={r} live={live} draftWaiting={draftFor(r)} onDecline={onDecline} id={id && i === 0 && !briefOpen ? "first-rec" : undefined} />)
+          shownRows.map((r, i) => <RecCard key={r.driver.id} r={r} ask={r.driver.groupId === "pe" ? newWorkAsk(s.demo) : null} live={live} draftWaiting={draftFor(r)} onDecline={onDecline} id={id && i === 0 && !briefOpen ? "first-rec" : undefined} />)
         ) : (
           <div className={cx(CARD, "w-full items-start justify-center bg-emerald-50/40")}>
             <div className="text-[12px] font-semibold uppercase tracking-wide text-ok-ink">Nothing to do</div>

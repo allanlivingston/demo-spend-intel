@@ -47,9 +47,9 @@ function aboutDriver(s: DemoState, d: Driver, fixed: boolean): string {
   if (d.kind === "waste") {
     const owner = ownerOf(d.id);
     const state = fixed ? "It is already fixed." : waitingOnOwner(s, d.id) ? `The fix is with ${owner!.short}; it counts once they ship it.` : owner ? `The fix belongs to ${owner.short}, so Fix it drafts a hand-off.` : "Fix it drafts the change for you to approve.";
-    return `${d.label} adds ${usd(d.forward)} by month end, and fixing it saves ${usd(recoveryOf(d))}. ${c.level} confidence: ${c.reason} ${state}`;
+    return `${d.plain ?? d.label} adds ${usd(d.forward)} by month end, and fixing it saves ${usd(recoveryOf(d))}. ${c.level} confidence: ${c.reason} ${state}`;
   }
-  return `${d.label} adds ${usd(d.forward)} by month end, and it is producing work: ${d.evidence.slice(0, 2).join(", ")}. ${c.level} confidence: ${c.reason}`;
+  return `${d.plain ?? d.label} adds ${usd(d.forward)} by month end, and it is producing work: ${d.evidence.slice(0, 2).join(", ")}. ${c.level} confidence: ${c.reason}`;
 }
 
 const DRAFT_Q = /why these changes|risk if i approve|only approve part/;
@@ -62,7 +62,7 @@ const DRAFT_Q = /why these changes|risk if i approve|only approve part/;
 export function freshSummary(s: DemoState, kind: string, art?: { kind: string; groupId?: GroupId; rows?: { driverId: string; savings: number }[] }): string {
   if (art?.kind === "policy_diff" && art.rows?.length && art.groupId) {
     const g = art.groupId;
-    const label = (id: string) => lc(driverEffects(s, g).find((e) => e.driver.id === id)?.driver.label ?? id);
+    const label = (id: string) => { const d = driverEffects(s, g).find((e) => e.driver.id === id)?.driver; return lc(d ? d.plain ?? d.label : id); };
     const mine = art.rows.filter((r) => !ownerOf(r.driverId));
     const theirs = art.rows.filter((r) => ownerOf(r.driverId));
     const owner = theirs.length ? ownerOf(theirs[0].driverId)! : null;
@@ -79,8 +79,8 @@ export function freshSummary(s: DemoState, kind: string, art?: { kind: string; g
 
 /** What applying a fix does, in plain words. */
 const DOES: Record<string, string> = {
-  "a-connector": "turns off the Jira MCP connector's retry loop",
-  "a-subagents": "moves Claude Code subagents from Opus to Sonnet",
+  "a-connector": "stops the Jira link retrying after 3 failures",
+  "a-subagents": "moves helper tasks from Opus to Sonnet",
 };
 const doesOf = (id: string, label: string) => DOES[id] ?? `fixes ${label}`;
 
@@ -92,8 +92,8 @@ function draftAnswer(s: DemoState, p: string, kind: string): string {
     const theirs = open.filter((d) => ownerOf(d.id));
     const after = forecast({ ...s, appliedFixes: [...s.appliedFixes, ...mine.map((d) => d.id)] }, g).p50;
     if (/risk/.test(p)) return "Low. Nobody is capped or blocked, Opus stays one click away for anyone who needs it, and Sonnet's occasional retries are already counted in the savings. You can undo it from the card.";
-    if (/part/.test(p)) return `Each row stands on its own: ${open.map((d) => `${lc(d.label)} saves ${usd(recoveryOf(d))}`).join(", ")}. Tell me which to leave out and I will redraft it.`;
-    return `It ${mine.map((d) => doesOf(d.id, lc(d.label))).join(" and ")}. With those applied, ${GROUPS[g].name} is forecast at ${usd100(after)}.${theirs.length ? ` The cache fix is a code change, so it goes to ${ownerOf(theirs[0].id)!.short}.` : ""}`;
+    if (/part/.test(p)) return `Each row stands on its own: ${open.map((d) => `${lc(d.plain ?? d.label)} saves ${usd(recoveryOf(d))}`).join(", ")}. Tell me which to leave out and I will redraft it.`;
+    return `It ${mine.map((d) => doesOf(d.id, lc(d.plain ?? d.label))).join(" and ")}. With those applied, ${GROUPS[g].name} is forecast at ${usd100(after)}.${theirs.length ? ` The cache fix is a code change, so it goes to ${ownerOf(theirs[0].id)!.short}.` : ""}`;
   }
   if (kind === "rebalance_plan") {
     const r = draftRebalance(s, g);
@@ -142,7 +142,7 @@ export function offlinePlan(req: AgentRequest): OfflinePlan {
       const over = p.landing > p.target;
       const lead = `${w.name} is forecast at ${usd(p.landing)} against its ${usd(p.target)} target${over ? "" : ", within it"}${p.membersBlocked ? `, and ${p.membersBlocked} people would go over their monthly limit` : ""}.`;
       const blocked = "";
-      const why = inside.length ? ` Driving it: ${inside.map((e) => `${lc(e.driver.label)} (${usd(e.forward)})`).join(", ")}.` : " Nothing unusual is driving it.";
+      const why = inside.length ? ` Driving it: ${inside.map((e) => `${lc(e.driver.plain ?? e.driver.label)} (${usd(e.forward)})`).join(", ")}.` : " Nothing unusual is driving it.";
       const age = evidenceAge(s, w.id);
       const conf = age.isNew ? ` It is new (${age.label}), so its forecast is based mostly on the team average, and budget moved to it is not taken back before its 30-day check.` : "";
       return plan(`${lead}${why}${blocked}${conf}`.trim(), calls);
@@ -235,7 +235,7 @@ export function offlinePlan(req: AgentRequest): OfflinePlan {
 
   if (/waste come from|where.*waste|fixable waste/.test(p)) {
     const rows = breakdown(s, g).rows.filter((r) => r.side === "fix" && r.state === "open" && r.driver.kind === "waste");
-    if (rows.length) return plan(`${usd(k.fixableWaste)} of waste across ${rows.length} sources: ${rows.map((r) => `${lc(r.driver.label)} (${usd(r.recoverable)})`).join(", ")}. None of it produced completed work, so fixing it loses nothing.`);
+    if (rows.length) return plan(`${usd(k.fixableWaste)} of waste across ${rows.length} sources: ${rows.map((r) => `${lc(r.driver.plain ?? r.driver.label)} (${usd(r.recoverable)})`).join(", ")}. None of it produced completed work, so fixing it loses nothing.`);
   }
 
   if (/work.*risk|at risk/.test(p)) {
@@ -247,7 +247,7 @@ export function offlinePlan(req: AgentRequest): OfflinePlan {
   if (/over budget/.test(p)) {
     if (f.p50 <= f.pool) return plan(`${GROUPS[g].name} is not over budget: it is forecast at ${usd100(f.p50)} of ${usd(f.pool)}.`);
     // Name each growth driver with its own figure: a sum would be a number no tool returned.
-    const growth = driverEffects(s, g).filter((e) => e.driver.kind === "growth").map((e) => `${lc(e.driver.label)} (${usd(e.driver.forward)}${s.overrides.includes(e.driver.id) ? ", approved as planned" : ""})`);
+    const growth = driverEffects(s, g).filter((e) => e.driver.kind === "growth").map((e) => `${lc(e.driver.plain ?? e.driver.label)} (${usd(e.driver.forward)}${s.overrides.includes(e.driver.id) ? ", approved as planned" : ""})`);
     const parts = [k.fixableWaste > 0 && `${usd(k.fixableWaste)} of fixable waste`, k.waitingOnOwner > 0 && `${usd(k.waitingOnOwner)} waiting on the dev tools team`, growth.length > 0 && `new work that is producing results: ${growth.join(", ")}`].filter(Boolean);
     return plan(`${GROUPS[g].name} is forecast at ${usd100(f.p50)} against ${usd(f.pool)}, ${usd100(f.p50 - f.pool)} over. It comes from ${parts.join(" and ")}.${nextStep(s, sel)}`);
   }

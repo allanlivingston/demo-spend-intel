@@ -68,7 +68,7 @@ export function ruleFromDecline(driverId: string, reasonLabel: string, at = new 
   const t = TOPIC_OF[driverId];
   const d = driverById(driverId);
   if (!t || !d) return null;
-  return { id: newId(t, d.groupId), topic: t, groupId: d.groupId, level: "skip", basedOn: reasonLabel ? `You declined "${d.label}" because "${reasonLabel.toLowerCase()}".` : `You declined "${d.label}".`, createdAt: at };
+  return { id: newId(t, d.groupId), topic: t, groupId: d.groupId, level: "skip", basedOn: reasonLabel ? `You declined "${d.plain ?? d.label}" because "${reasonLabel.toLowerCase()}".` : `You declined "${d.plain ?? d.label}".`, createdAt: at };
 }
 
 /** Rules suggested after the admin applied fixes they could have applied alone: do the same next month without asking. */
@@ -79,7 +79,7 @@ export function rulesFromApply(s: DemoState, driverIds: string[], noThanks: stri
     const d = driverById(id);
     if (!t || !d || ownerOf(id) || !canAllow(t) || ruleFor(s, id) || noThanks.includes(`${t}:${d.groupId}`)) continue;
     if (out.some((r) => r.topic === t && r.groupId === d.groupId)) continue;
-    out.push({ id: newId(t, d.groupId), topic: t, groupId: d.groupId, level: "ask", basedOn: `You applied "${d.label}".`, createdAt: at });
+    out.push({ id: newId(t, d.groupId), topic: t, groupId: d.groupId, level: "ask", basedOn: `You applied "${d.plain ?? d.label}".`, createdAt: at });
   }
   return out;
 }
