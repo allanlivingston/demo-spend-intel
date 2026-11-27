@@ -47,7 +47,7 @@ export function Workstreams({ onFollowUp, busy }: { onFollowUp: FollowUp; busy: 
                 <div className="h-1.5 rounded-full bg-neutral-100">
                   <div className={cx("h-1.5 rounded-full", over ? "bg-bad" : w.pace < 0.5 ? "bg-neutral-400" : "bg-ok")} style={{ width: `${barPct}%` }} />
                 </div>
-                <span className={cx("text-right tabular-nums", over && "text-bad")}>{usd(w.landing)}<span className="block text-[12px] text-muted">lands at</span></span>
+                <span className={cx("text-right tabular-nums", over && "text-bad")}>{usd(w.landing)}<span className="block text-[12px] text-muted">forecast</span></span>
                 <span className="text-right tabular-nums">{usd(w.target)}<span className="block text-[12px] text-muted">target</span></span>
                 <span className={cx("text-right text-[13px]", share >= 0.2 ? "text-bad" : pm.length ? "text-warn-ink" : "text-muted")} title={pm.length ? `${pm.length} people. Cheaper model first, then paused runs, then runs held for a few hours.` : undefined}>{who}</span>
                 <button type="button" disabled={busy} className={FOLLOW}
@@ -99,7 +99,7 @@ export function Users({ onFollowUp, busy }: { onFollowUp: FollowUp; busy: boolea
       </div>
       <div>
         <div className={cx("grid gap-2", cols, " bg-white px-4 py-1.5 text-[12px] uppercase tracking-wide text-muted")}>
-          <span>Name</span>{showTeam && <span>{simple ? "Team" : "Workstream"}</span>}<span className="text-right">So far</span><span className="text-right">Lands at</span><span className="text-right">Limit</span><span className="pl-3">Status</span><span />
+          <span>Name</span>{showTeam && <span>{simple ? "Team" : "Workstream"}</span>}<span className="text-right">So far</span><span className="text-right">Forecast</span><span className="text-right">Limit</span><span className="pl-3">Status</span><span />
         </div>
         {shown.map((u) => {
           const status = u.st.text;

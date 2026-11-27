@@ -209,7 +209,7 @@ export function draftCfoBrief(s: DemoState, g: GroupId): CfoBrief {
     ``,
     `| | Now | If approved |`,
     `|---|---|---|`,
-    `| Lands at | ${usd(f.p50)} | ${usd(f.p50)} |`,
+    `| Forecast | ${usd(f.p50)} | ${usd(f.p50)} |`,
     `| High case | ${usd(Math.round(f.p90 / 100) * 100)} | ${usd(Math.round(f.p90 / 100) * 100)}${highOver > 0 ? ` (${usd(highOver)} over)` : ""} |`,
     `| Status | ${f.status} | ${statusAfter} |`,
     ``,

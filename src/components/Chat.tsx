@@ -240,7 +240,7 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
       }
     >
       {(live || open) && <div className="flex flex-wrap gap-x-10 gap-y-2 px-4 py-3">
-        <Stat label={<Term def={TERMS.landsAt}>Lands at</Term>} value={usd(lands === f.p50 ? f.p50 : Math.round(lands / 100) * 100)} tone={lands > f.pool ? "text-bad" : undefined} hint="if nothing changes" />
+        <Stat label={<Term def={TERMS.landsAt}>Forecast</Term>} value={usd(lands === f.p50 ? f.p50 : Math.round(lands / 100) * 100)} tone={lands > f.pool ? "text-bad" : undefined} />
         <Stat label="Budget" value={usd(f.pool)} />
         <Stat label={third.label === "Fixable waste" ? <Term def={TERMS.fixable}>{third.label}</Term> : third.label === "Waiting on owner" ? <Term def={TERMS.waiting}>{third.label}</Term> : third.label} value={third.value} tone={third.tone} learn={live ? third.learn : undefined} />
       </div>}
@@ -531,7 +531,7 @@ function RecapCard({ r, earlier }: { r: Recap; earlier: boolean }) {
     setTimeout(() => setCopied(false), 1500);
   };
   const lines: [string, React.ReactNode][] = [
-    ["Lands at", <>{usd100(r.after.lands)} <span className="text-muted">(was heading for {usd100(r.before.lands)})</span></>],
+    ["Forecast", <>{usd100(r.after.lands)} <span className="text-muted">(was heading for {usd100(r.before.lands)})</span></>],
     ["Budget", r.budgetAdded > 0 ? <>{usd(r.after.budget)} <span className="text-muted">(was {usd(r.before.budget)})</span></> : usd(r.after.budget)],
   ];
   if (r.fixed > 0) lines.push(["Waste fixed", usd(r.fixed)]);

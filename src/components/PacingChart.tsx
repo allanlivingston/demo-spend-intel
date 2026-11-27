@@ -15,7 +15,6 @@ let lastTeam: { group: string; line: number[]; band: ([number, number] | undefin
 const TEAM_MS = 360;
 
 /** Chart readouts round to $100, like the rest of the app. */
-const r100 = (v: number) => Math.round(v / 100) * 100;
 
 const FORMULA =
   "Likely landing = spend to date + remaining days at each driver's daily rate, shaped by the team's weekly pattern, plus active drivers, minus applied fixes. The shaded band runs to a high case, which widens as more spend comes from autonomous agents.";
@@ -190,11 +189,8 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
             <CartesianGrid stroke="#eef0f3" vertical={false} />
             <XAxis dataKey="day" tick={{ fontSize: 12 }} tickLine={false} axisLine={{ stroke: "#e2e8f0" }} {...dayTicks(phone)} />
             <YAxis domain={[0, shownTop]} allowDataOverflow ticks={evenTicks(top).filter((t) => t <= shownTop + 1)} tickFormatter={usdK} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={52} />
-            <Tooltip
-              formatter={(v, name) => (Array.isArray(v) ? [`${usd(r100(Number(v[0])))} to ${usd(r100(Number(v[1])))}`, "Likely range"] : [usd(r100(Number(v))), String(name)])}
-              labelFormatter={(d) => `Day ${d}${Number(d) === TODAY ? " (today)" : ""}`}
-              contentStyle={{ fontSize: 12, borderRadius: 6 }}
-            />
+            {/* No hover box: the axis gives the day and the labels give the events. The cursor line stays to show which day a click asks about. */}
+            <Tooltip content={() => null} />
             <Area dataKey="band" name="Likely range" fill="#D97757" fillOpacity={0.12} stroke="none" isAnimationActive />
             {advanced && <Line dataKey="plan" name="Pacing plan" stroke="#D97757" strokeWidth={1} dot={false} isAnimationActive={false} />}
             {ghost && <Line dataKey="ghost" name="Previous forecast" stroke="#94a3b8" strokeOpacity={0.5} strokeDasharray="4 4" dot={false} isAnimationActive={false} />}

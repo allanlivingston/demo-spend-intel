@@ -23,7 +23,7 @@ function Shell({ title, tag, status, children }: { title: string; tag?: string; 
   );
 }
 
-function LandingChange({ before, after, label = "Lands at" }: { before: { p50: number; status: PolicyDiff["before"]["status"] }; after: { p50: number; status: PolicyDiff["before"]["status"] }; label?: string }) {
+function LandingChange({ before, after, label = "Forecast" }: { before: { p50: number; status: PolicyDiff["before"]["status"] }; after: { p50: number; status: PolicyDiff["before"]["status"] }; label?: string }) {
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-md bg-neutral-50 px-3 py-2">
       <span className="text-[13px] text-muted">{label}</span>
@@ -142,7 +142,7 @@ function PolicyDiffCard({ a, status, runOf }: { a: PolicyDiff; status?: Artifact
           </div>
         </div>
       )}
-      <LandingChange before={a.before} after={afterMine} label={theirs.length && mine.length ? "After your changes" : "Lands at"} />
+      <LandingChange before={a.before} after={afterMine} label={theirs.length && mine.length ? "After your changes" : "Forecast"} />
       {theirs.length > 0 && mine.length > 0 && <LandingChange before={afterMine} after={afterAll} label="After the owner's fix" />}
       {!applied && mine.length > 0 && <p className="text-[13px] text-muted">Nobody is cut off. Undo any time{theirs.length ? "; the owner gets a ticket" : ""}. Every change is logged in Activity.</p>}
       <div className="flex gap-2">
@@ -254,7 +254,7 @@ function CfoBriefCard({ a, status }: { a: CfoBrief; status?: ArtifactStatus }) {
         <thead><tr className="text-left text-muted"><th className="font-normal" /><th className="font-normal">Now</th><th className="font-normal">If approved</th></tr></thead>
         <tbody className="tabular-nums">
           <tr><td className="text-muted">Budget</td><td>{usd(a.currentBudget)}</td><td className="font-semibold">{usd(a.newBudget)}</td></tr>
-          <tr><td className="text-muted">Lands at</td><td>{usd(a.p50)}</td><td>{usd(a.p50)}</td></tr>
+          <tr><td className="text-muted">Forecast</td><td>{usd(a.p50)}</td><td>{usd(a.p50)}</td></tr>
           <tr><td className="text-muted">High case</td><td>{usd(Math.round(a.p90 / 100) * 100)}</td><td>{usd(Math.round(a.p90 / 100) * 100)}{Math.round(a.p90 / 100) * 100 > a.newBudget && <span className="text-warn-ink"> ({usd(Math.round(a.p90 / 100) * 100 - a.newBudget)} over)</span>}</td></tr>
           <tr><td className="text-muted">Status</td><td><StatusPill status={a.statusBefore} /></td><td><StatusPill status={a.statusAfter} /></td></tr>
         </tbody>
