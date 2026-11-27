@@ -124,3 +124,7 @@ The full list is in [NOTES.md](NOTES.md).
 ## Research behind it
 
 The main source is Capgemini Research Institute, *The cost of intelligence: Governing AI economics in the agentic enterprise*, November 2026 ([report](https://www.capgemini.com/wp-content/uploads/2026/11/AI_Economics.pdf)), along with FinOps Foundation, McKinsey, Anthropic's Claude Enterprise documentation and ad-platform budget pacing. The full list is in [NOTES.md](NOTES.md); the "Ask about this demo" chat answers from `src/knowledge/DEMO_GUIDE.md`.
+
+## License
+
+All rights reserved. Shared for review only; no permission is granted to reuse or redistribute this code.

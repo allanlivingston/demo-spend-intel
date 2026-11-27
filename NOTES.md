@@ -22,8 +22,6 @@ Detail moved out of the README to keep it short: the write-up in brief, the full
 
 **Scope of the prototype.** Claude Enterprise bundles Claude Code, Cowork and chat under one consumption contract. The prototype focuses on Claude Code and the agents around it (subagents, connectors, scheduled runs), because that is where spend grows fastest and where nobody is in the loop to vouch for it. Chat and Cowork spend would go through the same forecast and pacing; their waste patterns and evidence of results would differ.
 
-**Scope of the prototype.** Claude Enterprise bundles Claude Code, Cowork and chat under one consumption contract. The prototype focuses on Claude Code and the agents around it (subagents, connectors, scheduled runs), because that is where spend grows fastest and where nobody is in the loop to vouch for it. Chat and Cowork spend would go through the same forecast and pacing; their waste patterns and evidence of results would differ.
-
 ## From the write-up to the prototype (full table)
 
 | Write-up | In the prototype |
