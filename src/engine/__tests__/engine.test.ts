@@ -51,7 +51,7 @@ describe("section 3 target numbers (Platform Engineering)", () => {
 describe("headlines", () => {
   test("computed per scenario", () => {
     expect(headline(initialState("baseline"))).toBe("All teams on pace.");
-    expect(headline(initialState("A"))).toBe("Platform Engineering: $10,800 of waste to fix.");
+    expect(headline(initialState("A"))).toBe("Platform Engineering: Fix $10,800 of waste.");
     expect(headline(initialState("B"))).toBe("Platform Engineering: About 7% of runs are slowed or held each day to stay within limits. Move unused budget to the payments refactor.");
   });
 });

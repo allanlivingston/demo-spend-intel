@@ -140,16 +140,15 @@ export function headline(s: DemoState, sel: GroupSelection = "all"): string {
   // Name both amounts up front, so the new engineers' share isn't a surprise after the fixes (what's left once the
   // waste is fixed is theirs: the same figure the funding step gives later).
   if (s.scenarioId === "C" && k.fixableWaste > 0) {
-    const hires = scenarioOf(s).newMembers.filter((m) => m.groupId === "pe").length;
     // Their team's figures, not all teams': other teams' unused budget doesn't pay for them. The line names who it is
     // about, so it needs no team prefix in the all-teams view.
     const pf = forecast(s, "pe");
     const rest = pf.p50 - pf.pool - kpis(s, "pe").fixableWaste;
-    return rest >= 100 ? `${usd(k.fixableWaste)} of waste to fix, then ask for ${usd100(rest)} for the ${hires} new engineers.` : lead(`${usd(k.fixableWaste)} of waste to fix.`);
+    return rest >= 100 ? `Fix ${usd(k.fixableWaste)} of waste, then ask for ${usd100(rest)}.` : lead(`Fix ${usd(k.fixableWaste)} of waste.`);
   }
 
   if (s.scenarioId === "A") {
-    if (k.fixableWaste > 0) return lead(`${usd(k.fixableWaste)} of waste to fix.`);
+    if (k.fixableWaste > 0) return lead(`Fix ${usd(k.fixableWaste)} of waste.`);
     if (k.waitingOnOwner > 0)
       return lead(over > 0 ? `${usd100(over)} over budget until the dev tools team fixes the prompt cache.` : `On track. ${onPace} Waiting on the dev tools team's cache fix.`);
     return lead(over > 0 ? `${usd100(over)} over budget.` : `On track. ${onPace}`);
