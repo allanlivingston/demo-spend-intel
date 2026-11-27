@@ -21,3 +21,11 @@ test("a draft that only hands a fix to its owner folds to a line that says what 
   const line = settledLine({ kind: "policy_diff", rows: [{ driverId: "a-cache", savings: 2100 }] } as never);
   expect(line).toBe("Sent 1 to the dev tools team · saves $2,100 once they ship it");
 });
+
+test("after the fixes, the all-teams headline gives Platform Engineering's own figures and the exact ask", async () => {
+  const { headline } = await import("@/engine");
+  const s = { ...initialState("C"), appliedFixes: ["a-connector", "a-subagents"], handedOff: ["a-cache"] };
+  const pe = headline(s, "pe");
+  expect(pe).toMatch(/Ask the budget owner for the \$[\d,]+\.$/);
+  expect(headline(s, "all")).toBe(`Platform Engineering: ${pe}`);
+});

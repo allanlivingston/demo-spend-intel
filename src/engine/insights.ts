@@ -157,10 +157,10 @@ export function headline(s: DemoState, sel: GroupSelection = "all"): string {
     if (s.budgetRevisions.pe) return `Budget is now ${usd(poolOf(s, "pe"))}.${k.waitingOnOwner > 0 ? " Waiting on the dev tools team's cache fix." : " Nothing else needs you."}`;
     if (s.rebalanceApplied) {
       if (over <= 0) return lead(`On track. ${onPace}`);
-      return lead(fundLine(s, over));
+      return lead(fundLine(s));
     }
     const pc = pacing(s, "pe");
-    if (!isAdvanced()) return lead(fundLine(s, over));
+    if (!isAdvanced()) return lead(fundLine(s));
     if (pc.members.length) return lead(`About ${Math.round(pc.teamShare * 100)}% of runs are slowed or held each day to stay within limits. Move unused budget to the payments refactor.`);
     return lead(`${t.newHiresBlockedByDay22} engineers reach their monthly limit by day 22. Move unused budget to the payments refactor.`);
   }
@@ -318,7 +318,10 @@ export function agentsOf(s: DemoState, sel: GroupSelection): (AgentRow & { team:
 }
 
 /** The funding step in plain words: what is over, where it comes from, and the next step. */
-function fundLine(s: DemoState, over: number): string {
+function fundLine(s: DemoState): string {
+  // Always Platform Engineering's own figures: in the all-teams view, other teams' unused budget doesn't pay for it.
+  const pf = forecast(s, "pe");
+  const over = pf.p50 - pf.pool;
   const soc2 = driversOf(s, "pe").find((d) => d.id === "b-soc2");
   const hires = scenarioOf(s).newMembers.filter((m) => m.groupId === "pe").length;
   const who = hires ? `the ${hires} new engineers` : "new work";
@@ -326,8 +329,8 @@ function fundLine(s: DemoState, over: number): string {
     return `${usd100(over)} over budget from ${who} and a planned ${usd(soc2.forward)} SOC 2 sprint starting tomorrow. Approve the sprint, then ask the budget owner for the rest.`;
   const waiting = kpis(s, "pe").waitingOnOwner;
   if (waiting > 0 && over > waiting)
-    return `${usd100(over)} over budget: ${usd100(over - waiting)} from ${who} and ${usd(waiting)} until the dev tools team ships their fix. Ask the budget owner for the rest.`;
-  return `${usd100(over)} over budget from ${who}. Ask the budget owner for the rest.`;
+    return `${usd100(over)} over budget: ${usd100(over - waiting)} from ${who} and ${usd(waiting)} until the dev tools team ships their fix. Ask the budget owner for the ${usd100(over - waiting)}.`;
+  return `${usd100(over)} over budget from ${who}. Ask the budget owner for the ${usd100(over)}.`;
 }
 
 /** What to ask for the new engineers' work: what is still over budget once all waste is fixed (scenario C only). */
