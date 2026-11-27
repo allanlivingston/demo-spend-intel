@@ -55,6 +55,7 @@ Detail moved out of the README to keep it short: the write-up in brief, the full
 
 ### Product and interface
 
+- **Fit it into today's admin console.** Line it up with the existing billing, usage and spend-control screens: where the forecast and recommendations live, how pacing relates to today's spend limits and alerts, and numbers that match the usage reports and invoices Finance already uses.
 - **Make the interface show less by default.** I'd use progressive disclosure: a simpler forecast first (where the month lands and whether to fix or fund), with the range, daily bars, per-person detail, workstreams, budget moves and forecasting health opening only when the admin asks for them.
 - **Try a dual-panel interface.** Evaluate a duet-style layout, with the chat in one panel and the forecast and drafts in a working panel beside it, against the single conversation the prototype uses.
 - **Make approvals richer to work with.** Today an approval is all or nothing. I'd let the admin approve part of a change, adjust an amount or a model setting before approving, add conditions (an end date, a spend ceiling, a review on a set day), and ask the owner or Finance a question on the draft itself.

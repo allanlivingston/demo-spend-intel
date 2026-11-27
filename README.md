@@ -113,6 +113,7 @@ Not possible yet, as the write-up says: proving business value beyond Claude Cod
 
 ## What I'd do differently with more time
 
+- **Fit it into today's admin console.** Line it up with the existing billing, usage and spend-control screens, so the numbers match the reports Finance already uses.
 - **Talk to platform owners before building.** The scenarios, waste patterns and thresholds are constructed; I'd test them in interviews and build the demo month from a design partner's real usage.
 - **Show less by default.** Where the month lands and whether to fix or fund first; the range, daily bars, per-person detail and workstreams only on request.
 - **Make approvals richer.** Approve part of a change, adjust an amount before approving, or add conditions like an end date or a spend ceiling.

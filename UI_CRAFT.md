@@ -8,7 +8,7 @@ specific correction, the example is in brackets.
 - **Chat first, not a dashboard.** The conversation is the main surface. Views (forecast, recommendations, drafts) appear inside it as artifacts. This is a demo for Anthropic, not an enterprise suite.
 - **Copy Claude.ai's conventions, don't invent new ones.** These include:
   - type sizes, spacing and colors;
-  - the model selector inside the message box, with suggestion chips in one row under it;
+  - suggestion chips in one row under the message box, with the model selector at its right as plain text ("Haiku + Sonnet  Auto"); its menu shows the current model, then More models and a one-line note;
   - the left nav layout;
   - the collapsible sidebar: open by default, collapse on the icon, peek on hover, pin on the logo. On a phone, no rail: a top bar with a menu button that slides the full sidebar over the page.
 - **Check against the real thing.** When unsure, open Claude.ai and compare side by side. [Fonts were smaller and padding wider than Claude's.]
