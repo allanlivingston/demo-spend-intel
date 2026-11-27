@@ -113,6 +113,9 @@ interface Store {
   drawerOpen: boolean;
   /** Daily bars under the chart: closed behind a one-line summary until the admin opens them. */
   dailyOpen: boolean;
+  /** The reader's last Show/Hide chart choice; null until they make one (the chart shows). */
+  chartHidden: boolean | null;
+  setChartHidden: (hidden: boolean) => void;
   /** Bumped on reset and scenario switch, so views return to their first tab. */
   epoch: number;
   /** How many Activity entries the admin has seen; the sidebar badge counts the rest. */
@@ -213,6 +216,7 @@ const fresh = (scenario: ScenarioId = "C") => ({
   messages: [] as ChatMessage[],
   ghost: null as DayPoint[] | null,
   dailyOpen: false,
+  chartHidden: null as boolean | null,
   pastChats: [] as PastChat[],
   currentChatId: null as string | null,
 });
@@ -309,6 +313,7 @@ export const useStore = create<Store>()(
         ruleNoThanks: [],
 
         setDailyOpen: (dailyOpen) => set({ dailyOpen }),
+        setChartHidden: (chartHidden) => set({ chartHidden }),
         setDrawer: (drawerOpen) => set({ drawerOpen, unseen: drawerOpen ? false : get().unseen }),
         setReview: (review) => set({ review }),
         threads: [],
@@ -548,7 +553,7 @@ export const useStore = create<Store>()(
         },
         reset: () => {
           const id = get().demo.scenarioId;
-          set({ ...fresh(id), ruleNoThanks: [], group: focusGroup(id), audit: [], auditSeen: 0, epoch: get().epoch + 1, seq: 0, threads: [], review: null, ghost: null, chatStart: { demo: initialState(id), group: focusGroup(id) } });
+          set({ ...fresh(id), ruleNoThanks: [], chartHidden: null, group: focusGroup(id), audit: [], auditSeen: 0, epoch: get().epoch + 1, seq: 0, threads: [], review: null, ghost: null, chatStart: { demo: initialState(id), group: focusGroup(id) } });
         },
       };
     },

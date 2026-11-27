@@ -2,9 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, CircleHelp } from "lucide-react";
 import { Area, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, usePlotArea, useXAxisScale, useYAxisScale, XAxis, YAxis } from "recharts";
-import { dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, pacing, TODAY, type GroupId } from "@/engine";
+import { DAYS, dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, pacing, TODAY, usd100, type GroupId } from "@/engine";
 import { useStore, type Snapshot } from "@/state/store";
-import { PHONE, Term, TERMS, usd, usdK, useMedia } from "./ui";
+import { cx, PHONE, Term, TERMS, usd, usdK, useMedia } from "./ui";
 import { markUsed, NewDot, useNew } from "./NewDot";
 import { useJustNow, useRoll } from "./motion";
 
@@ -108,20 +108,34 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
   const anyHeld = ms.people > 0;
   // Spend with limits on, from day 1: the no-limits line minus what was held back up to each day.
   let heldSoFar = 0;
+  // The payoff of a change: the forecast came down from where it was heading. The space between the old line and the
+  // new one is what the change saves; it fills as the line glides down.
+  const wasEnd = ghost?.at(-1)?.p50 ?? null;
+  const saved = !advanced && wasEnd !== null ? Math.round((wasEnd - f.p50) / 100) * 100 : 0;
+  const showSaved = saved >= 100;
+  const pool = tb(teamFrom?.pool, f.pool);
   const data = f.series.map((p, i) => {
     heldSoFar += thrArr[i] + blkArr[i];
     const was = ghost?.[i] ? (ghost[i].actual ?? ghost[i].p50 ?? cum(i)) : cum(i);
     const line = tb(teamFrom?.line[i], mix < 1 ? was + (cum(i) - was) * mix : cum(i));
     const fb = teamFrom?.band[i];
     const band = p.band && fb ? [tb(fb[0], p.band[0]), tb(fb[1], p.band[1])] as [number, number] : teamFrom ? undefined : p.band;
-    return { ...p, band, actual: p.actual !== undefined ? Math.round(line) : undefined, forecastLine: i + 1 >= TODAY ? Math.round(line) : undefined, noLimits: Math.round(line), limited: anyHeld ? Math.round(cum(i) - heldSoFar) : undefined, ghost: ghost && ghost[i]?.p50 !== undefined ? ghost[i].p50 : undefined };
+    const lineAt = (j: number) => {
+      const wj = ghost?.[j] ? (ghost[j].actual ?? ghost[j].p50 ?? cum(j)) : cum(j);
+      return tb(teamFrom?.line[j], mix < 1 ? wj + (cum(j) - wj) * mix : cum(j));
+    };
+    // The stretch of the forecast above the budget, drawn red; it starts one day early so it joins the line.
+    const future = i + 1 >= TODAY;
+    const over = !advanced && future && (line > pool || (i + 1 < f.series.length && lineAt(i + 1) > pool)) ? Math.round(line) : undefined;
+    const savedBand = showSaved && future && was - line > 1 ? [Math.round(line), Math.round(was)] as [number, number] : undefined;
+    return { ...p, band, over, savedBand, actual: p.actual !== undefined ? Math.round(line) : undefined, forecastLine: i + 1 >= TODAY ? Math.round(line) : undefined, noLimits: Math.round(line), limited: anyHeld ? Math.round(cum(i) - heldSoFar) : undefined, ghost: ghost && ghost[i]?.p50 !== undefined ? ghost[i].p50 : undefined };
   });
   // Event labels: one per dot (throttle days within 4 days share one). EventLabels places them in pixels so none overlap.
   const throttleLabels = Object.entries(blockDays)
     .filter(([day], i, all) => !(i > 0 && +day - +all[i - 1][0] < 4))
     .map(([day]) => ({ key: `b${day}`, day: +day, value: yAt(+day), text: `${Object.entries(blockDays).filter(([d]) => +d >= +day && +d - +day < 4).reduce((a, [, c]) => a + c, 0)} people: some runs held`, color: "#C4452F" }));
   const labels: EventLabel[] = [
-    ...markers.map((d) => ({ key: d.id, day: d.startDay, value: yAt(d.startDay), text: d.marker!.replace(/^Day \d+:\s*/, ""), color: fixedState(d.id) ? "#999" : "#555" })),
+    ...markers.map((d) => ({ key: d.id, day: d.startDay, value: yAt(d.startDay), text: `${d.marker!.replace(/^Day \d+:\s*/, "")}${fixedState(d.id) === "fixed" ? " · fixed" : fixedState(d.id) ? " · sent to owner" : ""}`, color: fixedState(d.id) ? "#999" : "#555" })),
     ...throttleLabels,
   ].sort((a, b) => a.day - b.day);
   const dots = [...markers.map((d) => ({ day: d.startDay, value: yAt(d.startDay) })), ...Object.keys(blockDays).map((d) => ({ day: +d, value: yAt(+d) }))];
@@ -136,7 +150,15 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
   });
 
   return (
-    <div>
+    <div className="group/chart">
+      {/* On a phone the chart has no room for end labels: the same line sits above it. */}
+      {!advanced && phone && !teamFrom && mix >= 1 && (
+        <div className={cx("px-4 pt-2 text-[13px]", morphing && "settle-in")}>
+          {showSaved && <span className="text-muted">Was {usd(wasEnd!)} · <span className="font-semibold text-ok-ink">saved {usd100(saved)}</span> · </span>}
+          <span className="font-semibold">{usd(f.p50)}</span>
+          <span className={f.p50 - f.pool >= 100 ? "text-bad" : f.pool - f.p50 >= 100 ? "text-ok-ink" : "text-muted"}> · {Math.abs(f.p50 - f.pool) < 100 ? "on budget" : f.p50 > f.pool ? `${usd100(f.p50 - f.pool)} over` : `${usd100(f.pool - f.p50)} under`}</span>
+        </div>
+      )}
       <div id={onDay ? "forecast-chart" : undefined} className="h-[260px] px-1 pt-2">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
@@ -163,9 +185,11 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
             <Area dataKey="band" name="Likely range" fill="#D97757" fillOpacity={0.12} stroke="none" isAnimationActive />
             {advanced && <Line dataKey="plan" name="Pacing plan" stroke="#D97757" strokeWidth={1} dot={false} isAnimationActive={false} />}
             {ghost && <Line dataKey="ghost" name="Previous forecast" stroke="#94a3b8" strokeOpacity={0.5} strokeDasharray="4 4" dot={false} isAnimationActive={false} />}
+            {showSaved && <Area dataKey="savedBand" name="Saved by your changes" fill="#3F8F5A" fillOpacity={0.16 * mix} stroke="none" isAnimationActive={false} />}
             <Line dataKey="actual" name="Actual" stroke="#191919" strokeWidth={2} dot={false} isAnimationActive={false} />
             {advanced && anyHeld && <Line dataKey="limited" name="Spend with pacing and caps" stroke="#D97757" strokeWidth={2} strokeDasharray="2 3" dot={false} isAnimationActive={false} />}
             <Line dataKey={advanced ? "noLimits" : "forecastLine"} name={advanced ? "No limits, from day 1" : "Forecast"} stroke="#191919" strokeWidth={2} strokeDasharray="6 4" dot={false} animationDuration={700} isAnimationActive={!morphing} />
+            {!advanced && <Line dataKey="over" name="Over budget" stroke="#C4452F" strokeWidth={2} strokeDasharray="6 4" dot={false} isAnimationActive={false} legendType="none" />}
             <ReferenceLine y={tb(teamFrom?.pool, f.pool)} stroke="#191919" strokeDasharray="2 4" label={{ value: `Budget ${usd(f.pool)}`, position: "insideTopLeft", fontSize: 12, fill: "#555" }} />
             <ReferenceLine x={TODAY} stroke="#cbd5e1" label={{ value: "Today", position: "insideTop", fontSize: 11, fill: "#888" }} />
             {markers.map((d) => (
@@ -192,6 +216,7 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
                 style={{ cursor: "pointer" }}
               />
             ))}
+            {!advanced && !teamFrom && !phone && <EndLabels was={showSaved ? wasEnd : null} now={f.p50} low={cum(DAYS - 8)} pool={f.pool} saved={saved} show={mix >= 1} fresh={morphing} />}
             <EventLabels
               labels={labels}
               dots={dots}
@@ -201,7 +226,8 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 px-4 pb-3 pt-1 text-[13px] text-muted">
+      {/* The legend shows while the pointer is over the chart (or it has focus); touch screens always show it. */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 px-4 pb-3 pt-1 text-[13px] text-muted opacity-0 transition-opacity duration-200 group-hover/chart:opacity-100 group-focus-within/chart:opacity-100 [@media(hover:none)]:opacity-100">
         <span><span className="mr-1 inline-block h-0.5 w-4 bg-ink align-middle" />Actual</span>
         <span><span className="mr-1 inline-block w-4 border-t-2 border-dashed border-ink align-middle" />{advanced ? "No limits, from day 1" : "Forecast"}</span>
         {advanced && anyHeld && <span><span className="mr-1 inline-block w-4 border-t-2 border-dotted align-middle" style={{ borderColor: "#D97757" }} />Spend with pacing and caps</span>}
@@ -210,6 +236,7 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
         {/* Only the markers this chart shows. */}
         {markers.some((d) => d.kind === "waste" && !fixedState(d.id)) && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-warn align-middle" />Waste starts</span>}
         {markers.some((d) => d.kind !== "waste" && !fixedState(d.id)) && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-ok align-middle" />Growth starts</span>}
+        {showSaved && <span><span className="mr-1 inline-block h-2.5 w-4 align-middle" style={{ background: "rgba(63,143,90,0.25)" }} />Saved by your changes</span>}
         {markers.some((d) => fixedState(d.id)) && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ background: "#B8B8B8" }} />Fixed or sent to owner</span>}
         {Object.keys(blockDays).length > 0 && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-bad align-middle" />People with runs first held</span>}
         {/* The note and the ? stay together on the right, so neither wraps onto a line of its own. */}
@@ -227,6 +254,36 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
       {anyHeld && <DailySummary data={stripDays} pace={pacing(demo, group)} open={!!dailyOpen} onToggle={() => setDailyOpen(!dailyOpen)} />}
       {anyHeld && dailyOpen && <DailyStrip data={stripDays} />}
     </div>
+  );
+}
+
+/**
+ * Labels at the end of the forecast: where it was heading (grey, when a change brought it down), where it lands now
+ * and how that compares with the budget, and what the change saved, in the green band. They appear once the line has
+ * settled.
+ */
+function EndLabels({ was, now, low, pool, saved, show, fresh }: { was: number | null; now: number; low: number; pool: number; saved: number; show: boolean; fresh: boolean }) {
+  const xs = useXAxisScale();
+  const ys = useYAxisScale();
+  if (!xs || !ys || !show) return null;
+  const xEnd = xs(DAYS, { position: "middle" });
+  const yNow = ys(now);
+  if (xEnd === undefined || yNow === undefined) return null;
+  const x = xEnd - 12;
+  const gap = now - pool;
+  const verdict = Math.abs(gap) < 100 ? "on budget" : gap > 0 ? `${usd100(gap)} over` : `${usd100(-gap)} under`;
+  const tone = Math.abs(gap) < 100 ? "#555" : gap > 0 ? "#C4452F" : "#2F7A4A";
+  const yWas = was !== null ? ys(was) ?? null : null;
+  // The landing sits under the end of the line, clear of the "was" label above it.
+  // The label spans the last week or so; it sits under the lowest point of the line there, so it never crosses it.
+  const nowY = Math.max(yNow + 20, (ys(low) ?? yNow) + 16, yWas !== null ? yWas + 36 : 0);
+  return (
+    <g className={fresh ? "settle-in" : undefined} style={{ pointerEvents: "none" }}>
+      {yWas !== null && <text x={x} y={yWas - 8} textAnchor="end" fontSize={12} fill="#888">was {usd(was!)}<tspan fontWeight={600} fill="#2F7A4A"> · saved {usd100(saved)}</tspan></text>}
+      <text x={x} y={nowY} textAnchor="end" fontSize={12} fontWeight={600} fill="#191919">
+        {usd(now)}<tspan fontWeight={500} fill={tone}> · {verdict}</tspan>
+      </text>
+    </g>
   );
 }
 

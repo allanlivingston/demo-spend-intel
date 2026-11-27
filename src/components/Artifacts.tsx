@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ArrowRight, Check, Copy, FileText, GitBranch, Scale, Send, ShieldCheck } from "lucide-react";
+import { ArrowRight, Check, Copy, Send } from "lucide-react";
 import {
   FUNDING_PATHS, handoffTo, handoffWhat, landing, ownerOf, REASON_CODES, type Artifact, type CfoBrief, type Handoff, type OverrideArtifact, type PolicyDiff, type RebalanceArtifact, levelOfTier } from "@/engine";
 import { useStore, type ArtifactStatus } from "@/state/store";
@@ -8,11 +8,11 @@ import { Button, StatusPill, usd, pct, cx } from "./ui";
 
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
-function Shell({ icon, title, tag, status, children }: { icon: React.ReactNode; title: string; tag?: string; status?: ArtifactStatus; children: React.ReactNode }) {
+function Shell({ title, tag, status, children }: { title: string; tag?: string; status?: ArtifactStatus; children: React.ReactNode }) {
   return (
     <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm">
       <div className="flex items-center gap-2 border-b border-neutral-100 bg-neutral-50/60 px-3 py-2 text-[15px] font-semibold">
-        {icon} {title}
+        {title}
         {tag && <span className="rounded border border-neutral-300 px-1.5 py-px text-[11px] font-medium text-muted">{tag}</span>}
         {status && status !== "proposed" && (
           <span className={cx("ml-auto rounded-full px-2 py-0.5 text-[12px] font-medium capitalize", status === "reverted" || status === "declined" ? "bg-neutral-100 text-muted" : "bg-emerald-50 text-ok-ink")}>{status}</span>
@@ -90,7 +90,7 @@ function PolicyDiffCard({ a, status, runOf }: { a: PolicyDiff; status?: Artifact
   const afterMine = landing(withMine, a.groupId);
   const afterAll = landing(withAll, a.groupId);
   return (
-    <Shell icon={<GitBranch size={15} />} title="Proposed changes" status={status}>
+    <Shell title="Proposed changes" status={status}>
       {mine.length > 0 && (
         <div>
           {theirs.length > 0 && <div className="mb-1 text-[12px] font-semibold uppercase tracking-wide text-muted">You apply</div>}
@@ -159,7 +159,7 @@ function PolicyDiffCard({ a, status, runOf }: { a: PolicyDiff; status?: Artifact
 function RebalanceCard({ a, status }: { a: RebalanceArtifact; status?: ArtifactStatus }) {
   const applyRebalance = useStore((s) => s.applyRebalance);
   return (
-    <Shell icon={<Scale size={15} />} title="Move unused budget" status={status}>
+    <Shell title="Move unused budget" status={status}>
       <div className="grid grid-cols-2 gap-2 text-[13px]">
         <div><span className="text-muted">Sharing level</span><div className="font-medium">{a.rungLabel}</div></div>
         <div><span className="text-muted">Confidence</span><div className="font-medium">{levelOfTier(a.tier)}{a.tier < a.requiredTier ? ` (needs ${levelOfTier(a.requiredTier)})` : ""}</div></div>
@@ -210,7 +210,7 @@ function OverrideCard({ a, status }: { a: OverrideArtifact; status?: ArtifactSta
   const reasonOk = reason !== "" && (reason !== "Other" || other.trim().length > 2);
   const done = status === "confirmed";
   return (
-    <Shell icon={<ShieldCheck size={15} />} title="Planned spend approval" status={status}>
+    <Shell title="Planned spend approval" status={status}>
       <div>
         <div className="font-medium">{a.driverLabel}</div>
         <div className="text-[13px] text-muted">+{usd(a.amount)} to month end · {levelOfTier(a.tier)} confidence: {a.evidence.join(", ")}</div>
@@ -246,7 +246,7 @@ function CfoBriefCard({ a, status }: { a: CfoBrief; status?: ArtifactStatus }) {
   const advanced = useStore((s) => s.advanced);
   const [copied, setCopied] = useState(false);
   return (
-    <Shell icon={<FileText size={15} />} title="Budget owner brief" status={status}>
+    <Shell title="Budget owner brief" status={status}>
       <div className="text-base font-semibold">
         Request +{usd(a.requested)} <span className="text-[15px] font-normal text-muted">({a.groupName}: {usd(a.currentBudget)} to {usd(a.newBudget)})</span>
       </div>
@@ -284,7 +284,7 @@ function HandoffCard({ a }: { a: Handoff }) {
   const sent = useStore((s) => (s.demo.handedOff ?? []).includes(a.driverId));
   const sendHandoff = useStore((s) => s.sendHandoff);
   return (
-    <Shell icon={<Send size={15} />} title={a.channel} tag={sent ? "Sent" : "Draft"}>
+    <Shell title={a.channel} tag={sent ? "Sent" : "Draft"}>
       <div className="text-[13px]"><span className="text-muted">To</span> {a.recipient}</div>
       <div className="font-medium">{a.title}</div>
       <p className="text-[13px] leading-relaxed text-neutral-700">{a.body}</p>

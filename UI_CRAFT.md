@@ -36,12 +36,14 @@ specific correction, the example is in brackets.
   - Only where something the user did changed something: the landing rolls from where it was heading, the forecast line glides from the old curve (which stays as a dashed ghost), an approved card settles with its check drawn, and the month's recap lines arrive one after another.
   - Switching team: the headline block's height glides (360ms) and the new headline fades in, so the forecast moves smoothly instead of jumping. The chart's scale, lines, range and budget line glide to the new team's together. Don't reserve empty space to avoid movement: it looks unfinished. [A fixed-height headline left too much white space.]
   - A new draft grows open, and an approved one folds to its one line, over 360ms with even easing (a fast start drops frames while the new forecast renders). [Apply, Fund it and the budget owner approval jerked the page.]
+  - The change a fix makes is drawn, not left to compare: the space between the old forecast and the new one fills green as the line glides down, then the end shows "was $56,900 · saved $8,700" and "$48,200 · $8,200 over"; the stretch above budget is red; fixed causes say "· fixed" or "· sent to owner". On a phone the end labels become one line above the chart.
   - Short and once: 600ms or less, a 250ms pause before a figure moves so the eye finds it, number and line in step.
   - Never on a page load or reload, and none at all with reduced motion.
   - No wipes, slides, bounces or pulsing buttons: they slow the demo and pull attention from the next step.
 
 ## 3. Show less by default
 
+- **The chart can be hidden; the figures can't.** Show/Hide chart is remembered for new copies. Until the reader chooses, the opening chart hides once the conversation starts; later copies show theirs. The chart legend shows on hover or focus (always on touch screens). Card headers have no decorative icons.
 - **Progressive disclosure.** Lead with one sentence or one summary line and open the detail on request. [The daily bars sit behind a one-line summary.]
 - **The default view shows the core idea only.** Workstreams, Health and budget moves live in the advanced view.
 - **Never mention something the current view doesn't have.** [A workstream or "SOC 2 sprint" string in the default view.]

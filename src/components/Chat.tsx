@@ -3,7 +3,7 @@
 // Everything after appends below. Views (forecast, recommendations) can be posted again at the bottom; only the
 // newest copy of each is live, older copies render from the state they were posted with, so they match their text.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Copy, LineChart, ListChecks, X } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Copy, X } from "lucide-react";
 import {
   breakdown, confidenceOf, driverById, forecast, GROUP_IDS, GROUPS, headline, kpis, ownerOf, ruleFor, TODAY, usd100,
   type Artifact, type BreakdownRow, type GroupSelection,
@@ -58,8 +58,8 @@ const same = (a: Snapshot, b: Snapshot) => a.group === b.group && JSON.stringify
 
 // ---------- Shared frame ----------
 
-function Frame({ icon, title, right, children, id, stale }: {
-  icon: React.ReactNode; title: string; right?: React.ReactNode; children: React.ReactNode; id?: string;
+function Frame({ title, right, children, id, stale }: {
+  title: string; right?: React.ReactNode; children: React.ReactNode; id?: string;
   stale?: { changed: boolean; kind: ViewKind; open: boolean };
 }) {
   const postView = useStore((s) => s.postView);
@@ -74,7 +74,6 @@ function Frame({ icon, title, right, children, id, stale }: {
     <SmoothHeight>
     <section id={id} className={cx("overflow-hidden rounded-xl border bg-white", stale ? "border-black/[0.06]" : "border-black/10")}>
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-neutral-100 px-4 py-2.5">
-        <span className="text-muted">{icon}</span>
         <h2 className="whitespace-nowrap text-[15px] font-semibold">{title}</h2>
         <div className="ml-auto flex min-w-0 max-w-full items-center gap-2">{right}</div>
       </header>
@@ -186,6 +185,15 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
   const [userOpen, setOpen] = useState<boolean | null>(null);
   const open = userOpen ?? live;
   const [tab0, setTab] = useState<ForecastTab>("chart");
+  // The chart can be hidden; the figures above it always show. A copy follows the reader's last choice. Until they
+  // make one, the opening copy hides its chart once the conversation starts (the reader has moved on); later copies
+  // show theirs, since the chart after a change shows what it did.
+  const chartPref = useStore((st) => st.chartHidden);
+  const setChartHidden = useStore((st) => st.setChartHidden);
+  const started = useStore((st) => st.messages.length > 0);
+  const [chartMine, setChartMine] = useState<boolean | null>(null);
+  const chartHidden = chartMine ?? chartPref ?? (id === "forecast" && started);
+  const toggleChart = () => { setChartMine(!chartHidden); setChartHidden(!chartHidden); };
   const advanced = useStore((st) => st.advanced);
   const tabs = (Object.keys(TAB_LABEL) as ForecastTab[]).filter((t) => advanced || t === "chart" || t === "users" || t === "agents");
   const tab = tabs.includes(tab0) ? tab0 : "chart";
@@ -209,7 +217,6 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
   return (
     <Frame
       id={id}
-      icon={<LineChart size={15} />}
       title="Spend forecast"
       stale={stale && { ...stale, kind: "forecast", open }}
       right={
@@ -248,8 +255,14 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
                 {TAB_LABEL[t]}{t === "activity" && auditCount > 0 ? ` (${auditCount})` : ""}
               </button>
             ))}
+            {tab === "chart" && (
+              <button type="button" onClick={toggleChart} aria-expanded={!chartHidden}
+                className="ml-auto inline-flex shrink-0 items-center gap-1 whitespace-nowrap py-2 text-[13px] text-muted hover:text-ink">
+                {chartHidden ? "Show chart" : "Hide chart"}<ChevronDown size={14} className={cx("transition-transform", !chartHidden && "rotate-180")} />
+              </button>
+            )}
           </div>
-          {tab === "chart" && <PacingChart onDay={(q, c) => ask(q, [c])} />}
+          {tab === "chart" && !chartHidden && <PacingChart onDay={(q, c) => ask(q, [c])} />}
           {tab === "workstreams" && <Workstreams onFollowUp={(q, c) => ask(q, [c])} busy={busy} />}
           {tab === "users" && <Users onFollowUp={(q, c) => ask(q, [c])} busy={busy} />}
           {tab === "agents" && <Agents onFollowUp={(q, c) => ask(q, [c])} busy={busy} />}
@@ -370,7 +383,6 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
   return (
     <div id={id} className="border-t border-neutral-100">
       <div className="flex items-center gap-2 px-4 pt-3">
-        <ListChecks size={14} className="text-muted" />
         <h3 className="text-[15px] font-semibold">Recommendations</h3>
         <span className="ml-auto whitespace-nowrap text-[13px] text-muted">{open ? `${open} open` : "Nothing open"}</span>
         {rows.length > 2 && !allDone && (
@@ -550,7 +562,6 @@ function RecapCard({ r, earlier }: { r: Recap; earlier: boolean }) {
         <p className="font-serif text-[17px] leading-[26px]">That&rsquo;s everything open for {r.team === "All teams" ? "every team" : r.team}. {stillTrue(r, "It")} {peopleLine(r)}</p>
       </div>
       <Frame
-        icon={<ClipboardCheck size={15} />}
         title={`${r.team}, this month`}
         right={<>
           <StatusPill status={r.after.status} />
