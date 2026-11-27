@@ -5,7 +5,7 @@ import { Area, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line, Referenc
 import { DAYS, dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, pacing, TODAY, usd100, type GroupId } from "@/engine";
 import { useStore, type Snapshot } from "@/state/store";
 import { useUi } from "@/state/ui";
-import { cx, PHONE, usd, usdK, useMedia } from "./ui";
+import { cx, PHONE, Term, usd, usdK, useMedia } from "./ui";
 import { markUsed } from "./NewDot";
 import { useJustNow, useRoll } from "./motion";
 
@@ -450,12 +450,15 @@ function DailySummary({ data, pace, open, onToggle }: { data: StripDay[]; pace: 
   const steps = STEPS.filter((st) => Math.round(t(st.key) / 100) > 0);
   const pct = Math.round(share * 100);
   const top = [...STEPS].sort((a, b) => t(b.key, TODAY + 1) - t(a.key, TODAY + 1)).find((st) => t(st.key, TODAY + 1) > 0);
-  const sentence = `${pct ? `If nothing changes, the app would automatically slow about ${pct}% of runs` : "If nothing changes, the app would automatically slow under 1% of runs"} from today${when} to stay on budget instead of cutting anyone off${pct && top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}.`;
+  const share100 = pct ? `about ${pct}%` : "under 1%";
+  const tail = ` of runs from today${when} to stay on budget instead of cutting anyone off${pct && top ? `, mostly ${STEP_PHRASE[top.key]}` : ""}.`;
   return (
     <div id="slowed" className={`border-t border-neutral-100 px-4 py-2.5 text-[13px]${open ? " pb-1" : ""}`}>
       {/* A link at the end of the sentence opens the day-by-day bars it summarises. */}
       <p className="text-ink">
-        {sentence}{" "}
+        If nothing changes, the app would automatically{" "}
+        <Term def="Slowed runs still finish. The heaviest ones move to a cheaper Claude model, or wait a few hours, on the busiest days. Nobody is cut off, and the person sees a note when it happens.">slow</Term>{" "}
+        {share100}{tail}{" "}
         <button type="button" onClick={() => { onToggle(); markUsed("daily-bars"); }} aria-expanded={open} aria-label={open ? "Hide the day-by-day bars" : "Show the day-by-day bars"} className="inline-flex items-center rounded p-0.5 align-middle text-muted hover:bg-neutral-100 hover:text-ink">
           <ChevronDown size={15} className={open ? "rotate-180 transition-transform" : "transition-transform"} />
         </button>

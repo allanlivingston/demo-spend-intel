@@ -5,7 +5,7 @@ import type { Recap } from "./recap";
 import { persist } from "zustand/middleware";
 import { ownerOf, headline, usd, usd100, GROUPS, GROUP_IDS, kpis, driverEffects,
   setAdvancedView, draftCfoBrief, draftOverride, draftPolicyDiff, draftRebalance, forecast, initialState,
-  type Artifact, type DayPoint, type DemoState, type GroupId, type GroupSelection, type ScenarioId, type SharingLevel, isDeclined, driverById,
+  type Artifact, type DayPoint, type DemoState, type GroupId, type GroupSelection, type ScenarioId, type SharingLevel, isDeclined, driverById, recoveryOf,
   handoffTo, type Handoff, applyRulesAtStart, DECLINE_REASONS, ruleFor, ruleFromDecline, rulesFromApply, ruleSentence, topicOf, withRules,
   type PrefRule, type RuleLevel, type DeclineReasonId,
 } from "@/engine";
@@ -414,8 +414,11 @@ export const useStore = create<Store>()(
           if (artifactId) get().setArtifactStatus(artifactId, "applied");
           if (mine.length) log({ actor: "Admin", action: "Apply policy", detail: mine.join(", "), evidenceTier: 1 });
           theirs.forEach((x) => log({ actor: "Admin", action: `Sent fix to ${ownerOf(x)!.name}`, detail: x, evidenceTier: 1 }));
-          const done = theirs.length ? (mine.length ? "Applied your changes and sent the rest to its owner." : "Sent to its owner.") : "Applied.";
-          const ack = tickets.length ? `${done.replace(/\.$/, "")}, and sent the ticket to ${handoffTo(tickets[0])}.` : done;
+          // Lead with the result: what the applied fixes save, so the change is felt where the eye is.
+          const saved = mine.reduce((t, id) => { const d = driverById(id); return t + (d ? recoveryOf(d) : 0); }, 0);
+          const savesLine = saved > 0 ? ` That saves ${usd(saved)} by month end.` : "";
+          const done = (theirs.length ? (mine.length ? "Applied your changes and sent the rest to its owner." : "Sent to its owner.") : "Applied.");
+          const ack = (tickets.length ? `${done.replace(/\.$/, "")}, and sent the ticket to ${handoffTo(tickets[0])}.` : done) + savesLine;
           const rules = rulesFromApply(get().demo, mine, get().ruleNoThanks);
           // The rule offer sits with the change it is about; the updated forecast and next step stay at the bottom.
           if (!rules.length) return update(ack);

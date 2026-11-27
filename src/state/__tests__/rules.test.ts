@@ -37,7 +37,7 @@ test("applying a fix suggests a rule (Ask me first by default); saved as Apply w
   st().applyPolicy(["a-connector"]);
   // One question at a time: the offer carries the new landing and is last; the forecast waits for the answer.
   const proposal = last();
-  expect(proposal.text).toMatch(/^Applied\. Platform Engineering is now forecast at \$[\d,]+ against a \$40,000 budget.* Want a rule for changes like this next month\?/);
+  expect(proposal.text).toMatch(/^Applied\. That saves \$[\d,]+ by month end\. Platform Engineering is now forecast at \$[\d,]+ against a \$40,000 budget.* Want a rule for changes like this next month\?/);
   expect(proposal.held?.view).toBe("forecast");
   // No chips compete with the question.
   expect(chipsFor({ demo: st().demo, group: st().group, messages: st().messages, auditCount: st().audit.length, forecastVisible: false, draftActionsVisible: true })).toEqual([]);
