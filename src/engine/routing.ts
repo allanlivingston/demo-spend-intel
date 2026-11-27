@@ -44,7 +44,7 @@ export function policyRow(d: Driver): PolicyRow | null {
         before: "run on Opus, the priciest model",
         after: "run on Sonnet; Opus still there when asked for",
         savings: Math.round(excess - penalty),
-        method: `This month's helper tasks cost $${ROUTING.subagentOpusCost.toLocaleString()} on Opus and would cost $${ROUTING.subagentSonnetCost.toLocaleString()} on Sonnet, allowing for the ${ROUTING.sonnetRetryRate * 100}% Sonnet has to redo.`,
+        method: `Helper tasks: $${ROUTING.subagentOpusCost.toLocaleString()} on Opus → $${ROUTING.subagentSonnetCost.toLocaleString()} on Sonnet, plus $${Math.round(penalty).toLocaleString()} for the ${ROUTING.sonnetRetryRate * 100}% redone = saves $${Math.round(excess - penalty).toLocaleString()}.`,
       };
     }
     case "a-cache": {

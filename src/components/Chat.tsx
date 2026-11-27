@@ -309,7 +309,7 @@ function RecCard({ r, live, draftWaiting, id, onDecline }: { r: BreakdownRow; li
         </span>
       </div>
       <div className="mt-1.5 line-clamp-2 text-[15px] font-medium leading-snug">{r.driver.plain ?? r.driver.label}</div>
-      <div className="mt-1 line-clamp-2 text-[13px] text-muted">{r.driver.evidence.join(" · ")}</div>
+      <div className="mt-1 line-clamp-2 text-[13px] text-muted">{(r.driver.plainEvidence ?? r.driver.evidence).join(" · ")}</div>
       <div className="mt-auto flex items-center justify-end gap-1.5 pt-2">
         {done ? (
           <>
@@ -511,7 +511,7 @@ function settledLine(a: Artifact): string {
     const applied = mine.length ? `Applied ${mine.length === 1 ? "1 fix" : `${mine.length} fixes`}` : "";
     const sent = theirs.length ? `sent ${theirs.length === 1 ? "1" : theirs.length} to ${ownerOf(theirs[0].driverId)!.short}` : "";
     const done = [applied, sent].filter(Boolean).join(" and ");
-    return `${done.charAt(0).toUpperCase()}${done.slice(1)} · saves ${saves}`;
+    return `${done.charAt(0).toUpperCase()}${done.slice(1)} · saves ${saves} · in effect now`;
   }
   if (a.kind === "cfo_brief") return `Budget owner approved · budget now ${usd(a.newBudget)}`;
   if (a.kind === "governed_override") return `Approved as planned spend · ${driverById(a.driverId)?.label ?? a.driverId}`;

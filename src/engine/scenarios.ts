@@ -8,6 +8,7 @@ const CONNECTOR: Driver = {
   tier: 1, category: "Infra and On-call", startDay: 14, sunk: 140, forward: 4_100, recoverable: 4_100,
   sigma: 1_310, agentShare: 1, memberShare: 0,
   evidence: ["9,400 retries since day 14", "0 successful writes", "create_issue returns 401"],
+  plainEvidence: ["9,400 retries since day 14", "none of them worked", "the Jira login is being refused"],
   roi: 0.05, confidence: 0.9, marker: "Day 14: Jira link starts retrying",
 };
 
@@ -17,6 +18,7 @@ const SUBAGENTS: Driver = {
   tier: 1, category: "Production Code", startDay: 17, sunk: 60, forward: 4_800, recoverable: 4_600,
   sigma: 1_381, agentShare: 0.9, memberShare: 1,
   evidence: ["71% of subagent calls on Opus", "Search and lint tasks", "Sonnet does them as well"],
+  plainEvidence: ["71% of helper tasks run on Opus", "searching and checking code", "Sonnet does these just as well"],
   roi: 0.3, confidence: 0.8, marker: "Day 17: helper tasks move to Opus",
 };
 
@@ -26,6 +28,7 @@ const CACHE: Driver = {
   tier: 1, category: "Documentation", startDay: 12, sunk: 100, forward: 2_300, recoverable: 2_100,
   sigma: 441, agentShare: 0.6, memberShare: 0.7,
   evidence: ["Cache reads down 60%", "A shared Claude Code hook adds the date at the top of every session since day 12", "Found from cache usage only, no prompt text read"],
+  plainEvidence: ["Saved context reused 60% less since day 12", "a shared setup step puts the date first in every session", "found from usage alone, no prompts read"],
   roi: 0.1, confidence: 0.85, marker: "Day 12: saved context stops being reused",
 };
 
@@ -35,6 +38,7 @@ const NEW_HIRES: Driver = {
   tier: 2, category: "Production Code", startDay: 9, sunk: 300, forward: 6_200, recoverable: 0,
   sigma: 1_346, agentShare: 0.5, memberShare: 1, cohort: "new",
   evidence: ["31 PRs merged", "212 tests newly passing", "too early to tell if the code lasts"],
+  plainEvidence: ["31 pull requests merged", "212 tests newly passing", "too early to tell if the code lasts"],
   roi: 3.0, confidence: 0.7, marker: "Day 9: 14 new engineers join",
 };
 
