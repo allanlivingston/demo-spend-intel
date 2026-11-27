@@ -3,10 +3,10 @@
 // speed limit: it speeds up gently, never goes faster than MAX_SPEED, slows down to land, re-aims every frame, and stops
 // the moment the reader scrolls themselves. A slow frame (a chart drawing) just pauses it; it never leaps to catch up.
 
-/** Top speed in pixels per millisecond: 1,000px a second, about 17px per frame at 60 frames a second. */
-const MAX_SPEED = 1;
-/** How fast it speeds up and slows down, in pixels per millisecond squared: full speed after a quarter second. */
-const ACCEL = 0.004;
+/** Top speed in pixels per millisecond: 1,800px a second, about 30px per frame at 60 frames a second. */
+const MAX_SPEED = 1.8;
+/** How fast it speeds up and slows down, in pixels per millisecond squared: full speed after about 0.2 seconds. */
+const ACCEL = 0.009;
 /** The longest frame step it will take, so a stalled frame never turns into a jump. */
 const MAX_DT = 1000 / 60;
 
