@@ -7,7 +7,7 @@ import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, Chevro
 import {
   breakdown, confidenceOf, driverById, forecast, GROUP_IDS, GROUPS, headline, kpis, ownerOf, ruleFor, usd100,
   type Artifact, type BreakdownRow, type GroupSelection,
-  DECLINE_REASONS, topicOf, type DeclineReasonId, type GroupId,
+  DECLINE_REASONS, topicOf, type GroupId,
 } from "@/engine";
 import { dropEarlyRun, keepEarlyRun, runKey, startEarlyRun, startAgentRun } from "@/state/agentClient";
 import { chipsFor, isSuperseded, pendingDraft, runFor, type ChipSpec } from "@/state/chipRules";
@@ -287,20 +287,9 @@ export const askAboutRow = (r: BreakdownRow) => {
 const CONF_TONE = { High: "bg-emerald-50 text-ok-ink", Medium: "bg-amber-50 text-warn-ink", Low: "bg-neutral-100 text-muted" };
 const CARD = "flex h-[192px] w-[280px] max-w-[88%] shrink-0 snap-start flex-col rounded-xl border border-neutral-200 bg-white p-3.5";
 
-function RecCard({ r, live, draftWaiting, id }: { r: BreakdownRow; live: boolean; draftWaiting: boolean; id?: string }) {
+function RecCard({ r, live, draftWaiting, id, onDecline }: { r: BreakdownRow; live: boolean; draftWaiting: boolean; id?: string; onDecline: (driverId: string) => void }) {
   const busy = busyOf(useStore((s) => s.messages));
-  const { declineInPlace, restoreRec, ruleNoThanks } = useStore();
-  const demo = useStore((s) => s.demo);
-  // Declining happens in the card: "why" asks the reason, "rule" offers to keep a lasting reason as a rule.
-  const [step, setStep] = useState<null | "why" | { reason: DeclineReasonId }>(null);
-  const [keep, setKeep] = useState(true);
-  const teamName = GROUPS[r.driver.groupId as GroupId]?.name ?? "this team";
-  const canRule = (reasonId: DeclineReasonId) => {
-    const reason = DECLINE_REASONS.find((x) => x.id === reasonId);
-    const t = topicOf(r.driver.id);
-    return !!reason?.lasting && !!t && !ruleFor(demo, r.driver.id) && !ruleNoThanks.includes(`${t}:${r.driver.groupId}`);
-  };
-  const pick = (reasonId: DeclineReasonId) => (canRule(reasonId) ? (setKeep(true), setStep({ reason: reasonId })) : (declineInPlace(r.driver.id, reasonId, false), setStep(null)));
+  const { restoreRec } = useStore();
   // Not suggested because of a saved rule (rather than declined by hand): changed under Activity, not restored here.
   const byRule = useStore((s) => r.state === "declined" && !(s.demo.declined ?? []).includes(r.driver.id) && ruleFor(s.demo, r.driver.id)?.level === "skip");
   const fix = r.side === "fix";
@@ -318,31 +307,9 @@ function RecCard({ r, live, draftWaiting, id }: { r: BreakdownRow; live: boolean
             : <span className="text-ink" title="What this work adds by month end"><span className="text-[12px] font-normal text-muted">adds </span>{usd(r.projected)}</span>}
         </span>
       </div>
-      <div className={cx("mt-1.5 text-[15px] font-medium leading-snug", step ? "line-clamp-1" : "line-clamp-2")}>{r.driver.plain ?? r.driver.label}</div>
-      {step === "why" ? (
-        <div className="mt-1 flex min-h-0 flex-1 flex-col">
-          <div className="text-[13px] text-muted">Why not?</div>
-          <div className="mt-1 flex flex-wrap gap-1">
-            {DECLINE_REASONS.map((x) => (
-              <button key={x.id} type="button" onClick={() => pick(x.id)} className="rounded-full border border-neutral-200 px-2 py-0.5 text-[12px] text-ink hover:bg-neutral-100">{x.label}</button>
-            ))}
-          </div>
-          <div className="mt-auto flex justify-end pt-1"><button type="button" onClick={() => setStep(null)} className="rounded-md px-2 py-1 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">Cancel</button></div>
-        </div>
-      ) : step ? (
-        <div className="mt-1 flex min-h-0 flex-1 flex-col">
-          <label className="flex cursor-pointer items-start gap-2 text-[13px] text-ink">
-            <input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} className="mt-0.5 accent-[#191919]" />
-            <span>Don&apos;t suggest this for {teamName} again</span>
-          </label>
-          <div className="mt-0.5 pl-5 text-[12px] text-muted">Change it any time under Activity.</div>
-          <div className="mt-auto flex justify-end gap-1.5 pt-1">
-            <button type="button" onClick={() => setStep(null)} className="rounded-md px-2 py-1 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">Cancel</button>
-            <button type="button" onClick={() => { declineInPlace(r.driver.id, step.reason, keep); setStep(null); }} className="rounded-md bg-ink px-3 py-1 text-[13px] font-medium text-white hover:bg-black">Done</button>
-          </div>
-        </div>
-      ) : <div className="mt-1 line-clamp-2 text-[13px] text-muted">{r.driver.evidence.join(" · ")}</div>}
-      {!step && <div className="mt-auto flex items-center justify-end gap-1.5 pt-2">
+      <div className="mt-1.5 line-clamp-2 text-[15px] font-medium leading-snug">{r.driver.plain ?? r.driver.label}</div>
+      <div className="mt-1 line-clamp-2 text-[13px] text-muted">{r.driver.evidence.join(" · ")}</div>
+      <div className="mt-auto flex items-center justify-end gap-1.5 pt-2">
         {done ? (
           <>
             <span className={cx("text-[13px] font-medium", r.state === "sent" || r.state === "declined" ? "text-muted" : "text-ok-ink")}>{done}</span>
@@ -356,7 +323,7 @@ function RecCard({ r, live, draftWaiting, id }: { r: BreakdownRow; live: boolean
           <span className="text-[13px] text-muted">Not worth funding</span>
         ) : live ? (
           <>
-            <button type="button" disabled={busy} onClick={() => setStep("why")} title="Logged in Activity; Undo brings it back."
+            <button type="button" disabled={busy} onClick={() => onDecline(r.driver.id)} title="Logged in Activity; Undo brings it back."
               className="mr-auto rounded-md px-1.5 py-1.5 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink disabled:opacity-40">
               Decline
             </button>
@@ -374,10 +341,13 @@ function RecCard({ r, live, draftWaiting, id }: { r: BreakdownRow; live: boolean
             )}
           </>
         ) : null}
-      </div>}
+      </div>
     </div>
   );
 }
+
+/** Decline reasons, short enough to sit on one line under the cards. */
+const SHORT_REASON: Record<string, string> = { needed: "Team needs it", planned: "Planned", later: "Not now", numbers: "Numbers look off" };
 
 /** The recommendations carousel: part of the forecast artifact, so every copy of the forecast shows its recommendations. */
 function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
@@ -386,8 +356,7 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
   const rank = (r: BreakdownRow) => (r.state === "open" ? 0 : 1);
   const sorted = breakdown(s.demo, s.group).rows.slice()
     .sort((a, b) => rank(a) - rank(b) || (a.side === b.side ? b.recoverable - a.recoverable : a.side === "fix" ? -1 : 1));
-  // While this copy is on screen the cards keep their places: a card declined in place stays where it was instead of
-  // jumping to the end and dragging the row with it. A new copy sorts afresh.
+  // While this copy is on screen the cards keep their places, so a change to one card never reshuffles the row.
   const order = useRef<string[]>([]);
   for (const r of sorted) if (!order.current.includes(r.driver.id)) order.current.push(r.driver.id);
   const rows = sorted.slice().sort((a, b) => order.current.indexOf(a.driver.id) - order.current.indexOf(b.driver.id));
@@ -398,6 +367,25 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
   const briefOpen = next.cta?.label === "Draft the budget owner brief" && !rows.some((r) => r.state === "open");
   const fc = forecast(s.demo, s.group);
   const busy = busyOf(messages);
+  // Declined cards leave the row; they wait behind "N declined". Right after a decline, one line under the row offers
+  // Undo and an optional reason, and clears itself after a few seconds or on the next thing the user does.
+  const { declineInPlace, giveDeclineReason, restoreRec } = useStore();
+  const [showDeclined, setShowDeclined] = useState(false);
+  const [just, setJust] = useState<{ id: string; rule?: boolean; reason?: boolean } | null>(null);
+  const declinedRows = rows.filter((r) => r.state === "declined");
+  const shownRows = [...rows.filter((r) => r.state !== "declined"), ...(showDeclined ? declinedRows : [])];
+  const msgCount = messages.length;
+  const seenCount = useRef(msgCount);
+  useEffect(() => {
+    if (msgCount !== seenCount.current) { seenCount.current = msgCount; setJust(null); }
+  }, [msgCount]);
+  useEffect(() => {
+    if (!just) return;
+    const t = setTimeout(() => setJust(null), just.reason ? 3000 : 10000);
+    return () => clearTimeout(t);
+  }, [just]);
+  const onDecline = (driverId: string) => { declineInPlace(driverId); setJust({ id: driverId }); };
+  const justRow = just && rows.find((r) => r.driver.id === just.id);
   const open = rows.filter((r) => r.state === "open").length + (briefOpen ? 1 : 0);
   // Everything handled: one card says so; the finished cards (with Restore on declined ones) open on request.
   const [showDone, setShowDone] = useState(false);
@@ -413,7 +401,7 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => { el.removeEventListener("scroll", update); ro.disconnect(); };
-  }, [rows.length]);
+  }, [shownRows.length]);
   const fade = edge.left && edge.right ? "[mask-image:linear-gradient(to_right,transparent,black_32px,black_calc(100%-48px),transparent)]"
     : edge.right ? "[mask-image:linear-gradient(to_right,black_calc(100%-48px),transparent)]"
     : edge.left ? "[mask-image:linear-gradient(to_right,transparent,black_32px)]" : "";
@@ -423,12 +411,19 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
         <h3 className="text-[15px] font-semibold">Recommendations</h3>
         {/* How many are still open, as a small count beside the title; none open shows nothing. */}
         {open > 0 && <span aria-label={`${open} open`} className="rounded-full bg-neutral-100 px-1.5 text-[12px] font-medium tabular-nums leading-5 text-muted">{open}</span>}
-        {rows.length > 2 && !allDone && (
+        <span className="ml-auto flex items-center gap-1">
+        {live && declinedRows.length > 0 && !allDone && (
+          <button type="button" onClick={() => setShowDeclined(!showDeclined)} aria-expanded={showDeclined} className="mr-1 rounded-md px-1.5 py-0.5 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">
+            {showDeclined ? "Hide declined" : `${declinedRows.length} declined`}
+          </button>
+        )}
+        {shownRows.length > 2 && !allDone && (
           <>
-            <button type="button" onClick={() => page(-1)} aria-label="Previous" className="ml-auto rounded-md p-1 text-muted hover:bg-neutral-100 hover:text-ink"><ChevronLeft size={15} /></button>
+            <button type="button" onClick={() => page(-1)} aria-label="Previous" className="rounded-md p-1 text-muted hover:bg-neutral-100 hover:text-ink"><ChevronLeft size={15} /></button>
             <button type="button" onClick={() => page(1)} aria-label="Next" className="rounded-md p-1 text-muted hover:bg-neutral-100 hover:text-ink"><ChevronRight size={15} /></button>
           </>
         )}
+        </span>
       </div>
       <div ref={track} className={cx("flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 py-3 [scrollbar-width:none]", fade)}>
         {briefOpen && (
@@ -453,7 +448,7 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
             </button>
           </div>
         ) : rows.length ? (
-          rows.map((r, i) => <RecCard key={r.driver.id} r={r} live={live} draftWaiting={draftFor(r)} id={id && i === 0 && !briefOpen ? "first-rec" : undefined} />)
+          shownRows.map((r, i) => <RecCard key={r.driver.id} r={r} live={live} draftWaiting={draftFor(r)} onDecline={onDecline} id={id && i === 0 && !briefOpen ? "first-rec" : undefined} />)
         ) : (
           <div className={cx(CARD, "w-full items-start justify-center bg-emerald-50/40")}>
             <div className="text-[12px] font-semibold uppercase tracking-wide text-ok-ink">Nothing to do</div>
@@ -462,6 +457,23 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
           </div>
         )}
       </div>
+      {live && justRow && (
+        <div role="status" className="settle-in -mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 px-4 pb-3 text-[13px] text-muted">
+          {just!.reason ? (
+            <span>{just!.rule ? `Won't suggest this for ${GROUPS[justRow.driver.groupId as GroupId]?.name ?? "this team"} again.` : "Thanks, noted."}</span>
+          ) : (
+            <>
+              <span className="min-w-0 truncate">Declined <span className="text-ink">{justRow.driver.plain ?? justRow.driver.label}</span></span>
+              {topicOf(justRow.driver.id) && <span>· Why?</span>}
+              {topicOf(justRow.driver.id) && DECLINE_REASONS.map((x) => (
+                <button key={x.id} type="button" onClick={() => setJust({ id: just!.id, reason: true, rule: giveDeclineReason(just!.id, x.id) })}
+                  className="rounded-full border border-neutral-200 px-2 py-px text-[12px] text-ink hover:bg-neutral-100">{SHORT_REASON[x.id]}</button>
+              ))}
+            </>
+          )}
+          <button type="button" onClick={() => { restoreRec(just!.id, true); setJust(null); }} className="ml-auto rounded-md px-1.5 py-0.5 font-medium text-ink hover:bg-neutral-100">Undo</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -620,7 +632,25 @@ function RecapCard({ r, earlier }: { r: Recap; earlier: boolean }) {
             );
           })}
         </dl>
+        {!earlier && <KeepSkipping />}
       </Frame>
+    </div>
+  );
+}
+
+/** The one question a decline leaves for the month's end: declines with no reason given, kept as rules or not. */
+function KeepSkipping() {
+  const { demo, declineReasons, settleDeclines } = useStore();
+  const ids = (demo.declined ?? []).filter((id) => !declineReasons[id] && topicOf(id) && !ruleFor(demo, id));
+  if (!ids.length) return null;
+  const names = ids.map((id) => driverById(id)?.plain ?? driverById(id)?.label ?? id);
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-neutral-100 px-4 py-3 text-[14px]">
+      <span className="min-w-0 flex-[1_1_16rem]">Keep skipping {ids.length === 1 ? <span className="font-medium">{names[0]}</span> : <>the {ids.length} you declined</>} next month?</span>
+      <span className="flex gap-1.5">
+        <button type="button" onClick={() => settleDeclines(ids, false)} className="rounded-md px-2.5 py-1 text-[13px] text-neutral-600 hover:bg-neutral-100 hover:text-ink">No</button>
+        <button type="button" onClick={() => settleDeclines(ids, true)} className="rounded-md bg-ink px-3 py-1 text-[13px] font-medium text-white hover:bg-black">Keep skipping</button>
+      </span>
     </div>
   );
 }

@@ -7,11 +7,6 @@ import { cx } from "./ui";
 
 export type MockKind = "rules" | "slowed" | "composer";
 
-/** A button in an example screen; "on" marks the one to press. */
-const Btn = ({ children, on, dark }: { children: ReactNode; on?: boolean; dark?: boolean }) => (
-  <span className={cx("inline-flex items-center rounded-md px-2 py-1 text-[12px] font-medium", dark ? "bg-ink text-white" : "text-muted", on && "ring-2 ring-accent ring-offset-1")}>{children}</span>
-);
-
 const Card = ({ children, className }: { children: ReactNode; className?: string }) => (
   <div className={cx("rounded-lg border border-neutral-200 bg-white p-2.5", className)}>{children}</div>
 );
@@ -45,19 +40,11 @@ const BODY: Record<MockKind, (m: Month) => ReactNode> = {
     return (
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
-          <span>Declined <b className="font-medium text-ink">{m.sub.label}</b></span>
-          <ArrowRight size={12} />
-          <span>Why?</span>
-          <Pick on>The team needs it</Pick>
+          <span>Declined <b className="font-medium text-ink">{m.sub.label}</b> · Why?</span>
+          <Pick on>Team needs it</Pick><Pick>Planned</Pick><Pick>Not now</Pick>
+          <span className="ml-auto font-medium text-ink">Undo</span>
         </div>
-        <Card>
-          <div className="text-[13px] font-medium leading-snug">{m.sub.label}</div>
-          <div className="mt-1 flex items-start gap-1.5 text-[12px]">
-            <span className="mt-0.5 inline-flex h-3 w-3 shrink-0 items-center justify-center rounded-sm bg-ink text-[9px] leading-none text-white">✓</span>
-            <span>Don&apos;t suggest this for Platform Engineering again</span>
-          </div>
-          <div className="mt-1.5 flex justify-end text-[11px]"><Btn dark on>Done</Btn></div>
-        </Card>
+        <div className="flex items-center gap-1.5 text-[12px] text-muted"><ArrowRight size={12} />Won&apos;t suggest this for Platform Engineering again.</div>
         <div className="flex items-center gap-1.5 text-[12px] text-muted"><BookmarkCheck size={13} className="text-ok-ink" />Saved rules are listed in Activity, where you can change them.</div>
       </div>
     );

@@ -80,7 +80,7 @@ specific correction, the example is in brackets.
 
 - **The first call to action is obvious on arrival.** The headline says what needs doing and the button under it does it.
 - **The next step is always clear.** The first suggestion chip is the next step, and every chip fits the current state.
-- **Declining happens on the card.** Decline swaps the card's body for the reasons; a lasting reason offers "Don't suggest this for <team> again" (ticked) and Done. Nothing is posted to the chat, the cards keep their places, and Undo on the card restores it and drops that rule. A rule answer in the chat (after Apply) that is the newest message shows the next step as one button. [Declining a fix posted four messages for what changes no numbers, then ended on "Rule saved".]
+- **Declining is one click and gets out of the way.** The card leaves the row (cards keep their order otherwise) and waits behind "N declined". One line under the cards offers Undo and an optional reason; a lasting reason becomes a rule; the line clears after a few seconds or on the next action. Declines left without a reason get one question in the month's recap. Nothing is posted to the chat. [A forced reason and a declined card left in the row got in the way.]
 - **Close the loop.** When nothing is left open, say what the work came to (a recap with a copy to share), say what is still true ("over budget until the owner ships the fix"), and point forward. Never say "done" while something the user should know about is still pending.
 - **Every recommendation can be declined,** every change is logged in Activity, and applied changes can be undone.
 - **A failed run offers Retry.** Live vs offline is shown subtly.

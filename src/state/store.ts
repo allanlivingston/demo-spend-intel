@@ -6,7 +6,7 @@ import { persist } from "zustand/middleware";
 import { ownerOf, headline, usd, usd100, GROUPS,
   setAdvancedView, draftCfoBrief, draftOverride, draftPolicyDiff, draftRebalance, forecast, initialState,
   type Artifact, type DayPoint, type DemoState, type GroupId, type GroupSelection, type ScenarioId, type SharingLevel, isDeclined, driverById,
-  handoffTo, type Handoff, applyRulesAtStart, DECLINE_REASONS, ruleFromDecline, rulesFromApply, ruleSentence, topicOf, withRules,
+  handoffTo, type Handoff, applyRulesAtStart, DECLINE_REASONS, ruleFor, ruleFromDecline, rulesFromApply, ruleSentence, topicOf, withRules,
   type PrefRule, type RuleLevel, type DeclineReasonId,
 } from "@/engine";
 import type { AgentId, Backend, StepPhase } from "@/agents/types";
@@ -158,11 +158,17 @@ interface Store {
   /** Decline a recommendation: it stays in the forecast but is no longer suggested. Logged; Restore undoes it. */
   declineRec: (driverId: string) => void;
   restoreRec: (driverId: string, quiet?: boolean) => void;
+  /** Decline from the card: one click, no reason needed, nothing posted to the chat. Logged in Activity. */
+  declineInPlace: (driverId: string) => void;
   /**
-   * Decline from the card itself: the reason, and (for a lasting reason) whether to keep it as a rule, are chosen in the
-   * card, so nothing is posted to the chat. Logged in Activity like any decline.
+   * The optional reason for a decline, given just after it. A lasting reason ("The team needs it") keeps it as a rule
+   * for the team; returns true when it did.
    */
-  declineInPlace: (driverId: string, reasonId: DeclineReasonId, keepRule: boolean) => void;
+  giveDeclineReason: (driverId: string, reasonId: DeclineReasonId) => boolean;
+  /** Reasons given for this month's declines (driver id → reason id), so the recap only asks about the rest. */
+  declineReasons: Record<string, string>;
+  /** From the recap: keep skipping these declines next month (saves a rule each), or not. */
+  settleDeclines: (driverIds: string[], keep: boolean) => void;
   /** Decline a draft: nothing changes, and it is logged. */
   declineDraft: (artifactId: string) => void;
   /** Answer "why decline it?". A lasting reason leads to a suggested rule. */
@@ -316,6 +322,7 @@ export const useStore = create<Store>()(
         unseen: false,
         review: null,
         ruleNoThanks: [],
+        declineReasons: {},
 
         setDailyOpen: (dailyOpen) => set({ dailyOpen }),
         setChartHidden: (chartHidden) => set({ chartHidden }),
@@ -451,22 +458,43 @@ export const useStore = create<Store>()(
           set({ demo: { ...d, declined: (d.declined ?? []).filter((x) => x !== driverId), rules: (d.rules ?? []).filter((r) => !fromThis.includes(r)) } });
           log({ actor: "Admin", action: "Restored recommendation", detail: driverId });
           fromThis.forEach((r) => log({ actor: "Admin", action: "Removed rule", detail: ruleSentence(r) }));
+          if (quiet) { const { [driverId]: _gone, ...rest } = get().declineReasons; void _gone; set({ declineReasons: rest }); }
           if (!quiet) update(`Restored: ${label}.`);
         },
-        declineInPlace: (driverId, reasonId, keepRule) => {
+        declineInPlace: (driverId) => {
           const d = get().demo;
-          const reason = DECLINE_REASONS.find((r) => r.id === reasonId);
-          if (isDeclined(d, driverId) || !reason) return;
+          if (isDeclined(d, driverId)) return;
           const runs = new Set(get().messages.filter((m) => m.run?.driverId === driverId).map((m) => m.id));
-          const rule = keepRule && reason.lasting ? ruleFromDecline(driverId, reason.label) : null;
-          const demo = { ...d, declined: [...(d.declined ?? []), driverId] };
           set({
-            demo: rule ? withRules(demo, [rule]) : demo,
+            demo: { ...d, declined: [...(d.declined ?? []), driverId] },
             messages: get().messages.map((m) => (m.artifactStatus === "proposed" && m.runOf && runs.has(m.runOf) ? { ...m, artifactStatus: "declined" as const } : m)),
           });
           log({ actor: "Admin", action: "Declined recommendation", detail: driverId });
+        },
+        giveDeclineReason: (driverId, reasonId) => {
+          const reason = DECLINE_REASONS.find((r) => r.id === reasonId);
+          if (!reason) return false;
+          set({ declineReasons: { ...get().declineReasons, [driverId]: reasonId } });
           log({ actor: "Admin", action: "Gave a reason", detail: `${driverId}: ${reason.label}` });
-          if (rule) log({ actor: "Admin", action: "Saved rule", detail: ruleSentence(rule) });
+          const t = topicOf(driverId);
+          const g = driverById(driverId)?.groupId;
+          if (!reason.lasting || !t || !g || ruleFor(get().demo, driverId) || get().ruleNoThanks.includes(`${t}:${g}`)) return false;
+          const rule = ruleFromDecline(driverId, reason.label);
+          if (!rule) return false;
+          set({ demo: withRules(get().demo, [rule]) });
+          log({ actor: "Admin", action: "Saved rule", detail: ruleSentence(rule) });
+          return true;
+        },
+        settleDeclines: (driverIds, keep) => {
+          const reasons = { ...get().declineReasons };
+          const rules: PrefRule[] = [];
+          for (const id of driverIds) {
+            reasons[id] = keep ? "kept" : "later";
+            const r = keep && !ruleFor(get().demo, id) ? ruleFromDecline(id, "") : null;
+            if (r && !rules.some((x) => x.topic === r.topic && x.groupId === r.groupId)) rules.push(r);
+          }
+          set({ declineReasons: reasons, demo: rules.length ? withRules(get().demo, rules) : get().demo });
+          rules.forEach((r) => log({ actor: "Admin", action: "Saved rule", detail: ruleSentence(r) }));
         },
         declineDraft: (artifactId) => {
           const m = get().messages.find((x) => x.artifact?.id === artifactId);
@@ -577,7 +605,7 @@ export const useStore = create<Store>()(
         },
         reset: () => {
           const id = get().demo.scenarioId;
-          set({ ...fresh(id), ruleNoThanks: [], chartHidden: null, group: focusGroup(id), audit: [], auditSeen: 0, epoch: get().epoch + 1, seq: 0, threads: [], review: null, ghost: null, chatStart: { demo: initialState(id), group: focusGroup(id) } });
+          set({ ...fresh(id), ruleNoThanks: [], declineReasons: {}, chartHidden: null, group: focusGroup(id), audit: [], auditSeen: 0, epoch: get().epoch + 1, seq: 0, threads: [], review: null, ghost: null, chatStart: { demo: initialState(id), group: focusGroup(id) } });
         },
       };
     },

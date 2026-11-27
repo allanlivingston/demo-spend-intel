@@ -75,7 +75,7 @@ A short private note, only to them, never shared with the team. For example: "Ab
 No. Spend is shown per person, as in the Claude Enterprise console, but results like merged PRs and passing tests are counted for the team and the piece of work, not for each person. That addresses people's concerns about being measured one by one, and budget moves between pieces of work, never between named people.
 
 ## Can I decline a recommendation?
-Yes. Press Decline on the recommendation card or under a draft, or type "decline it". It stays in the forecast but isn't suggested again, and Undo on the card brings it back. Declines are logged in Activity.
+Yes. Press Decline on the recommendation card or under a draft, or type "decline it". The card leaves the row; it stays in the forecast but isn't suggested again. Undo, or the "declined" link above the cards, brings it back. Declines are logged in Activity.
 
 ## What is Activity?
 A list of everything approved, applied, sent or undone, with who did it and when. You can copy it as a spreadsheet.

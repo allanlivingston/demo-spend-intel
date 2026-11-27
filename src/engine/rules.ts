@@ -68,7 +68,7 @@ export function ruleFromDecline(driverId: string, reasonLabel: string, at = new 
   const t = TOPIC_OF[driverId];
   const d = driverById(driverId);
   if (!t || !d) return null;
-  return { id: newId(t, d.groupId), topic: t, groupId: d.groupId, level: "skip", basedOn: `You declined "${d.label}" because "${reasonLabel.toLowerCase()}".`, createdAt: at };
+  return { id: newId(t, d.groupId), topic: t, groupId: d.groupId, level: "skip", basedOn: reasonLabel ? `You declined "${d.label}" because "${reasonLabel.toLowerCase()}".` : `You declined "${d.label}".`, createdAt: at };
 }
 
 /** Rules suggested after the admin applied fixes they could have applied alone: do the same next month without asking. */
