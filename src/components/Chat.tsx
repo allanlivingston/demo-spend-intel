@@ -5,7 +5,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Copy, X } from "lucide-react";
 import {
-  breakdown, confidenceOf, driverById, forecast, GROUP_IDS, GROUPS, headline, kpis, ownerOf, ruleFor, TODAY, usd100,
+  breakdown, confidenceOf, driverById, forecast, GROUP_IDS, GROUPS, headline, kpis, ownerOf, ruleFor, usd100,
   type Artifact, type BreakdownRow, type GroupSelection,
 } from "@/engine";
 import { dropEarlyRun, keepEarlyRun, runKey, startEarlyRun, startAgentRun } from "@/state/agentClient";
@@ -243,7 +243,6 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
         <Stat label={<Term def={TERMS.landsAt}>Lands at</Term>} value={usd(lands === f.p50 ? f.p50 : Math.round(lands / 100) * 100)} tone={lands > f.pool ? "text-bad" : undefined} hint="if nothing changes" />
         <Stat label="Budget" value={usd(f.pool)} />
         <Stat label={third.label === "Fixable waste" ? <Term def={TERMS.fixable}>{third.label}</Term> : third.label === "Waiting on owner" ? <Term def={TERMS.waiting}>{third.label}</Term> : third.label} value={third.value} tone={third.tone} learn={live ? third.learn : undefined} />
-        <div className="ml-auto self-end whitespace-nowrap text-[13px] text-muted">Day {TODAY} of 30</div>
       </div>}
       {/* An earlier copy shows its chart as it was then; the tabs read today's numbers, so only the live copy has them. */}
       {open && !live && <div className="border-t border-neutral-100"><PacingChart snap={s} /></div>}
@@ -956,7 +955,6 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
                   className="shrink-0 whitespace-nowrap rounded-lg bg-ink px-4 py-2 text-[15px] font-medium text-white hover:bg-neutral-800">
                   {chips.find((c) => c.primary)!.text}
                 </button>
-                <span className="text-[13px] text-muted">Claude drafts the change. Nothing is applied until you approve it.</span>
               </div>
             )}
             </SmoothHeight>

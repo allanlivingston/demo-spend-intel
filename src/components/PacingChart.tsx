@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, CircleHelp } from "lucide-react";
-import { Area, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, usePlotArea, useXAxisScale, useYAxisScale, XAxis, YAxis } from "recharts";
+import { Area, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, usePlotArea, useXAxisScale, useYAxisScale, XAxis, YAxis, ZIndexLayer } from "recharts";
 import { DAYS, dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, pacing, TODAY, usd100, type GroupId } from "@/engine";
 import { useStore, type Snapshot } from "@/state/store";
 import { cx, PHONE, Term, TERMS, usd, usdK, useMedia } from "./ui";
@@ -138,6 +138,17 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
     ...markers.map((d) => ({ key: d.id, day: d.startDay, value: yAt(d.startDay), text: `${d.marker!.replace(/^Day \d+:\s*/, "")}${fixedState(d.id) === "fixed" ? " · fixed" : fixedState(d.id) ? " · sent to owner" : ""}`, color: fixedState(d.id) ? "#999" : "#555" })),
     ...throttleLabels,
   ].sort((a, b) => a.day - b.day);
+  // Marker labels stay hidden until the pointer is over the chart; a hovered or tapped dot shows its own label, and
+  // right after a change the newly fixed causes show theirs for a few seconds.
+  const [pinned, setPinned] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string[]>(() => (morphing ? markers.filter((d) => fixedState(d.id)).map((d) => d.id) : []));
+  useEffect(() => {
+    if (!flash.length) return;
+    const t = setTimeout(() => setFlash([]), 4000);
+    return () => clearTimeout(t);
+  }, [flash]);
+  const dotTap = useRef(false);
+  const shownLabels = new Set([...flash, ...(pinned ? [pinned] : [])]);
   const dots = [...markers.map((d) => ({ day: d.startDay, value: yAt(d.startDay) })), ...Object.keys(blockDays).map((d) => ({ day: +d, value: yAt(+d) }))];
   const yMax = Math.max(f.pool, ...f.series.map((p) => p.p90 ?? 0), ...(ghost ?? []).map((p) => p.p90 ?? 0)) * 1.05;
   const top = Math.ceil(yMax / 5000) * 5000;
@@ -167,6 +178,8 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
             className="cursor-pointer"
             onClick={(st) => {
               const day = Number(st?.activeLabel);
+              // A tap on a dot shows its label; it isn't a question about the day.
+              if (dotTap.current) { dotTap.current = false; return; }
               if (!day || !onDay) return;
               markUsed("chart-day");
               const d = dayInfo(demo, group, day);
@@ -217,7 +230,9 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
               />
             ))}
             {!advanced && !teamFrom && !phone && <EndLabels was={showSaved ? wasEnd : null} now={f.p50} low={cum(DAYS - 8)} pool={f.pool} saved={saved} show={mix >= 1} fresh={morphing} />}
+            <DotHits labels={labels} onHover={setPinned} onTap={(k) => { dotTap.current = true; setPinned((p) => (p === k ? null : k)); }} />
             <EventLabels
+              shown={shownLabels}
               labels={labels}
               dots={dots}
               lines={[data.map((p) => p.noLimits), ...(advanced && anyHeld ? [data.map((p) => p.limited)] : []), ...(advanced ? [data.map((p) => p.plan as number | undefined)] : [])]}
@@ -306,7 +321,32 @@ const hit = (a: Box, b: Box, gap = 2) => a.l < b.r + gap && b.l < a.r + gap && a
  * left-aligned; if that spot overlaps another label, a dot, a spend line or the chart's Budget and Today labels, it
  * tries right-aligned, then a row higher, then below the dot, until it finds a free spot.
  */
-function EventLabels({ labels, dots, lines, fixed }: {
+/** Invisible targets over each marker dot: hovering one shows its label; on a touch screen, tapping does. */
+function DotHits({ labels, onHover, onTap }: { labels: EventLabel[]; onHover: (key: string | null) => void; onTap: (key: string) => void }) {
+  const xs = useXAxisScale();
+  const ys = useYAxisScale();
+  if (!xs || !ys) return null;
+  return (
+    <ZIndexLayer zIndex={2000}>
+      <g>
+        {labels.map((l) => {
+          const cx = xs(l.day, { position: "middle" });
+          const cy = ys(l.value);
+          if (cx === undefined || cy === undefined) return null;
+          return (
+            <circle key={l.key} cx={cx} cy={cy} r={11} fill="transparent" style={{ cursor: "pointer" }}
+              onPointerEnter={(e) => { if (e.pointerType === "mouse") onHover(l.key); }}
+              onPointerLeave={(e) => { if (e.pointerType === "mouse") onHover(null); }}
+              onPointerUp={(e) => { if (e.pointerType !== "mouse") onTap(l.key); }} />
+          );
+        })}
+      </g>
+    </ZIndexLayer>
+  );
+}
+
+function EventLabels({ shown, labels, dots, lines, fixed }: {
+  shown: Set<string>;
   labels: EventLabel[];
   dots: { day: number; value: number }[];
   lines: (number | undefined)[][];
@@ -378,10 +418,10 @@ function EventLabels({ labels, dots, lines, fixed }: {
     <g pointerEvents="none">
       {/* Every leader line first, then every label on top, so a label's white halo covers a line passing behind it. */}
       {placed.map(({ l, box, x, y, above }) => (
-        <line key={`${l.key}-line`} x1={x} x2={x} y1={above ? y - 7 : y + 7} y2={above ? box.b - 1 : box.t + 1} stroke={l.color} strokeOpacity={0.35} />
+        <line key={`${l.key}-line`} className={cx("ev-label", shown.has(l.key) && "ev-on")} x1={x} x2={x} y1={above ? y - 7 : y + 7} y2={above ? box.b - 1 : box.t + 1} stroke={l.color} strokeOpacity={0.35} />
       ))}
       {placed.map(({ l, box }) => (
-        <text key={`${l.key}-text`} x={box.l + 2} y={box.t + 10} fontSize={11} fill={l.color} paintOrder="stroke" stroke="#fff" strokeWidth={4}>{l.text}</text>
+        <text key={`${l.key}-text`} className={cx("ev-label", shown.has(l.key) && "ev-on")} x={box.l + 2} y={box.t + 10} fontSize={11} fill={l.color} paintOrder="stroke" stroke="#fff" strokeWidth={4}>{l.text}</text>
       ))}
     </g>
   );

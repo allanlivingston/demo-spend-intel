@@ -58,3 +58,11 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .settle-in, .check-draw path, .check-draw polyline { animation: none; }
 }
+
+/* Chart marker labels: hidden until the pointer is over the chart (or it has focus), or their dot is hovered or
+   tapped, or a change just fixed their cause. Touch screens have no hover: only a tap shows one. */
+.ev-label { opacity: 0; transition: opacity 200ms; }
+.ev-label.ev-on { opacity: 1; }
+.group\/chart:focus-within .ev-label { opacity: 1; }
+@media (hover: hover) { .group\/chart:hover .ev-label { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ev-label { transition: none; } }
