@@ -473,6 +473,8 @@ export const useStore = create<Store>()(
           set({
             demo: { ...d, declined: [...(d.declined ?? []), driverId] },
             messages: get().messages.map((m) => (m.artifactStatus === "proposed" && m.runOf && runs.has(m.runOf) ? { ...m, artifactStatus: "declined" as const } : m)),
+            // Its Undo line is up: the month stays open until the card clears it.
+            justDeclined: driverId,
           });
           log({ actor: "Admin", action: "Declined recommendation", detail: driverId });
         },

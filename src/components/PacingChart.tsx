@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { Area, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, usePlotArea, useXAxisScale, useYAxisScale, XAxis, YAxis, ZIndexLayer } from "recharts";
 import { DAYS, dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, pacing, TODAY, usd100, type GroupId } from "@/engine";
 import { useStore, type Snapshot } from "@/state/store";
+import { useUi } from "@/state/ui";
 import { cx, PHONE, usd, usdK, useMedia } from "./ui";
 import { markUsed } from "./NewDot";
 import { useJustNow, useRoll } from "./motion";
@@ -87,7 +88,12 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
     return tb(teamFrom?.line[day - 1], p.actual ?? p.p50 ?? 0);
   };
 
-  const markers = groups.flatMap((g) => driverEffects(demo, g).filter((e) => e.driver.marker && (advanced || e.driver.id !== "b-soc2")).map((e) => e.driver));
+  const causes = groups.flatMap((g) => driverEffects(demo, g).filter((e) => e.driver.marker && (advanced || e.driver.id !== "b-soc2")).map((e) => e.driver));
+  // Cause dots only in the advanced view. In the default view the chart stays clean, and hovering a recommendation
+  // card marks the day its cause started (live chart only).
+  const markers = advanced ? causes : [];
+  const hoverId = useUi((u) => u.hoverDriver);
+  const hovered = !advanced && onDay ? causes.find((d) => d.id === hoverId) : undefined;
   // The whole month for everyone who hits a limit: bursty days included, under both policies.
   const ms = monthStrip(demo, group);
   // The day-1 "runs held" dot only explains the advanced comparison lines; the daily bars already show it in the default view.
@@ -133,6 +139,7 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
   const labels: EventLabel[] = [
     ...markers.map((d) => ({ key: d.id, day: d.startDay, value: yAt(d.startDay), text: `${d.marker!.replace(/^Day \d+:\s*/, "")}${fixedState(d.id) === "fixed" ? " · fixed" : fixedState(d.id) ? " · sent to owner" : ""}`, color: fixedState(d.id) ? "#999" : "#555" })),
     ...throttleLabels,
+    ...(hovered ? [{ key: `h-${hovered.id}`, day: hovered.startDay, value: yAt(hovered.startDay), text: `Started day ${hovered.startDay}`, color: hovered.kind === "waste" ? "#9A6512" : "#2F6B43" }] : []),
   ].sort((a, b) => a.day - b.day);
   // Marker labels stay hidden until the pointer is over the chart; a hovered or tapped dot shows its own label, and
   // right after a change the newly fixed causes show theirs for a few seconds.
@@ -144,8 +151,8 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
     return () => clearTimeout(t);
   }, [flash]);
   const dotTap = useRef(false);
-  const shownLabels = new Set([...flash, ...(pinned ? [pinned] : [])]);
-  const dots = [...markers.map((d) => ({ day: d.startDay, value: yAt(d.startDay) })), ...Object.keys(blockDays).map((d) => ({ day: +d, value: yAt(+d) }))];
+  const shownLabels = new Set([...flash, ...(pinned ? [pinned] : []), ...(hovered ? [`h-${hovered.id}`] : [])]);
+  const dots = [...markers.map((d) => ({ day: d.startDay, value: yAt(d.startDay) })), ...(hovered ? [{ day: hovered.startDay, value: yAt(hovered.startDay) }] : []), ...Object.keys(blockDays).map((d) => ({ day: +d, value: yAt(+d) }))];
   const yMax = Math.max(f.pool, ...f.series.map((p) => p.p90 ?? 0), ...(ghost ?? []).map((p) => p.p90 ?? 0)) * 1.05;
   const top = Math.ceil(yMax / 5000) * 5000;
   // Switching team changes the scale: it glides there instead of snapping (not on page load).
@@ -210,6 +217,9 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
                 style={{ cursor: "pointer" }}
               />
             ))}
+            {hovered && (
+              <ReferenceDot x={hovered.startDay} y={yAt(hovered.startDay)} r={6} fill={hovered.kind === "waste" ? "#C98A1B" : "#3F8F5A"} stroke="#fff" strokeWidth={2} />
+            )}
             {Object.entries(blockDays).map(([day]) => (
               <ReferenceDot
                 key={`b${day}`}
@@ -223,7 +233,7 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
               />
             ))}
             {!advanced && !teamFrom && !phone && <EndLabels was={showSaved ? wasEnd : null} now={f.p50} low={cum(DAYS - 8)} pool={f.pool} saved={saved} show={mix >= 1} fresh={morphing} />}
-            <DotHits labels={labels} onHover={setPinned} onTap={(k) => { dotTap.current = true; setPinned((p) => (p === k ? null : k)); }} />
+            <DotHits labels={labels.filter((l) => !l.key.startsWith("h-"))} onHover={setPinned} onTap={(k) => { dotTap.current = true; setPinned((p) => (p === k ? null : k)); }} />
             <EventLabels
               shown={shownLabels}
               labels={labels}

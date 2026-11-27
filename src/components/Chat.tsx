@@ -10,11 +10,11 @@ import {
   DECLINE_REASONS, topicOf, type GroupId,
 } from "@/engine";
 import { dropEarlyRun, keepEarlyRun, runKey, startEarlyRun, startAgentRun } from "@/state/agentClient";
-import { chipsFor, isSuperseded, pendingDraft, runFor, type ChipSpec } from "@/state/chipRules";
+import { chipsFor, isSuperseded, pendingDraft, runFor, stepOpen, type ChipSpec } from "@/state/chipRules";
 import { nextAction, verdictFor, type Verdict } from "@/state/nextAction";
 import { useStore, type ChatMessage, type Snapshot, type ViewKind } from "@/state/store";
 import { useUi } from "@/state/ui";
-import { anythingDone, doneLine, peopleLine, questionOpen, recapOf, recapText, shouldRecap, stillTrue, type Recap } from "@/state/recap";
+import { anythingDone, doneLine, peopleLine, recapOf, recapText, shouldRecap, stillTrue, type Recap } from "@/state/recap";
 import { AgentRunCard } from "./AgentRunCard";
 import { ArtifactCard } from "./Artifacts";
 import { Activity, Agents, Users, Workstreams } from "./Details";
@@ -297,7 +297,8 @@ function RecCard({ r, live, draftWaiting, id, onDecline }: { r: BreakdownRow; li
   const done = { applied: "Fixed", funded: "Funded", overridden: "Approved as planned", sent: "Sent to owner", declined: byRule ? "Skipped by your rule" : "Declined" }[r.state as string];
   const notWorth = fix && r.driver.kind === "growth";
   return (
-    <div id={id} className={cx(CARD, done && "bg-neutral-50", r.state === "declined" && "opacity-75")}>
+    <div id={id} className={cx(CARD, done && "bg-neutral-50", r.state === "declined" && "opacity-75")}
+      onMouseEnter={() => live && useUi.getState().set({ hoverDriver: r.driver.id })} onMouseLeave={() => useUi.getState().set({ hoverDriver: null })}>
       <div className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide">
         <span className={fix ? "text-warn-ink" : "text-ok-ink"}>{fix ? "Fix" : "Fund"}</span>
         <span title={c.reason} className={cx("cursor-help rounded px-1.5 py-px text-[11px] normal-case tracking-normal", CONF_TONE[c.level])}>{c.level} confidence</span>
@@ -386,7 +387,7 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
     const t = setTimeout(() => setJust(null), just.reason ? 3000 : 10000);
     return () => clearTimeout(t);
   }, [just]);
-  const onDecline = (driverId: string) => { declineInPlace(driverId); setJust({ id: driverId }); };
+  const onDecline = (driverId: string) => { useUi.getState().set({ hoverDriver: null }); declineInPlace(driverId); setJust({ id: driverId }); };
   // While the line is up the decline can still be undone, so the month isn't closed yet (the recap waits).
   const setJustDeclined = useStore((st) => st.setJustDeclined);
   useEffect(() => { if (live) setJustDeclined(just?.id ?? null); }, [just, live, setJustDeclined]);
@@ -467,7 +468,7 @@ function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string }) {
             <span>{just!.rule ? `Won't suggest this for ${GROUPS[justRow.driver.groupId as GroupId]?.name ?? "this team"} again.` : "Thanks, noted."}</span>
           ) : (
             <>
-              <span className="min-w-0 truncate">Declined <span className="text-ink">{justRow.driver.plain ?? justRow.driver.label}</span></span>
+              <span className="min-w-0 max-w-[45%] truncate">Declined <span className="text-ink">{justRow.driver.plain ?? justRow.driver.label}</span></span>
               {topicOf(justRow.driver.id) && <span>· Why?</span>}
               {topicOf(justRow.driver.id) && DECLINE_REASONS.map((x) => (
                 <button key={x.id} type="button" onClick={() => setJust({ id: just!.id, reason: true, rule: giveDeclineReason(just!.id, x.id) })}
@@ -899,7 +900,7 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
   const stepNow = nextAction(demo, group);
   const doneKey = `${epoch}|${currentChatId}|${demo.scenarioId}|${group}`;
   const justDeclined = useStore((s) => s.justDeclined);
-  const hasStep = !!stepNow.cta || !!pendingDraft(messages) || questionOpen(messages) || !!justDeclined;
+  const hasStep = stepOpen(demo, group, messages, justDeclined);
   const prevDone = useRef<{ key: string; hasStep: boolean; verdict: typeof stepNow.verdict } | null>(null);
   useEffect(() => {
     const now = { key: doneKey, hasStep, verdict: stepNow.verdict };

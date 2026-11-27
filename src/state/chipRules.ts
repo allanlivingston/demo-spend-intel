@@ -4,6 +4,7 @@ import { breakdown, forecast, GROUP_IDS, GROUPS, isAdvanced, ownerOf, pacing, ty
 import type { StartRun } from "./agentClient";
 import { nextAction, wasteSources } from "./nextAction";
 import type { ChatMessage, ViewKind } from "./store";
+import { questionOpen } from "./recap";
 
 export type ChipAction =
   | { type: "run"; run: StartRun }
@@ -133,4 +134,12 @@ export function chipsFor(i: ChipInput): ChipSpec[] {
   if (i.auditCount > 0 && next.cta) extra.push({ text: "View activity", action: { type: "activity" } });
   // "Show again" chips always fit: questions give way first.
   return [...fresh.slice(0, Math.max(1, MAX_CHIPS - extra.length)), ...extra].slice(0, MAX_CHIPS);
+}
+
+/**
+ * Is there still something to do for the team on screen? A next step, a draft waiting, an open question, or a card
+ * just declined whose Undo is still on screen. The month's recap waits until this is false.
+ */
+export function stepOpen(demo: DemoState, group: GroupSelection, messages: ChatMessage[], justDeclined: string | null): boolean {
+  return !!nextAction(demo, group).cta || !!pendingDraft(messages) || questionOpen(messages) || !!justDeclined;
 }

@@ -1,4 +1,4 @@
-import { chipsFor } from "@/state/chipRules";
+import { chipsFor, stepOpen } from "@/state/chipRules";
 // Preference rules: a decline with a lasting reason suggests a rule; saved rules are enforced by the engine and carry to next month.
 import { beforeEach, expect, test } from "vitest";
 import { isDeclined, ruleSentence } from "@/engine";
@@ -111,4 +111,13 @@ test("a short-term reason saves no rule; the recap can keep unexplained declines
   st().settleDeclines(["a-connector"], true);
   expect(st().demo.rules).toHaveLength(1);
   expect(st().declineReasons["a-connector"]).toBe("kept");
+});
+
+test("declining the last open card keeps the month open while its Undo is up, then closes it", () => {
+  const open = () => st().demo && stepOpen(st().demo, st().group, st().messages, st().justDeclined);
+  for (const id of ["a-subagents", "a-connector", "a-cache", "b-newhires"]) st().declineInPlace(id);
+  expect(st().justDeclined).toBe("b-newhires");
+  expect(open()).toBe(true);
+  st().setJustDeclined(null);
+  expect(open()).toBe(false);
 });

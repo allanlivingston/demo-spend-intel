@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { ArrowRight, Check, Copy, Send } from "lucide-react";
 import {
-  FUNDING_PATHS, handoffTo, handoffWhat, landing, ownerOf, REASON_CODES, type Artifact, type CfoBrief, type Handoff, type OverrideArtifact, type PolicyDiff, type RebalanceArtifact, levelOfTier } from "@/engine";
+  driverById, FUNDING_PATHS, handoffTo, handoffWhat, landing, ownerOf, REASON_CODES, type Artifact, type CfoBrief, type Handoff, type OverrideArtifact, type PolicyDiff, type RebalanceArtifact, levelOfTier } from "@/engine";
 import { useStore, type ArtifactStatus } from "@/state/store";
 import { Button, StatusPill, usd, pct, cx } from "./ui";
 
@@ -38,7 +38,7 @@ function DiffRow({ r }: { r: PolicyDiff["rows"][number] }) {
   return (
     <div className="px-3 py-2">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="font-medium">{r.control}</span>
+        <span className="font-medium" title={r.control}>{driverById(r.driverId)?.plain ?? r.control}</span>
         <span className="tabular-nums text-ok-ink">-{usd(r.savings)}</span>
       </div>
       <dl className="mt-1 grid grid-cols-[48px_1fr] gap-x-2 gap-y-0.5 text-[13px] leading-5">
