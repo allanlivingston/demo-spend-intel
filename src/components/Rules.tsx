@@ -80,7 +80,7 @@ export function RuleSuggestion({ m }: { m: ChatMessage }) {
       </div>
     );
   if (m.rulesStatus === "dismissed")
-    return <Note><p className="text-[14px] text-muted">Not saved. I won&apos;t suggest this rule again.</p></Note>;
+    return <Note><p className="text-[14px] text-muted">Not saved. I won&apos;t suggest {rules.length > 1 ? "these rules" : "this rule"} again.</p></Note>;
   return (
     <Note text={m.text}>
       <div data-rule-suggestion="" className="mt-2 rounded-xl border border-neutral-200 bg-white p-3.5">
