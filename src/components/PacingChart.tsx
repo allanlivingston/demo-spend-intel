@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, CircleHelp } from "lucide-react";
 import { Area, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, usePlotArea, useXAxisScale, useYAxisScale, XAxis, YAxis } from "recharts";
 import { dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, pacing, TODAY, type GroupId } from "@/engine";
@@ -10,6 +10,9 @@ import { useJustNow, useRoll } from "./motion";
 
 /** The live chart's last axis top, so a team switch can glide the scale from it (the chart may remount). */
 let lastTop: number | null = null;
+/** The live chart's last team and what it drew, so a team switch can blend the lines from it. */
+let lastTeam: { group: string; line: number[]; band: ([number, number] | undefined)[]; pool: number } | null = null;
+const TEAM_MS = 360;
 
 /** Chart readouts round to $100, like the rest of the app. */
 const r100 = (v: number) => Math.round(v / 100) * 100;
@@ -59,10 +62,33 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
     const wait = setTimeout(() => (raf = requestAnimationFrame(step)), 250);
     return () => { clearTimeout(wait); cancelAnimationFrame(raf); };
   }, [morphing]);
+  // Switching team: every line, the range and the budget blend from the last team's over 360ms, in step with the scale,
+  // so nothing snaps. Kept in a module variable because the chart may remount.
+  const [teamFrom, setTeamFrom] = useState(() => (!snap && justNow && lastTeam && lastTeam.group !== group ? lastTeam : null));
+  const [tmix, setTmix] = useState(teamFrom ? 0 : 1);
+  const prevGroup = useRef(group);
+  useEffect(() => {
+    if (snap || prevGroup.current === group) return;
+    prevGroup.current = group;
+    if (lastTeam && lastTeam.group !== group && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { setTeamFrom(lastTeam); setTmix(0); }
+  }, [snap, group]);
+  useEffect(() => {
+    if (!teamFrom) return;
+    let raf = 0, t0 = 0;
+    const step = (now: number) => {
+      if (!t0) t0 = now;
+      const p = Math.min(1, (now - t0) / TEAM_MS);
+      setTmix(p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2);
+      if (p < 1) raf = requestAnimationFrame(step); else setTeamFrom(null);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [teamFrom]);
+  const tb = (was: number | undefined, now: number) => (teamFrom && was !== undefined && tmix < 1 ? was + (now - was) * tmix : now);
   const groups: GroupId[] = group === "all" ? GROUP_IDS : [group];
   const yAt = (day: number) => {
     const p = f.series[day - 1];
-    return p.actual ?? p.p50 ?? 0;
+    return tb(teamFrom?.line[day - 1], p.actual ?? p.p50 ?? 0);
   };
 
   const markers = groups.flatMap((g) => driverEffects(demo, g).filter((e) => e.driver.marker && (advanced || e.driver.id !== "b-soc2")).map((e) => e.driver));
@@ -85,8 +111,10 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
   const data = f.series.map((p, i) => {
     heldSoFar += thrArr[i] + blkArr[i];
     const was = ghost?.[i] ? (ghost[i].actual ?? ghost[i].p50 ?? cum(i)) : cum(i);
-    const line = mix < 1 ? was + (cum(i) - was) * mix : cum(i);
-    return { ...p, forecastLine: i + 1 >= TODAY ? Math.round(line) : undefined, noLimits: Math.round(line), limited: anyHeld ? Math.round(cum(i) - heldSoFar) : undefined, ghost: ghost && ghost[i]?.p50 !== undefined ? ghost[i].p50 : undefined };
+    const line = tb(teamFrom?.line[i], mix < 1 ? was + (cum(i) - was) * mix : cum(i));
+    const fb = teamFrom?.band[i];
+    const band = p.band && fb ? [tb(fb[0], p.band[0]), tb(fb[1], p.band[1])] as [number, number] : teamFrom ? undefined : p.band;
+    return { ...p, band, actual: p.actual !== undefined ? Math.round(line) : undefined, forecastLine: i + 1 >= TODAY ? Math.round(line) : undefined, noLimits: Math.round(line), limited: anyHeld ? Math.round(cum(i) - heldSoFar) : undefined, ghost: ghost && ghost[i]?.p50 !== undefined ? ghost[i].p50 : undefined };
   });
   // Event labels: one per dot (throttle days within 4 days share one). EventLabels places them in pixels so none overlap.
   const throttleLabels = Object.entries(blockDays)
@@ -102,6 +130,10 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
   // Switching team changes the scale: it glides there instead of snapping (not on page load).
   const shownTop = Math.round(useRoll(top, !snap && justNow ? lastTop : null, 360));
   useEffect(() => { if (!snap) lastTop = top; }, [snap, top]);
+  useEffect(() => {
+    if (snap) return;
+    lastTeam = { group, line: f.series.map((_, i) => cum(i)), band: f.series.map((p) => p.band as [number, number] | undefined), pool: f.pool };
+  });
 
   return (
     <div>
@@ -134,7 +166,7 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
             <Line dataKey="actual" name="Actual" stroke="#191919" strokeWidth={2} dot={false} isAnimationActive={false} />
             {advanced && anyHeld && <Line dataKey="limited" name="Spend with pacing and caps" stroke="#D97757" strokeWidth={2} strokeDasharray="2 3" dot={false} isAnimationActive={false} />}
             <Line dataKey={advanced ? "noLimits" : "forecastLine"} name={advanced ? "No limits, from day 1" : "Forecast"} stroke="#191919" strokeWidth={2} strokeDasharray="6 4" dot={false} animationDuration={700} isAnimationActive={!morphing} />
-            <ReferenceLine y={f.pool} stroke="#191919" strokeDasharray="2 4" label={{ value: `Budget ${usd(f.pool)}`, position: "insideTopLeft", fontSize: 12, fill: "#555" }} />
+            <ReferenceLine y={tb(teamFrom?.pool, f.pool)} stroke="#191919" strokeDasharray="2 4" label={{ value: `Budget ${usd(f.pool)}`, position: "insideTopLeft", fontSize: 12, fill: "#555" }} />
             <ReferenceLine x={TODAY} stroke="#cbd5e1" label={{ value: "Today", position: "insideTop", fontSize: 11, fill: "#888" }} />
             {markers.map((d) => (
               <ReferenceDot

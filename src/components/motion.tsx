@@ -15,12 +15,19 @@ export function useJustNow(): boolean {
   return v;
 }
 
+const TRANSITION = "height 360ms ease-in-out";
+function scrollerOf(el: HTMLElement): HTMLElement | null {
+  for (let p = el.parentElement; p; p = p.parentElement) if (/auto|scroll/.test(getComputedStyle(p).overflowY)) return p;
+  return null;
+}
+
 /**
  * A box whose height glides when its content changes height (a headline that wraps differently, a button row that
  * comes or goes), so what sits below moves smoothly instead of jumping. The first height is set without motion.
  */
 export function SmoothHeight({ children, className, enter }: { children: React.ReactNode; className?: string; enter?: boolean }) {
   const inner = useRef<HTMLDivElement>(null);
+  const outer = useRef<HTMLDivElement>(null);
   // With enter, a box that appears in front of the user grows open from nothing instead of popping in at full height.
   const grow = !!enter && !reducedMotion();
   const [h, setH] = useState<number | null>(grow ? 0 : null);
@@ -28,7 +35,22 @@ export function SmoothHeight({ children, className, enter }: { children: React.R
   useLayoutEffect(() => {
     const el = inner.current;
     if (!el) return;
-    const measure = () => setH(el.offsetHeight);
+    const measure = () => {
+      const nh = el.offsetHeight;
+      const box = outer.current;
+      const sc = box && scrollerOf(box);
+      // A box wholly above the screen changes size out of sight: do it at once and move the scroll by the same amount,
+      // so what is on screen stays exactly still (the page turns off the browser's own scroll anchoring). A box that is
+      // even partly on screen glides instead.
+      if (box && sc && box.getBoundingClientRect().bottom <= sc.getBoundingClientRect().top) {
+        const was = box.offsetHeight;
+        box.style.transition = "none";
+        box.style.height = `${nh}px`;
+        sc.scrollTop += nh - was;
+        requestAnimationFrame(() => { box.style.transition = reducedMotion() ? "" : TRANSITION; });
+      }
+      setH(nh);
+    };
     if (!grow) measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -39,7 +61,7 @@ export function SmoothHeight({ children, className, enter }: { children: React.R
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
-    <div className={className} style={{ height: h ?? undefined, overflow: "clip", overflowClipMargin: 6, transition: ready && !reducedMotion() ? "height 360ms ease-in-out" : undefined }}>
+    <div ref={outer} className={className} style={{ height: h ?? undefined, overflow: "clip", overflowClipMargin: 6, transition: ready && !reducedMotion() ? TRANSITION : undefined }}>
       <div ref={inner}>{children}</div>
     </div>
   );

@@ -930,7 +930,9 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
 
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+      {/* The browser's scroll anchoring is off: it locks onto a message below a folding card and pushes everything above
+          down. Folds glide (SmoothHeight) and scrolls glide (glide.ts), so nothing needs it. */}
+      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto [overflow-anchor:none]">
         <div ref={floorRef} className="mx-auto w-full max-w-[816px] 2xl:max-w-[1008px] space-y-7 px-4 pb-56 pt-6 sm:px-6 sm:pt-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-[13px] text-muted">
