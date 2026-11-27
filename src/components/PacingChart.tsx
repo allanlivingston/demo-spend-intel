@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, CircleHelp } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Area, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, usePlotArea, useXAxisScale, useYAxisScale, XAxis, YAxis, ZIndexLayer } from "recharts";
 import { DAYS, dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, pacing, TODAY, usd100, type GroupId } from "@/engine";
 import { useStore, type Snapshot } from "@/state/store";
-import { cx, PHONE, Term, TERMS, usd, usdK, useMedia } from "./ui";
-import { markUsed, useNew } from "./NewDot";
+import { cx, PHONE, usd, usdK, useMedia } from "./ui";
+import { markUsed } from "./NewDot";
 import { useJustNow, useRoll } from "./motion";
 
 /** The live chart's last axis top, so a team switch can glide the scale from it (the chart may remount). */
@@ -16,8 +16,6 @@ const TEAM_MS = 360;
 
 /** Chart readouts round to $100, like the rest of the app. */
 
-const FORMULA =
-  "Likely landing = spend to date + remaining days at each driver's daily rate, shaped by the team's weekly pattern, plus active drivers, minus applied fixes. The shaded band runs to a high case, which widens as more spend comes from autonomous agents.";
 
 /**
  * The month's spend curve. Clicking any day asks Claude what happened (or is forecast) that day.
@@ -35,7 +33,6 @@ function evenTicks(top: number) {
 export function PacingChart({ onDay, snap }: { onDay?: (question: string, context: string) => void; snap?: Snapshot }) {
   const store = useStore();
   const phone = useMedia(PHONE);
-  const daySeen = useNew((s) => s.seen.includes("chart-day"));
   const { advanced, dailyOpen, setDailyOpen } = store;
   const demo = snap?.demo ?? store.demo;
   const group = snap?.group ?? store.group;
@@ -237,31 +234,7 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      {/* The legend shows while the pointer is over the chart (or it has focus); touch screens always show it. */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 px-4 pb-3 pt-1 text-[13px] text-muted opacity-0 transition-opacity duration-200 group-hover/chart:opacity-100 group-focus-within/chart:opacity-100 [@media(hover:none)]:opacity-100">
-        <span><span className="mr-1 inline-block h-0.5 w-4 bg-ink align-middle" />Actual</span>
-        <span><span className="mr-1 inline-block w-4 border-t-2 border-dashed border-ink align-middle" />{advanced ? "No limits, from day 1" : "Forecast"}</span>
-        {advanced && anyHeld && <span><span className="mr-1 inline-block w-4 border-t-2 border-dotted align-middle" style={{ borderColor: "#D97757" }} />Spend with pacing and caps</span>}
-        <span><span className="mr-1 inline-block h-2.5 w-4 bg-accent/20 align-middle" /><Term def={TERMS.likely}>Likely range</Term></span>
-        {advanced && <span><span className="mr-1 inline-block h-px w-4 bg-accent align-middle" />Pacing plan</span>}
-        {/* Only the markers this chart shows. */}
-        {markers.some((d) => d.kind === "waste" && !fixedState(d.id)) && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-warn align-middle" />Waste starts</span>}
-        {markers.some((d) => d.kind !== "waste" && !fixedState(d.id)) && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-ok align-middle" />Growth starts</span>}
-        {showSaved && <span><span className="mr-1 inline-block h-2.5 w-4 align-middle" style={{ background: "rgba(63,143,90,0.25)" }} />Saved by your changes</span>}
-        {markers.some((d) => fixedState(d.id)) && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ background: "#B8B8B8" }} />Fixed or sent to owner</span>}
-        {Object.keys(blockDays).length > 0 && <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-bad align-middle" />People with runs first held</span>}
-        {/* The note and the ? stay together on the right, so neither wraps onto a line of its own. */}
-        <span className="ml-auto inline-flex items-center gap-3 whitespace-nowrap">
-          {onDay && (
-            <span className="inline-flex items-center gap-1.5 text-ink">
-              <span className={daySeen ? "text-muted" : undefined}>Click any day to ask about it</span>
-            </span>
-          )}
-          <button type="button" className="inline-flex cursor-help items-center text-muted hover:text-ink" title={FORMULA} aria-label={`How is this calculated? ${FORMULA}`}>
-            <CircleHelp size={15} />
-          </button>
-        </span>
-      </div>
+      <div className="h-3" />
       {anyHeld && <DailySummary data={stripDays} pace={pacing(demo, group)} open={!!dailyOpen} onToggle={() => setDailyOpen(!dailyOpen)} />}
       {anyHeld && dailyOpen && <DailyStrip data={stripDays} />}
     </div>

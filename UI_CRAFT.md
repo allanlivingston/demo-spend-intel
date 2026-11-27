@@ -43,7 +43,7 @@ specific correction, the example is in brackets.
 
 ## 3. Show less by default
 
-- **The chart can be hidden; the figures can't.** Show/Hide chart is remembered for new copies. Until the reader chooses, the opening chart hides once the conversation starts; later copies show theirs. The chart legend shows on hover or focus (always on touch screens). Marker dots always show; their labels show when the pointer is over the chart, when a dot is hovered or tapped (a tap on a dot never asks about the day), and for a few seconds on the causes a change just fixed. The end labels always show. Don't repeat what the chart shows. ["Day 18 of 30" and the walkthrough line "Claude drafts the change…" were removed.] Card headers have no decorative icons.
+- **The chart can be hidden; the figures can't.** Show/Hide chart is remembered for new copies. Until the reader chooses, the opening chart hides once the conversation starts; later copies show theirs. The chart has no legend. Marker dots always show; a dot's label shows when that dot is hovered or tapped (a tap on a dot never asks about the day), and for a few seconds on the causes a change just fixed. The end labels always show. Don't repeat what the chart shows. ["Day 18 of 30" and the walkthrough line "Claude drafts the change…" were removed.] Card headers have no decorative icons.
 - **Progressive disclosure.** Lead with one sentence or one summary line and open the detail on request. [The daily bars sit behind a one-line summary.]
 - **The default view shows the core idea only.** Workstreams, Health and budget moves live in the advanced view.
 - **Never mention something the current view doesn't have.** [A workstream or "SOC 2 sprint" string in the default view.]
