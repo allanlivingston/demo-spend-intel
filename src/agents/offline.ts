@@ -287,7 +287,7 @@ export function offlinePlan(req: AgentRequest): OfflinePlan {
   if (/do nothing/.test(p)) {
     const pc = pacing(s, g);
     const waste = k.fixableWaste > 0 ? ` and ${usd(k.fixableWaste)} of waste keeps running` : "";
-    const people = t.blockedMonth > 0 ? ` ${t.blockedMonth} engineers go over their limit and about ${Math.round(pc.teamShare * 100)}% of the team's runs stay slowed each day.` : "";
+    const people = t.blockedMonth > 0 ? ` ${t.blockedMonth} engineers on the team go over their monthly limit${t.newHiresBlockedByDay22 ? ` (${t.newHiresBlockedByDay22} of them new engineers, by day 22)` : ""}, and about ${Math.round(pc.teamShare * 100)}% of the team's runs stay slowed each day.` : "";
     return plan(`${GROUPS[g].name} is forecast at ${usd100(f.p50)} against ${usd(f.pool)}${waste}.${people}${nextStep(s, sel)}`, [...base, { tool: "get_evidence", input: { group: g } }]);
   }
 

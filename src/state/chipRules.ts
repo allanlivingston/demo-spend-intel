@@ -117,8 +117,8 @@ export function chipsFor(i: ChipInput): ChipSpec[] {
       const run = runFor(one);
       const text = `Fix the ${SHORT[one.driver.id] ?? one.driver.label.toLowerCase()}`;
       for (let k = main.length - 1; k >= 0; k--) if (main[k].text.toLowerCase() === text.toLowerCase()) main.splice(k, 1);
-      main.forEach((c) => (c.primary = false));
-      main.unshift({ text, primary: true, action: { type: "run", run: { ...run, say: text } } });
+      // Second, not first: the main step keeps its place so the chips don't shift under the pointer.
+      main.splice(main.length ? 1 : 0, 0, { text, primary: !main.length, action: { type: "run", run: { ...run, say: text } } });
     }
     main.push(ask(f.p50 > f.pool ? "Why are we over budget?" : "Summarize spend"));
     if (next.verdict === "fix" || next.verdict === "fund") main.push(ask("What happens if we do nothing?"));
