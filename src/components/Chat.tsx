@@ -23,6 +23,7 @@ import { cx, StatusPill, Term, TERMS, usd } from "./ui";
 import { markUsed, NewDot } from "./NewDot";
 import { RuleSuggestion, WhyAsk } from "./Rules";
 import { glide, glideTo } from "./glide";
+import { useJustNow, useRoll } from "./motion";
 
 /** Money decisions an auditor or budget owner will ask about open in a full-page review. */
 
@@ -188,6 +189,11 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
   const auditCount = useStore((st) => st.audit.length);
   const busy = busyOf(useStore((st) => st.messages));
   const f = forecast(s.demo, s.group);
+  // A change the user just made: the landing rolls from where it was heading (the store's ghost of the last forecast).
+  const ghost = useStore((st) => st.ghost);
+  const justNow = useJustNow();
+  // Same timing as the chart line (PacingChart): a short pause, then 600ms, so the number and the line move together.
+  const lands = useRoll(f.p50, live && justNow && ghost ? ghost.at(-1)?.p50 ?? null : null, 600, 250);
   const k = kpis(s.demo, s.group);
   const rowsNow = breakdown(s.demo, s.group).rows;
   const fixLines = (state: string) => rowsNow.filter((r) => r.side === "fix" && r.state === state).sort((a, b) => b.recoverable - a.recoverable).map((r) => ({ label: r.driver.label, value: usd(r.recoverable) }));
@@ -224,7 +230,7 @@ function ForecastView({ snap, live, id }: { snap: Snapshot; live: boolean; id?: 
       }
     >
       {(live || open) && <div className="flex flex-wrap gap-x-10 gap-y-2 px-4 py-3">
-        <Stat label={<Term def={TERMS.landsAt}>Lands at</Term>} value={usd(f.p50)} tone={f.p50 > f.pool ? "text-bad" : undefined} hint="if nothing changes" />
+        <Stat label={<Term def={TERMS.landsAt}>Lands at</Term>} value={usd(lands === f.p50 ? f.p50 : Math.round(lands / 100) * 100)} tone={lands > f.pool ? "text-bad" : undefined} hint="if nothing changes" />
         <Stat label="Budget" value={usd(f.pool)} />
         <Stat label={third.label === "Fixable waste" ? <Term def={TERMS.fixable}>{third.label}</Term> : third.label === "Waiting on owner" ? <Term def={TERMS.waiting}>{third.label}</Term> : third.label} value={third.value} tone={third.tone} learn={live ? third.learn : undefined} />
         <div className="ml-auto self-end whitespace-nowrap text-[13px] text-muted">Day {TODAY} of 30</div>
@@ -437,11 +443,12 @@ function settledLine(a: Artifact): string {
 /** Once approved, a card folds to one line saying what it did; it opens again on click (Undo lives inside). */
 function Settled({ a, children }: { a: Artifact; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const justNow = useJustNow();
   return (
-    <div className="overflow-hidden rounded-xl border border-black/10 bg-white">
+    <div className={cx("overflow-hidden rounded-xl border border-black/10 bg-white", justNow && "settle-in")}>
       <button type="button" onClick={() => setOpen(!open)} aria-expanded={open}
         className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-[14px] hover:bg-neutral-50">
-        <Check size={15} className="shrink-0 text-ok-ink" />
+        <Check size={15} className={cx("shrink-0 text-ok-ink", justNow && "check-draw")} />
         <span className="flex-1 text-ink">{settledLine(a)}</span>
         <span className="inline-flex shrink-0 items-center gap-0.5 text-[13px] text-muted">{open ? "Hide" : "Show"}<ChevronDown size={13} className={cx("transition-transform", open && "rotate-180")} /></span>
       </button>
@@ -489,6 +496,8 @@ function Draft({ x, all }: { x: ChatMessage; all: ChatMessage[] }) {
 /** What the month came to, posted once everything open is handled. Facts only, with a copy for the team or budget owner. */
 function RecapCard({ r, earlier }: { r: Recap; earlier: boolean }) {
   const [copied, setCopied] = useState(false);
+  // Closing the month: its lines arrive one after another, once, when it is posted.
+  const justNow = useJustNow();
   // Like earlier forecast copies: folded once a newer recap is posted, until the admin opens it.
   const [userOpen, setOpen] = useState<boolean | null>(null);
   const open = userOpen ?? !earlier;
@@ -540,12 +549,15 @@ function RecapCard({ r, earlier }: { r: Recap; earlier: boolean }) {
         </>}
       >
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 px-4 py-3 text-[15px]">
-          {lines.map(([k, v]) => (
-            <div key={k + String(v)} className="contents">
-              <dt className="whitespace-nowrap text-muted">{k}</dt>
-              <dd className="min-w-0 tabular-nums">{v}</dd>
-            </div>
-          ))}
+          {lines.map(([k, v], i) => {
+            const enter = justNow && !earlier ? { className: "settle-in", style: { animationDelay: `${120 + i * 90}ms` } } : { className: "", style: undefined };
+            return (
+              <div key={k + String(v)} className="contents">
+                <dt className={cx("whitespace-nowrap text-muted", enter.className)} style={enter.style}>{k}</dt>
+                <dd className={cx("min-w-0 tabular-nums", enter.className)} style={enter.style}>{v}</dd>
+              </div>
+            );
+          })}
         </dl>
       </Frame>
     </div>

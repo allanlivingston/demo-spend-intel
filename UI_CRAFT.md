@@ -31,6 +31,12 @@ specific correction, the example is in brackets.
 - **One question at a time.** When Claude asks something (save this rule?), it is the last thing on screen: hold what would follow, such as the updated forecast, until it is answered, and put the key result in the question's own message ("now lands at $48,200"). If the user moves on instead, post the held content first; never block. [The forecast after Apply waits for the rule answer.]
 - **A confirmation belongs with what it confirms.** Never post it at the bottom when the messages between the action and the bottom haven't been read: the scroll follows it and skips them. [A saved rule's "Saved." used to land under the updated forecast and scroll it off the top.]
 
+- **Motion explains a change, never decorates.** (`src/components/motion.ts`)
+  - Only where something the user did changed something: the landing rolls from where it was heading, the forecast line glides from the old curve (which stays as a dashed ghost), an approved card settles with its check drawn, and the month's recap lines arrive one after another.
+  - Short and once: 600ms or less, a 250ms pause before a figure moves so the eye finds it, number and line in step.
+  - Never on a page load or reload, and none at all with reduced motion.
+  - No wipes, slides, bounces or pulsing buttons: they slow the demo and pull attention from the next step.
+
 ## 3. Show less by default
 
 - **Progressive disclosure.** Lead with one sentence or one summary line and open the detail on request. [The daily bars sit behind a one-line summary.]

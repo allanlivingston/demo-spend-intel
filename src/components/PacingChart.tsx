@@ -1,10 +1,12 @@
 "use client";
+import { useEffect, useState } from "react";
 import { ChevronDown, CircleHelp } from "lucide-react";
 import { Area, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, usePlotArea, useXAxisScale, useYAxisScale, XAxis, YAxis } from "recharts";
 import { dayInfo, driverEffects, forecast, GROUP_IDS, monthStrip, pacing, TODAY, type GroupId } from "@/engine";
 import { useStore, type Snapshot } from "@/state/store";
 import { PHONE, Term, TERMS, usd, usdK, useMedia } from "./ui";
 import { markUsed, NewDot, useNew } from "./NewDot";
+import { useJustNow } from "./motion";
 
 /** Chart readouts round to $100, like the rest of the app. */
 const r100 = (v: number) => Math.round(v / 100) * 100;
@@ -34,6 +36,26 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
   const group = snap?.group ?? store.group;
   const ghost = snap ? null : store.ghost;
   const f = forecast(demo, group);
+  // A change the user just made: the forecast line first draws where it was heading, then moves to where it lands now.
+  const justNow = useJustNow();
+  // The chart library doesn't blend a line between two data sets reliably, so the blend is done here: 0 is the old line,
+  // 1 the new one, over 600ms, easing out.
+  const [morphing] = useState(() => !snap && justNow && !!ghost);
+  const [mix, setMix] = useState(morphing ? 0 : 1);
+  useEffect(() => {
+    if (!morphing) return;
+    let raf = 0;
+    let t0 = 0;
+    const step = (now: number) => {
+      if (!t0) t0 = now;
+      const p = Math.min(1, (now - t0) / 600);
+      setMix(1 - Math.pow(1 - p, 3));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    // A short pause first, so the eye finds the old line before it moves.
+    const wait = setTimeout(() => (raf = requestAnimationFrame(step)), 250);
+    return () => { clearTimeout(wait); cancelAnimationFrame(raf); };
+  }, [morphing]);
   const groups: GroupId[] = group === "all" ? GROUP_IDS : [group];
   const yAt = (day: number) => {
     const p = f.series[day - 1];
@@ -59,7 +81,9 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
   let heldSoFar = 0;
   const data = f.series.map((p, i) => {
     heldSoFar += thrArr[i] + blkArr[i];
-    return { ...p, forecastLine: i + 1 >= TODAY ? Math.round(cum(i)) : undefined, noLimits: Math.round(cum(i)), limited: anyHeld ? Math.round(cum(i) - heldSoFar) : undefined, ghost: ghost && ghost[i]?.p50 !== undefined ? ghost[i].p50 : undefined };
+    const was = ghost?.[i] ? (ghost[i].actual ?? ghost[i].p50 ?? cum(i)) : cum(i);
+    const line = mix < 1 ? was + (cum(i) - was) * mix : cum(i);
+    return { ...p, forecastLine: i + 1 >= TODAY ? Math.round(line) : undefined, noLimits: Math.round(line), limited: anyHeld ? Math.round(cum(i) - heldSoFar) : undefined, ghost: ghost && ghost[i]?.p50 !== undefined ? ghost[i].p50 : undefined };
   });
   // Event labels: one per dot (throttle days within 4 days share one). EventLabels places them in pixels so none overlap.
   const throttleLabels = Object.entries(blockDays)
@@ -102,7 +126,7 @@ export function PacingChart({ onDay, snap }: { onDay?: (question: string, contex
             {ghost && <Line dataKey="ghost" name="Previous forecast" stroke="#94a3b8" strokeOpacity={0.5} strokeDasharray="4 4" dot={false} isAnimationActive={false} />}
             <Line dataKey="actual" name="Actual" stroke="#191919" strokeWidth={2} dot={false} isAnimationActive={false} />
             {advanced && anyHeld && <Line dataKey="limited" name="Spend with pacing and caps" stroke="#D97757" strokeWidth={2} strokeDasharray="2 3" dot={false} isAnimationActive={false} />}
-            <Line dataKey={advanced ? "noLimits" : "forecastLine"} name={advanced ? "No limits, from day 1" : "Forecast"} stroke="#191919" strokeWidth={2} strokeDasharray="6 4" dot={false} animationDuration={700} />
+            <Line dataKey={advanced ? "noLimits" : "forecastLine"} name={advanced ? "No limits, from day 1" : "Forecast"} stroke="#191919" strokeWidth={2} strokeDasharray="6 4" dot={false} animationDuration={700} isAnimationActive={!morphing} />
             <ReferenceLine y={f.pool} stroke="#191919" strokeDasharray="2 4" label={{ value: `Budget ${usd(f.pool)}`, position: "insideTopLeft", fontSize: 12, fill: "#555" }} />
             <ReferenceLine x={TODAY} stroke="#cbd5e1" label={{ value: "Today", position: "insideTop", fontSize: 11, fill: "#888" }} />
             {markers.map((d) => (

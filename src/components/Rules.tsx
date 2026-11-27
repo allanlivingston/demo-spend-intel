@@ -6,6 +6,7 @@ import { BookmarkCheck, Sparkles, Trash2 } from "lucide-react";
 import { canAllow, DECLINE_REASONS, LEVELS, ruleSentence, type PrefRule, type RuleLevel } from "@/engine";
 import { useStore, type ChatMessage } from "@/state/store";
 import { cx } from "./ui";
+import { useJustNow } from "./motion";
 
 const ORDER: RuleLevel[] = ["allow", "ask", "skip"];
 
@@ -62,10 +63,11 @@ export function RuleSuggestion({ m }: { m: ChatMessage }) {
   const { saveRules, dismissRules } = useStore();
   const [levels, setLevels] = useState<RuleLevel[]>(() => (m.rules ?? []).map((r) => r.level));
   const rules = m.rules ?? [];
+  const justNow = useJustNow();
   if (m.rulesStatus === "saved")
     return (
-      <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-[15px]">
-        <BookmarkCheck size={15} className="shrink-0 text-ok-ink" />
+      <div className={cx("flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-[15px]", justNow && "settle-in")}>
+        <BookmarkCheck size={15} className={cx("shrink-0 text-ok-ink", justNow && "check-draw")} />
         <span className="flex-1">
           {rules.length > 1 ? "Rules saved" : "Rule saved"}: {rules.map((r) => ruleSentence(r)).join(" ")}{" "}
           <span className="text-muted">
