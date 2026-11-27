@@ -34,7 +34,11 @@ test("a short-term reason gives no rule", () => {
 
 test("applying a fix suggests doing it without asking; saved, it applies itself next month", () => {
   st().applyPolicy(["a-connector"]);
-  const proposal = last();
+  // The offer comes with "Applied.", above the updated forecast, which stays last.
+  const proposal = st().messages.at(-2)!;
+  expect(proposal.text).toMatch(/^Applied\. You could apply this change yourself/);
+  expect(last().view).toBe("forecast");
+  expect(last().rules).toBeUndefined();
   expect(proposal.rules?.map((r) => [r.topic, r.level])).toEqual([["loop", "allow"]]);
   st().saveRules(proposal.id, ["allow"]);
   st().setScenario("A");
@@ -51,7 +55,7 @@ test("fixes owned by another team are never suggested as automatic", () => {
 
 test("No thanks stops the same suggestion; Reset demo clears rules", () => {
   st().applyPolicy(["a-connector"]);
-  st().dismissRules(last().id);
+  st().dismissRules(st().messages.at(-2)!.id);
   st().undoPolicy(["a-connector"]);
   st().applyPolicy(["a-connector"]);
   expect(st().messages.filter((m) => m.rules)).toHaveLength(1);

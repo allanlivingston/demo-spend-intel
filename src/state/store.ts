@@ -380,11 +380,14 @@ export const useStore = create<Store>()(
           if (mine.length) log({ actor: "Admin", action: "Apply policy", detail: mine.join(", "), evidenceTier: 1 });
           theirs.forEach((x) => log({ actor: "Admin", action: `Sent fix to ${ownerOf(x)!.name}`, detail: x, evidenceTier: 1 }));
           const done = theirs.length ? (mine.length ? "Applied your changes and sent the rest to its owner." : "Sent to its owner.") : "Applied.";
-          update(tickets.length ? `${done.replace(/\.$/, "")}, and sent the ticket to ${handoffTo(tickets[0])}.` : done);
+          const ack = tickets.length ? `${done.replace(/\.$/, "")}, and sent the ticket to ${handoffTo(tickets[0])}.` : done;
           const rules = rulesFromApply(get().demo, mine, get().ruleNoThanks);
-          suggestRules(rules, rules.length > 1
+          // The rule offer sits with the change it is about; the updated forecast and next step stay at the bottom.
+          if (!rules.length) return update(ack);
+          suggestRules(rules, `${ack} ${rules.length > 1
             ? "You could apply changes like these yourself. Want me to make them without asking next month?"
-            : "You could apply this change yourself. Want me to make it without asking next month?", { decision: "applied" });
+            : "You could apply this change yourself. Want me to make it without asking next month?"}`, { decision: "applied" });
+          get().postView("forecast", headline(get().demo, get().group));
         },
         sendHandoff: (driverId) => {
           const d = get().demo;
