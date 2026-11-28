@@ -254,12 +254,20 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
       const needed = el.scrollTop + msg.getBoundingClientRect().bottom - el.getBoundingClientRect().bottom + ANSWER_ROOM;
       return Math.min(firstLine, Math.max(el.scrollTop, needed));
     };
-    requestAnimationFrame(() => glide(el, aim));
+    // Wait for folds above (an approved draft shrinking) to finish first: gliding while they run chases a target that
+    // keeps moving up, so the page glides down and then back up (a bounce). Up to about 0.7 seconds.
+    let h = -1, frames = 0;
+    const whenStill = () => {
+      if (el.scrollHeight === h || frames++ > 40) { glide(el, aim); return; }
+      h = el.scrollHeight;
+      requestAnimationFrame(whenStill);
+    };
+    requestAnimationFrame(whenStill);
     // A card folding on screen (an approved draft) can finish after the scroll has landed and leave the reply's first
     // line above the screen. Once folds have settled, bring it back into view.
     const settle = setTimeout(() => {
       if (msg.isConnected && msg.getBoundingClientRect().top < el.getBoundingClientRect().top) glide(el, aim);
-    }, 450);
+    }, 900);
     return () => clearTimeout(settle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
