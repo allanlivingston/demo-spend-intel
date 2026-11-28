@@ -152,7 +152,7 @@ export function Recs({ s, live, id }: { s: Snapshot; live: boolean; id?: string 
       <div className="flex items-center gap-2 px-4 pt-3">
         <h3 className="text-[15px] font-semibold">Recommendations</h3>
         {/* How many are still open, as a small count beside the title; none open shows nothing. */}
-        {open > 0 && <span aria-label={`${open} open`} className="rounded-full bg-neutral-100 px-1.5 text-[12px] font-medium tabular-nums leading-5 text-muted">{open}</span>}
+        {open > 0 && <span aria-label={`${open} open`} className="rounded-full bg-neutral-100 px-1.5 text-[12px] font-medium tabular-nums leading-5 text-muted">{open} open</span>}
         <span className="ml-auto flex items-center gap-1">
         {live && declinedRows.length > 0 && !allDone && (
           <button type="button" onClick={() => setShowDeclined(!showDeclined)} aria-expanded={showDeclined} className="mr-1 rounded-md px-1.5 py-0.5 text-[13px] text-muted hover:bg-neutral-100 hover:text-ink">

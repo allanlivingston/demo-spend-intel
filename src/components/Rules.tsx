@@ -109,6 +109,7 @@ export function RuleSuggestion({ m }: { m: ChatMessage }) {
             {m.rulesWording === "pending" ? "Claude is wording it…" : null}
           </span>
         </div>
+        <p className="mt-1 text-[13px] leading-[18px] text-muted">If the same problem comes back next month, Claude fixes it on its own or asks you first.</p>
         {rules.map((r, i) => {
           const shown = { ...r, level: levels[i] ?? r.level };
           return (
