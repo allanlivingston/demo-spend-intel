@@ -453,7 +453,7 @@ function DailySummary({ data, pace, open, onToggle }: { data: StripDay[]; pace: 
       <p className="text-ink">
         On the current plan, the app would automatically{" "}
         <Term def="Slowed runs still finish. The heaviest ones move to a cheaper Claude model, or wait a few hours, on the busiest days. Nobody is cut off, and the person sees a note when it happens.">slow</Term>{" "}
-        {share100} of runs{when}.{" "}
+        {share100} of runs{when} (cheaper model or a short wait).{" "}
         <button type="button" onClick={() => { onToggle(); markUsed("daily-bars"); }} aria-expanded={open} aria-label={open ? "Hide the day-by-day bars" : "Show the day-by-day bars"} className="inline-flex items-center rounded p-0.5 align-middle text-muted hover:bg-neutral-100 hover:text-ink">
           <ChevronDown size={15} className={open ? "rotate-180 transition-transform" : "transition-transform"} />
         </button>

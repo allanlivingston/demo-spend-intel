@@ -89,6 +89,7 @@ export type Learn = { lines: { label: string; value: string }[]; note: string; q
 export function LearnMore({ learn, children }: { learn: Learn; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const hovered = useRef(false);
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
@@ -98,8 +99,11 @@ export function LearnMore({ learn, children }: { learn: Learn; children: React.R
     return () => { window.removeEventListener("mousedown", close); window.removeEventListener("keydown", esc); };
   }, [open]);
   return (
-    <div ref={ref} className="relative">
-      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="inline-flex items-center gap-0.5 uppercase tracking-wide underline decoration-dotted underline-offset-2 hover:text-ink">
+    // Opens on hover too (the dotted underline promises it); one opened by a click stays until a click elsewhere.
+    <div ref={ref} className="relative"
+      onMouseEnter={() => { if (window.matchMedia("(hover: hover)").matches && !open) { hovered.current = true; setOpen(true); } }}
+      onMouseLeave={() => { if (hovered.current) { hovered.current = false; setOpen(false); } }}>
+      <button type="button" onClick={() => { if (hovered.current) { hovered.current = false; return; } setOpen(!open); }} aria-expanded={open} className="inline-flex items-center gap-0.5 uppercase tracking-wide underline decoration-dotted underline-offset-2 hover:text-ink">
         {children}<ChevronDown size={12} className={cx("transition-transform", open && "rotate-180")} />
       </button>
       {open && (

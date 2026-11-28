@@ -116,18 +116,6 @@ export function kpis(s: DemoState, sel: GroupSelection): Kpis {
   };
 }
 
-/** Under the headline: how much of the waste the admin can fix here, and how much another team has to ship. */
-export function headlineNote(s: DemoState, sel: GroupSelection): string | null {
-  // It is about Platform Engineering's waste: only there and in the all-teams view, whose headline is the same.
-  if (s.scenarioId !== "C" || newWorkAsk(s) === null || (sel !== "pe" && sel !== "all")) return null;
-  const open = driverEffects(s, "pe").filter((e) => e.driver.kind === "waste" && !e.fixed && !waitingOnOwner(s, e.driver.id) && !isDeclined(s, e.driver.id));
-  const theirs = open.filter((e) => ownerOf(e.driver.id));
-  if (!theirs.length || theirs.length === open.length) return null;
-  const owed = sum(theirs.map((e) => recoveryOf(e.driver)));
-  const mine = sum(open.map((e) => recoveryOf(e.driver))) - owed;
-  return `${usd(mine)} you can fix here; ${usd(owed)} needs a change to ${ownerOf(theirs[0].driver.id)!.owns}, which ${ownerOf(theirs[0].driver.id)!.short} owns.`;
-}
-
 /**
  * The verdict line for the team in view: what is happening, in plain words, ending on the next step.
  * Every number comes from the engine.

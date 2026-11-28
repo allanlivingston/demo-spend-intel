@@ -4,7 +4,7 @@
 // newest copy of each is live, older copies render from the state they were posted with, so they match their text.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
-import { headline, headlineNote } from "@/engine";
+import { headline } from "@/engine";
 import { dropEarlyRun, keepEarlyRun, runKey, startEarlyRun, startAgentRun } from "@/state/agentClient";
 import { chipsFor, stepOpen, type ChipSpec } from "@/state/chipRules";
 import { nextAction } from "@/state/nextAction";
@@ -329,7 +329,6 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
             {/* Once the chat starts, this is how things stood then; the newest forecast below is the live one. */}
             {/* Always live: it updates after a fix and follows the team picked. Earlier figures stay in the chat history. */}
             <Headline key={group} text={headline(demo, group)} />
-            {headlineNote(demo, group) && <p className="mt-2 text-[15px] text-muted">{headlineNote(demo, group)}</p>}
             {!messages.length && chips.find((c) => c.primary)?.action.type === "run" && (
               <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <button type="button" onClick={() => onChip(chips.find((c) => c.primary)!)}
