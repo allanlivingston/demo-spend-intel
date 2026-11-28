@@ -255,11 +255,14 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
       return Math.min(firstLine, Math.max(el.scrollTop, needed));
     };
     // Wait for folds above (an approved draft shrinking) to finish first: gliding while they run chases a target that
-    // keeps moving up, so the page glides down and then back up (a bounce). Up to about 0.7 seconds.
-    let h = -1, frames = 0;
+    // keeps moving up, so the page glides down and then back up (a bounce). Up to about 1 second.
+    // "Still" means the same height for 6 frames in a row (about 0.1 seconds): a fold can start a few frames after the
+    // click, so one equal pair of frames is not enough.
+    let h = -1, same = 0, frames = 0;
     const whenStill = () => {
-      if (el.scrollHeight === h || frames++ > 40) { glide(el, aim); return; }
+      same = el.scrollHeight === h ? same + 1 : 0;
       h = el.scrollHeight;
+      if (same >= 6 || frames++ > 60) { glide(el, aim); return; }
       requestAnimationFrame(whenStill);
     };
     requestAnimationFrame(whenStill);
