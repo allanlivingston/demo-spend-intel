@@ -54,7 +54,8 @@ export const stripDashes = (s: string) => s.replace(/\s?[–—]\s?/g, ", ");
 
 /** Display polish for prose: no dashes, thousands separators on dollar amounts ($48000 to $48,000). */
 export const polish = (s: string) =>
-  stripDashes(s).replace(/\$(\d{4,})(?!\d|[.,]\d)/g, (_, n: string) => `$${Number(n).toLocaleString("en-US")}`);
+  // The drafted card sits right under the answer, so a sentence pointing to it is dropped (older recordings have one).
+  stripDashes(s).replace(/\s*Review the [^.]*below\./g, "").replace(/\$(\d{4,})(?!\d|[.,]\d)/g, (_, n: string) => `$${Number(n).toLocaleString("en-US")}`);
 
 /** Answer length rule: at most 3 sentences and 70 words. */
 export const MAX_SENTENCES = 3;
