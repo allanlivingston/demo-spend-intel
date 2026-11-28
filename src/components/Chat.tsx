@@ -240,8 +240,8 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
     // A draft folding to one line, or an earlier forecast copy folding, can leave the new reply above the screen. Then
     // the page would jump and scroll back. Instead, put it mid-screen before the first paint, where the reader was
     // looking, and let it glide up from there.
-    const top = msg.getBoundingClientRect().top - el.getBoundingClientRect().top;
-    if (top < 0) el.scrollTop += top - el.clientHeight * 0.5;
+    // (No jump first: the floor below keeps the page from shrinking under the reader while the draft folds, so the
+    // reply moves up into view on its own, and one glide after the fold settles finishes the move.)
     // A typed question moves to the top, like claude.ai. A question from a click (a card's Ask, a chip) scrolls only
     // as far as needed to show it and the start of its answer, so the cards it came from stay in view when they fit.
     const wasTyped = target === user && Date.now() - typed.at < 2_000;
@@ -258,11 +258,18 @@ export function ChatApp({ activityOpen, setActivityOpen }: { activityOpen: boole
     // keeps moving up, so the page glides down and then back up (a bounce). Up to about 1 second.
     // "Still" means the same height for 6 frames in a row (about 0.1 seconds): a fold can start a few frames after the
     // click, so one equal pair of frames is not enough.
+    // While the draft folds, the reply slides up with it: stop it at its resting line instead of letting it pass and
+    // glide back down. Checked when the layout changes, before the screen draws, so it never shows past the line.
+    const hold = new ResizeObserver(() => {
+      const over = 24 - (msg.getBoundingClientRect().top - el.getBoundingClientRect().top);
+      if (target !== user && over > 0) el.scrollTop -= over;
+    });
+    if (floorRef.current) [...floorRef.current.children].forEach((c) => hold.observe(c));
     let h = -1, same = 0, frames = 0;
     const whenStill = () => {
       same = el.scrollHeight === h ? same + 1 : 0;
       h = el.scrollHeight;
-      if (same >= 6 || frames++ > 60) { glide(el, aim); return; }
+      if (same >= 6 || frames++ > 60) { hold.disconnect(); glide(el, aim); return; }
       requestAnimationFrame(whenStill);
     };
     requestAnimationFrame(whenStill);
