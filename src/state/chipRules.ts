@@ -108,7 +108,7 @@ export function chipsFor(i: ChipInput): ChipSpec[] {
   } else {
     if (next.cta) {
       const sources = wasteSources(i.demo, i.group);
-      const text = next.verdict === "fix" ? (sources.length > 1 ? "Fix all the waste" : `Fix the ${sources[0].name.toLowerCase()}`) : next.cta.label;
+      const text = next.verdict === "fix" ? (sources.length > 1 ? (i.demo.appliedFixes.length ? "Fix the rest of the waste" : "Fix all the waste") : `Fix the ${sources[0].name.toLowerCase()}`) : next.cta.label;
       main.push({ text, primary: true, action: { type: "run", run: { ...next.cta.run, say: text } } });
     }
     // Just asked about one fix from its card: fixing that one is the next step (the answer says "Fix it drafts the change").

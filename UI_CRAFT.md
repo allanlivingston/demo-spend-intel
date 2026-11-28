@@ -118,4 +118,6 @@ When asked to rate the app, score the same five things every time, 1 to 10 each,
 | **Polish** | Looks and feels like Claude | Plain words, nothing jumps or snaps, every chip fits the state, no dead ends |
 | **Robustness** | Holds up everywhere | Phone, tablet and desktop, reduced motion, Offline replay and live, a failed run recovers |
 
+**Who the cold reader is.** The app is for Anthropic reviewers judging whether it could ship as a Claude feature. The cold reader plays that person: a PM or reviewer at Anthropic who uses Claude.ai and the Claude admin console every day, has not seen this app, and reads it for 2 to 3 minutes with no tour. Claude.ai's own patterns (the chat, the message box, the model picker, chips) are familiar to them, not jargon; don't count them against First use. Do count anything that would stop that reader: a word or number they can't explain, a click that misses, a step that seems to vanish, figures that don't match.
+
 Don't move a score without naming what changed. A half point between sessions with no change named is noise.

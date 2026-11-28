@@ -125,7 +125,7 @@ export function headlineNote(s: DemoState, sel: GroupSelection): string | null {
   if (!theirs.length || theirs.length === open.length) return null;
   const owed = sum(theirs.map((e) => recoveryOf(e.driver)));
   const mine = sum(open.map((e) => recoveryOf(e.driver))) - owed;
-  return `${usd(mine)} you can fix here; ${usd(owed)} is a code fix for ${ownerOf(theirs[0].driver.id)!.short}.`;
+  return `${usd(mine)} you can fix here; ${usd(owed)} needs a change to ${ownerOf(theirs[0].driver.id)!.owns}, which ${ownerOf(theirs[0].driver.id)!.short} owns.`;
 }
 
 /**

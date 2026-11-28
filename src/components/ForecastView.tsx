@@ -29,9 +29,11 @@ export function Frame({ title, right, children, id, stale }: {
   return (
     <SmoothHeight>
     <section id={id} className={cx("overflow-hidden rounded-xl border bg-white", stale ? "border-black/[0.06]" : "border-black/10")}>
-      <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-neutral-100 px-4 py-2.5">
-        <h2 className="whitespace-nowrap text-[15px] font-semibold">{title}</h2>
-        <div className="ml-auto flex min-w-0 max-w-full items-center gap-2">{right}</div>
+      {/* On wider screens the title truncates instead of wrapping, so the team tabs on the right never move when the
+          team (and so the title's length) changes. On a phone the tabs always sit on their own line. */}
+      <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-neutral-100 px-4 py-2.5 sm:flex-nowrap">
+        <h2 className="min-w-0 whitespace-nowrap text-[15px] font-semibold sm:truncate">{title}</h2>
+        <div className="ml-auto flex min-w-0 max-w-full shrink-0 items-center gap-2">{right}</div>
       </header>
       {stale?.open && (
         <div className="flex items-center gap-2 border-b border-neutral-100 bg-neutral-50 px-4 py-1.5 text-[13px] text-muted">
